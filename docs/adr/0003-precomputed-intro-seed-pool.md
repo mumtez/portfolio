@@ -1,3 +1,5 @@
 # Intro Seeds are precomputed offline, drawn at random from a pool
 
 The name must form out of chaos under strict Life, but running Life forward from random soup never lands on a specific pattern, so Intro Seeds are found ahead of time by searching backward from the name (SAT-based predecessor search) and shipped as data. A pool of several seeds is kept for each name layout (one line on wide screens, two stacked lines on narrow ones) and one is picked at random per visit, so the Intro is real Life and still varies. If the search can't reach ~8 generations back within a time-boxed attempt, the Intro becomes a hybrid: guided emergence (Pinned Cells condensing out of soup) for the early chaos, ending on however many strict generations were found.
+
+**Outcome (prototype, 2026-10-09):** the search reached 8 strict generations for the one-line layout (pool of 12) and 7 for the stacked layout (pool of 2). Both Intros run on strict Life alone. The hybrid fallback isn't used, and 7 generations (840ms) is accepted as close enough on narrow screens. The seeds only fit the exact name layout, so changing a name glyph means re-running the search.

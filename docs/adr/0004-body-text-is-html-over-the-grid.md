@@ -1,0 +1,3 @@
+# Body Text is HTML over the Grid, not Pinned Cells
+
+Headings, navigation and buttons are drawn in Pinned Cells, but Body Text is real HTML laid directly over the live Grid. On a Section's arrival, its Body Text region condenses out of Cells and then releases into Life as the HTML fades in. A prototype showed that paragraph-length text in a 5×7 cell font doesn't work. On a phone it fits about 15 characters per line. On desktop it's legible but slow to read, and its Fringe makes it worse. A walled panel beside the Grid read well but felt like a normal page pasted onto the simulation. Body Text already exists as HTML for the Plain View (ADR 0002), so this adds no new content cost. Don't move Body Text into Cells without solving phone-width legibility first.

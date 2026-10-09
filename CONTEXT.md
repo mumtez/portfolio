@@ -22,6 +22,10 @@ _Avoid_: Static cell, frozen cell, locked cell
 Any Cell that is not pinned and obeys the rules normally.
 _Avoid_: Background cell
 
+**Fringe**:
+The Free Cells bordering Pinned Cells, continually reborn because the Pinned Cells count as live neighbours. Every piece of pinned content has one.
+_Avoid_: Halo, glow, noise
+
 **Set Piece**:
 A deliberate showcase moment of the Grid, choreographed rather than ambient. Runs by strict B3/S23 where feasible; may use Pinned Cells to guide it otherwise.
 
@@ -45,6 +49,10 @@ The Grid evolving from one Section's Pinned Cells to the next's.
 **Deep Dive**:
 A Section that tells one project's story beyond the resume bullet (FTC RoboRebels, Baja fuel estimator, FTC Event Viewer).
 _Avoid_: Case study, project page
+
+**Body Text**:
+Paragraph-length writing in a Section, such as a Deep Dive's story. It is real HTML laid over the live Grid, never drawn in Cells.
+_Avoid_: Copy, prose, description
 
 **Frame**:
 A region of a Section reserved for real media (photos, video), where no Cells live and the Grid steps around it.
