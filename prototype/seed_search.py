@@ -14,7 +14,13 @@ constants; after solving, the leftmost STRIDE columns of every generation are fr
 moves on. Constraints whose 3x3 input crosses the window's right edge are deferred to the next
 window. UNSAT/timeout -> backtrack one window and re-solve it with a different random seed.
 
-Usage: python seed_search.py <layout> <depth> <n_seeds> [budget_s] [window] [stride] [window_timeout_s]
+- Splitting the tall stacked layout into horizontal bands of 2-D windows (band/band_stride args)
+  fails at the corners: each x-window freezes upper rows whose lower neighbours were solved by a
+  different window, so the next band has no joint completion. Fix would be staircase-shaped windows
+  (keep the unfrozen lower rows of earlier windows as variables). Not done within the time-box.
+
+Usage: python seed_search.py <layout> <depth> <n_seeds> [budget_s] [window] [stride] [window_timeout_s] [band] [band_stride]
+(band/band_stride split tall layouts into horizontal bands of 2-D windows.)
 Writes seeds-<layout>.json.
 """
 import itertools
@@ -114,13 +120,13 @@ class Search:
         self.fixed = [dict() for _ in range(depth + 1)]  # layer -> cell -> bool
         self.calls = 0
 
-    def solve_window(self, lo, hi, last):
+    def solve_window(self, lo, hi, ylo, yhi):
         D = self.depth
         var = [dict() for _ in range(D + 1)]
         n = 0
         for k in range(1, D + 1):
             for c in cells(self.boxes[k]):
-                if lo <= c[0] < hi and c not in self.fixed[k]:
+                if lo <= c[0] < hi and ylo <= c[1] < yhi and c not in self.fixed[k]:
                     n += 1
                     var[k][c] = n
 
@@ -134,10 +140,12 @@ class Search:
                 return self.fixed[k][c]
             return var[k].get(c)  # None = outside window, unknown
 
+        # Constrain every cell whose 3x3 input and output are all known (fixed or in this window)
+        # and that touches at least one window variable. Anything touching an unknown is deferred.
         clauses = []
         for k in range(1, D + 1):
             for c in cells(grow(self.boxes[k], 1)):
-                if not (lo - 1 <= c[0] < (hi + 1 if last else hi - 1)):
+                if not (lo - 1 <= c[0] <= hi and ylo - 1 <= c[1] <= yhi):
                     continue
                 ins = [get(k, c)] + [get(k, (c[0] + dx, c[1] + dy)) for dx, dy in NBR]
                 outv = get(k - 1, c)
@@ -146,7 +154,7 @@ class Search:
                 if all(isinstance(v, bool) for v in ins + [outv]):
                     continue
                 life_clauses(ins[0], ins[1:], outv, clauses)
-        # diversity: nudge a few cells of the seed layer in the part about to be frozen
+        # diversity: nudge a few cells of the seed layer
         nudge = [v for c, v in var[D].items() if c[0] < lo + self.stride]
         units = [[v if self.rng.random() < 0.5 else -v] for v in self.rng.sample(nudge, min(len(nudge), 3))]
         for attempt_units in (units, []):
@@ -156,35 +164,42 @@ class Search:
                 return {k: {c: (v in model) for c, v in var[k].items()} for k in range(1, D + 1)}
         return None
 
-    def run(self, deadline):
-        x0, x1 = self.boxes[self.depth][0], self.boxes[self.depth][2]
-        starts = list(range(x0, x1 + 1, self.stride))
-        i, history, retries = 0, [], 0
-        while i < len(starts):
-            if time.time() > deadline:
-                return None
-            lo = starts[i]
-            hi = lo + self.window
-            last = hi > x1
-            sol = self.solve_window(lo, hi, last)
-            if sol is None:
-                retries += 1
-                if not history or retries > 30:
+    def run(self, deadline, band=10 ** 6, band_stride=10 ** 6):
+        """Sweep windows left to right within horizontal bands, bands top to bottom."""
+        x0, y0, x1, y1 = self.boxes[self.depth]
+        ystarts = list(range(y0, y1 + 1, band_stride))
+        for bi, ylo in enumerate(ystarts):
+            yhi = ylo + band
+            last_band = yhi > y1
+            starts = list(range(x0, x1 + 1, self.stride))
+            i, history, retries = 0, [], 0
+            while i < len(starts):
+                if time.time() > deadline:
                     return None
-                # backtrack one window
-                i -= 1
-                for k, cs in history.pop().items():
-                    for c in cs:
-                        del self.fixed[k][c]
-                continue
-            frozen = {}
-            for k, vals in sol.items():
-                frozen[k] = [c for c in vals if last or c[0] < lo + self.stride]
-                for c in frozen[k]:
-                    self.fixed[k][c] = vals[c]
-            history.append(frozen)
-            i += 1
-            if last:
+                lo = starts[i]
+                hi = lo + self.window
+                last = hi > x1
+                sol = self.solve_window(lo, hi, ylo, yhi)
+                if sol is None:
+                    retries += 1
+                    if not history or retries > 30:
+                        return None
+                    i -= 1  # backtrack one window within this band
+                    for k, cs in history.pop().items():
+                        for c in cs:
+                            del self.fixed[k][c]
+                    continue
+                frozen = {}
+                for k, vals in sol.items():
+                    frozen[k] = [c for c in vals if (last or c[0] < lo + self.stride)
+                                 and (last_band or c[1] < ylo + band_stride)]
+                    for c in frozen[k]:
+                        self.fixed[k][c] = vals[c]
+                history.append(frozen)
+                i += 1
+                if last:
+                    break
+            if last_band:
                 break
         return {c for c, v in self.fixed[self.depth].items() if v}
 
@@ -201,6 +216,8 @@ def main():
     window = int(sys.argv[5]) if len(sys.argv) > 5 else 24
     stride = int(sys.argv[6]) if len(sys.argv) > 6 else 8
     wt = float(sys.argv[7]) if len(sys.argv) > 7 else 300
+    band = int(sys.argv[8]) if len(sys.argv) > 8 else 10 ** 6
+    band_stride = int(sys.argv[9]) if len(sys.argv) > 9 else 10 ** 6
     rows = LAYOUTS[layout]
     target = {(x, y) for y, r in enumerate(rows) for x, ch in enumerate(r) if ch == "#"}
     off = int(os.environ.get("SEED_OFFSET", "0"))
@@ -209,7 +226,7 @@ def main():
     for i in range(n_seeds):
         t = time.time()
         s = Search(target, depth, window, stride, timeout=wt, rng=random.Random(1000 * depth + 100 * off + i))
-        seed = s.run(t_start + budget)
+        seed = s.run(t_start + budget, band, band_stride)
         dt = time.time() - t
         if seed is None:
             print(f"[{layout} d{depth}] seed {i}: FAILED after {dt:.0f}s, {s.calls} SAT calls", flush=True)
