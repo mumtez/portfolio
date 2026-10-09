@@ -1,0 +1,139 @@
+<!doctype html>
+<!--
+  PROTOTYPE (throwaway, branch prototype/gol-portfolio). Plays the found Intro Seeds.
+  Data: seeds.js (built by `python3 bundle_seeds.py` from seeds-*.json).
+  ?layout=one-line|two-lines  ?mode=strict|hybrid  ?tick=120
+  strict: the seed runs under pure B3/S23 until it is the name, then the name pins.
+  hybrid: ADR 0003 fallback. Random soup is guided toward the seed for GUIDE ticks
+          (cells flip to the seed's value one by one), then the strict generations run.
+  Click / any key replays.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intro Seed Player</title>
+<style>
+  :root { --bg: #0c120e; --pinned: #4F9A5E; --free: #355E3B; --fg: #dbe7dd; }
+  :root[data-theme="light"] { --bg: #f3eedf; --pinned: #355E3B; --free: #b5c9a8; --fg: #1e2a21; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px ui-monospace, Menlo, monospace; overflow: hidden; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 12px; top: 10px; white-space: pre; opacity: .85; }
+  #bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    background: #f2f2f2; color: #111; padding: 8px 12px; border-radius: 16px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  #bar button { font: inherit; background: none; border: 1px solid #111; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+</style>
+<script src="seeds.js"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"></div>
+<div id="bar">
+  <button id="layout"></button><button id="mode"></button><button id="theme">theme</button><button id="again">replay</button>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+let layout = params.get('layout') || (innerWidth < 700 ? 'two-lines' : 'one-line');
+let mode = params.get('mode') || 'strict';
+const TICK = +(params.get('tick') || 120), GUIDE = 6;
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+let cs, W, H, ox, oy, alive, ghost, isName, phase, gen, seedInfo, guideOrder, guideStart, depth, timer;
+
+function set(k, v) { params.set(k, v); history.replaceState(null, '', '?' + params); }
+function colors() { const s = getComputedStyle(document.documentElement); return k => s.getPropertyValue('--' + k).trim(); }
+
+function start() {
+  clearInterval(timer);
+  const pool = (window.SEEDS || {})[layout] || [];
+  if (!pool.length) { document.getElementById('hud').textContent = `no seeds for ${layout} yet`; return; }
+  seedInfo = pool[Math.floor(Math.random() * pool.length)];
+  depth = seedInfo.generations;
+  const target = seedInfo.target, rows = seedInfo.seed.rows;
+  const tw = target[0].length, th = target.length;
+  W = tw + 2 * depth + 40; H = th + 2 * depth + 30;
+  cs = Math.max(2, Math.floor(Math.min(innerWidth / W, innerHeight / H)));
+  W = Math.ceil(innerWidth / cs); H = Math.ceil(innerHeight / cs);
+  ox = Math.floor((W - tw) / 2); oy = Math.floor((H - th) / 2);
+  const dpr = devicePixelRatio || 1;
+  canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+  canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  alive = new Uint8Array(W * H); ghost = new Float32Array(W * H); isName = new Uint8Array(W * H);
+  target.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '#') isName[(oy + y) * W + ox + x] = 1; }));
+  const seedCells = new Uint8Array(W * H);
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '#') seedCells[(oy + seedInfo.seed.dy + y) * W + ox + seedInfo.seed.dx + x] = 1; }));
+  if (mode === 'hybrid') {
+    // soup over the seed's box, then flip cells to the seed's value in random order over GUIDE ticks
+    const x0 = ox + seedInfo.seed.dx - 6, y0 = oy + seedInfo.seed.dy - 4, x1 = x0 + rows[0].length + 12, y1 = y0 + rows.length + 8;
+    guideOrder = [];
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; alive[i] = Math.random() < 0.35 ? 1 : 0; guideOrder.push(i); }
+    guideOrder.sort(() => Math.random() - 0.5);
+    guideStart = seedCells; phase = 'guide'; gen = -GUIDE - depth;
+  } else { alive.set(seedCells); phase = 'strict'; gen = -depth; }
+  draw(); timer = setInterval(tick, TICK); hud();
+}
+
+function lifeStep() {
+  const n = new Uint8Array(W * H);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x;
+    if (phase === 'pinned' && isName[i]) { n[i] = 1; continue; }
+    const s = alive[i - W - 1] + alive[i - W] + alive[i - W + 1] + alive[i - 1] + alive[i + 1] + alive[i + W - 1] + alive[i + W] + alive[i + W + 1];
+    n[i] = s === 3 || (s === 2 && alive[i]) ? 1 : 0;
+  }
+  alive = n;
+}
+
+function tick() {
+  if (phase === 'guide') {
+    // Guided ticks: run Life, then force a growing fraction of cells to the seed (not strict Life).
+    lifeStep();
+    const k = GUIDE + depth + gen + 1, upto = Math.round(guideOrder.length * k / GUIDE);
+    for (let j = 0; j < upto; j++) alive[guideOrder[j]] = guideStart[guideOrder[j]];
+    gen++;
+    if (k >= GUIDE) { alive.fill(0); guideOrder.forEach(i => alive[i] = guideStart[i]); for (let i = 0; i < W * H; i++) if (guideStart[i]) alive[i] = 1; phase = 'strict'; }
+  } else if (phase === 'strict') {
+    lifeStep(); gen++;
+    if (gen === 0) {
+      let ok = true; for (let i = 0; i < W * H; i++) if (alive[i] !== isName[i]) { ok = false; break; }
+      phase = 'pinned'; console.log('name exact:', ok); hud(ok);
+    }
+  } else lifeStep();
+  for (let i = 0; i < W * H; i++) ghost[i] = alive[i] ? 1 : ghost[i] * 0.7;
+  draw(); if (phase !== 'pinned') hud();
+}
+
+function hud(ok) {
+  document.getElementById('hud').textContent =
+    `${layout}  ${mode}  seed ${(window.SEEDS[layout] || []).indexOf(seedInfo) + 1}/${(window.SEEDS[layout] || []).length}  ` +
+    `(${depth} strict gens, found in ${seedInfo.seconds}s)\n` +
+    (phase === 'pinned' ? `name pinned${ok === undefined ? '' : ok ? ' (exact match)' : ' (MISMATCH)'} after ${((mode === 'hybrid' ? GUIDE : 0) + depth) * TICK}ms` :
+      `${phase === 'guide' ? 'guided' : 'strict'} gen ${gen}`);
+}
+
+function draw() {
+  const c = colors(), r = cs * 0.28, inset = cs >= 4 ? 0.5 : 0.25, sz = cs - 2 * inset;
+  ctx.fillStyle = c('bg'); ctx.fillRect(0, 0, innerWidth, innerHeight);
+  const pass = (pred, color, a) => { ctx.globalAlpha = a; ctx.fillStyle = color; ctx.beginPath();
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (pred(i)) ctx.roundRect(x * cs + inset, y * cs + inset, sz, sz, r); }
+    ctx.fill(); };
+  pass(i => !alive[i] && ghost[i] > 0.1, c('free'), 0.3);
+  pass(i => alive[i] && !(phase === 'pinned' && isName[i]), c('free'), 1);
+  pass(i => alive[i] && phase === 'pinned' && isName[i], c('pinned'), 1);
+  ctx.globalAlpha = 1;
+}
+
+function ui() {
+  document.getElementById('layout').textContent = 'layout: ' + layout;
+  document.getElementById('mode').textContent = 'mode: ' + mode;
+}
+document.getElementById('layout').onclick = e => { e.stopPropagation(); layout = layout === 'one-line' ? 'two-lines' : 'one-line'; set('layout', layout); ui(); start(); };
+document.getElementById('mode').onclick = e => { e.stopPropagation(); mode = mode === 'strict' ? 'hybrid' : 'strict'; set('mode', mode); ui(); start(); };
+document.getElementById('theme').onclick = e => { e.stopPropagation(); const d = document.documentElement; d.dataset.theme = d.dataset.theme === 'light' ? 'dark' : 'light'; draw(); };
+document.getElementById('again').onclick = e => { e.stopPropagation(); start(); };
+canvas.addEventListener('click', start);
+addEventListener('keydown', start);
+ui(); start();
+</script>
+</body>
+</html>
