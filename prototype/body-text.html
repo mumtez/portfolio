@@ -1,0 +1,478 @@
+<!doctype html>
+<!--
+  PROTOTYPE (throwaway, branch prototype/gol-portfolio). Not production code.
+  Question (Q3): can paragraph-length body text be Pinned Cells and stay readable,
+  or should it be real HTML alongside / emerging from the Grid?
+  Three variants of the Baja Deep Dive, switchable via ?variant=A|B|C and the bottom bar:
+    A  All cells       – body text drawn in the 5x7 cell font
+    B  HTML alongside  – body text is HTML in a walled panel (a dead-wall region like a Frame)
+    C  HTML emerges    – body text is HTML over the live Grid; it condenses out of cells on load
+  Also: theme (system/light/dark), phone width (390px), cell size, FPS + contrast readout, and
+  fringe (?fringe=live|dim|ring): what to do with the Free Cells that are born forever next to
+  Pinned text: leave them, draw them faint, or keep a 1-cell dead ring around content.
+  Run: open this file directly, or `python3 -m http.server -d prototype 8000` and visit
+  http://<this-mac's-LAN-IP>:8000/body-text.html on a phone for the real frame rate.
+  Body copy is placeholder written from the resume bullet; the 5x7 font is hand-drawn in the
+  HD44780 style as a stand-in for an open-licence font.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Body Text Prototype</title>
+<style>
+  :root {
+    --bg: #f3eedf; --pinned: #355E3B; --free: #c3d3b8; --text: #1e2a21; --muted: #4c5c50;
+    --panel: #ebe5d2; --frame: #9fb09a; --bar-bg: #111; --bar-fg: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c120e; --pinned: #4F9A5E; --free: #355E3B; --text: #dbe7dd; --muted: #a3b5a7;
+      --panel: #131c16; --frame: #2c4031; --bar-bg: #f2f2f2; --bar-fg: #111;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c120e; --pinned: #4F9A5E; --free: #355E3B; --text: #dbe7dd; --muted: #a3b5a7;
+    --panel: #131c16; --frame: #2c4031; --bar-bg: #f2f2f2; --bar-fg: #111;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #777; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #stage { position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden; background: var(--bg); }
+  body.phone #stage { inset: auto; left: 50%; top: 16px; transform: translateX(-50%);
+    width: 390px; height: min(844px, calc(100vh - 90px)); border-radius: 28px; box-shadow: 0 0 0 10px #222; }
+  #world { position: relative; }
+  canvas { display: block; }
+  .html-block { position: absolute; color: var(--text); font-size: 17px; line-height: 1.6; }
+  .html-block p { margin: 0 0 1em; max-width: 68ch; }
+  .html-block .meta { color: var(--muted); font-size: 14px; letter-spacing: .02em; margin-bottom: 1.2em; }
+  .html-block.panel { padding: 0; }
+  .html-block.emerge { transition: opacity 700ms ease, filter 700ms ease; }
+  .html-block.emerge.hidden { opacity: 0; filter: blur(3px); }
+  .frame-label { position: absolute; display: grid; place-items: center; color: var(--muted);
+    font-size: 13px; border: 1.5px dashed var(--frame); border-radius: 10px; }
+  #bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 10;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
+    background: var(--bar-bg); color: var(--bar-fg); padding: 8px 14px; border-radius: 16px;
+    font: 13px/1.2 ui-monospace, Menlo, monospace; box-shadow: 0 6px 24px rgba(0,0,0,.35); max-width: calc(100vw - 24px); }
+  #bar button { font: inherit; background: transparent; color: inherit; border: 1px solid currentColor;
+    border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  #bar .sep { opacity: .35; }
+  #readout { position: fixed; right: 12px; bottom: 70px; z-index: 10; background: var(--bar-bg); color: var(--bar-fg);
+    font: 11px/1.45 ui-monospace, Menlo, monospace; padding: 8px 10px; border-radius: 10px; opacity: .9; white-space: pre; }
+  #readout.off { display: none; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="world"><canvas id="c"></canvas></div></div>
+<div id="readout"></div>
+<div id="bar">
+  <button id="prev" aria-label="Previous variant">←</button>
+  <span id="vlabel"></span>
+  <button id="next" aria-label="Next variant">→</button>
+  <span class="sep">|</span>
+  <button id="theme"></button>
+  <button id="width"></button>
+  <label>cell <input id="cell" type="range" min="2" max="8" step="1"> <span id="cellv"></span>px</label>
+  <button id="fringe"></button>
+  <button id="info">perf</button>
+  <button id="replay">replay</button>
+</div>
+<script>
+// ---------- 5x7 cell font (hand-drawn HD44780 style; stand-in) ----------
+const F = {};
+(() => {
+  const src = {
+    ' ':'00000 00000 00000 00000 00000 00000 00000','!':'00100 00100 00100 00100 00100 00000 00100',
+    '"':'01010 01010 01010 00000 00000 00000 00000','#':'01010 01010 11111 01010 11111 01010 01010',
+    '%':'11000 11001 00010 00100 01000 10011 00011','&':'01100 10010 10100 01000 10101 10010 01101',
+    "'":'01100 00100 01000 00000 00000 00000 00000','(':'00010 00100 01000 01000 01000 00100 00010',
+    ')':'01000 00100 00010 00010 00010 00100 01000','+':'00000 00100 00100 11111 00100 00100 00000',
+    ',':'00000 00000 00000 00000 01100 00100 01000','-':'00000 00000 00000 11111 00000 00000 00000',
+    '.':'00000 00000 00000 00000 00000 01100 01100','/':'00000 00001 00010 00100 01000 10000 00000',
+    '0':'01110 10001 10011 10101 11001 10001 01110','1':'00100 01100 00100 00100 00100 00100 01110',
+    '2':'01110 10001 00001 00010 00100 01000 11111','3':'11111 00010 00100 00010 00001 10001 01110',
+    '4':'00010 00110 01010 10010 11111 00010 00010','5':'11111 10000 11110 00001 00001 10001 01110',
+    '6':'00110 01000 10000 11110 10001 10001 01110','7':'11111 00001 00010 00100 01000 01000 01000',
+    '8':'01110 10001 10001 01110 10001 10001 01110','9':'01110 10001 10001 01111 00001 00010 01100',
+    ':':'00000 01100 01100 00000 01100 01100 00000',';':'00000 01100 01100 00000 01100 00100 01000',
+    '<':'00010 00100 01000 10000 01000 00100 00010','>':'01000 00100 00010 00001 00010 00100 01000',
+    '?':'01110 10001 00001 00010 00100 00000 00100','@':'01110 10001 00001 01101 10101 10101 01110',
+    'A':'01110 10001 10001 10001 11111 10001 10001','B':'11110 10001 10001 11110 10001 10001 11110',
+    'C':'01110 10001 10000 10000 10000 10001 01110','D':'11100 10010 10001 10001 10001 10010 11100',
+    'E':'11111 10000 10000 11110 10000 10000 11111','F':'11111 10000 10000 11110 10000 10000 10000',
+    'G':'01110 10001 10000 10111 10001 10001 01111','H':'10001 10001 10001 11111 10001 10001 10001',
+    'I':'01110 00100 00100 00100 00100 00100 01110','J':'00111 00010 00010 00010 00010 10010 01100',
+    'K':'10001 10010 10100 11000 10100 10010 10001','L':'10000 10000 10000 10000 10000 10000 11111',
+    'M':'10001 11011 10101 10101 10001 10001 10001','N':'10001 10001 11001 10101 10011 10001 10001',
+    'O':'01110 10001 10001 10001 10001 10001 01110','P':'11110 10001 10001 11110 10000 10000 10000',
+    'Q':'01110 10001 10001 10001 10101 10010 01101','R':'11110 10001 10001 11110 10100 10010 10001',
+    'S':'01111 10000 10000 01110 00001 00001 11110','T':'11111 00100 00100 00100 00100 00100 00100',
+    'U':'10001 10001 10001 10001 10001 10001 01110','V':'10001 10001 10001 10001 10001 01010 00100',
+    'W':'10001 10001 10001 10101 10101 10101 01010','X':'10001 10001 01010 00100 01010 10001 10001',
+    'Y':'10001 10001 10001 01010 00100 00100 00100','Z':'11111 00001 00010 00100 01000 10000 11111',
+    'a':'00000 00000 01110 00001 01111 10001 01111','b':'10000 10000 10110 11001 10001 10001 11110',
+    'c':'00000 00000 01110 10000 10000 10001 01110','d':'00001 00001 01101 10011 10001 10001 01111',
+    'e':'00000 00000 01110 10001 11111 10000 01110','f':'00110 01001 01000 11100 01000 01000 01000',
+    'g':'00000 01111 10001 10001 01111 00001 01110','h':'10000 10000 10110 11001 10001 10001 10001',
+    'i':'00100 00000 01100 00100 00100 00100 01110','j':'00010 00000 00110 00010 00010 10010 01100',
+    'k':'10000 10000 10010 10100 11000 10100 10010','l':'01100 00100 00100 00100 00100 00100 01110',
+    'm':'00000 00000 11010 10101 10101 10001 10001','n':'00000 00000 10110 11001 10001 10001 10001',
+    'o':'00000 00000 01110 10001 10001 10001 01110','p':'00000 00000 11110 10001 11110 10000 10000',
+    'q':'00000 00000 01101 10011 01111 00001 00001','r':'00000 00000 10110 11001 10000 10000 10000',
+    's':'00000 00000 01110 10000 01110 00001 11110','t':'01000 01000 11100 01000 01000 01001 00110',
+    'u':'00000 00000 10001 10001 10001 10011 01101','v':'00000 00000 10001 10001 10001 01010 00100',
+    'w':'00000 00000 10001 10001 10101 10101 01010','x':'00000 00000 10001 01010 00100 01010 10001',
+    'y':'00000 00000 10001 10001 01111 00001 01110','z':'00000 00000 11111 00010 00100 01000 11111',
+  };
+  for (const [ch, s] of Object.entries(src)) F[ch] = s.split(' ');
+  F['·'] = F['-']; F['–'] = F['-']; F['—'] = F['-']; F['’'] = F["'"];
+})();
+
+// ---------- content (placeholder copy from the resume bullet) ----------
+const C = {
+  crumb: 'PROJECTS / BAJA',
+  title: 'FUEL WITHOUT TOUCHING FUEL',
+  meta: 'Olin Baja · Electrical team · Fall 2026 – present',
+  body: [
+    "A Baja car's fuel sloshes, bounces and foams for the whole race, so a float in the tank reads nonsense. The team needed to know how much fuel was left without putting anything in the fuel.",
+    "We're co-developing a non-contact estimator instead: accelerometers on the tank pick up how it responds to the car's vibration, a custom PCB records them, and a Python model turns that response into a fuel level the driver can trust.",
+  ],
+  button: '< ALL PROJECTS',
+};
+
+// ---------- state / params ----------
+const params = new URLSearchParams(location.search);
+const VARIANTS = { A: 'All cells', B: 'HTML alongside', C: 'HTML emerges' };
+const KEYS = Object.keys(VARIANTS);
+let variant = KEYS.includes(params.get('variant')) ? params.get('variant') : 'A';
+let themeMode = params.get('theme') || 'system';
+let phone = params.get('w') === 'phone';
+let cellPx = +(params.get('cell') || 4);
+const FRINGES = ['live', 'dim', 'ring'];
+let fringe = FRINGES.includes(params.get('fringe')) ? params.get('fringe') : 'live';
+
+const stage = document.getElementById('stage'), world = document.getElementById('world');
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const M = 12; // off-screen margin in cells
+let cols, rows, W, H, alive, nxt, pinned, wall, ghost, quiet, near, layout, buttons = [];
+let colors = {};
+
+function setParam(k, v) { params.set(k, v); history.replaceState(null, '', '?' + params); }
+
+// ---------- layout helpers (cell units, visible coordinates) ----------
+function wrap(text, maxW, scale) {
+  const per = Math.floor((maxW + scale) / (6 * scale));
+  const lines = []; let line = '';
+  for (const w of text.split(' ')) {
+    const t = line ? line + ' ' + w : w;
+    if (t.length <= per || !line) line = t; else { lines.push(line); line = w; }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+function drawText(pins, str, x, y, scale = 1) {
+  for (const ch of str) {
+    const g = F[ch] || F[' '];
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++) if (g[r][c] === '1')
+      for (let a = 0; a < scale; a++) for (let b = 0; b < scale; b++) pins.push([x + c * scale + a, y + r * scale + b]);
+    x += 6 * scale;
+  }
+  return x;
+}
+function textBlock(pins, text, x, y, w, scale) {
+  const lines = wrap(text, w, scale);
+  lines.forEach((l, i) => drawText(pins, l, x, y + i * 9 * scale, scale));
+  return lines.length * 9 * scale;
+}
+function measureHTML(html, wCells, cls) {
+  const d = document.createElement('div');
+  d.className = 'html-block ' + cls; d.style.width = wCells * cellPx + 'px'; d.style.visibility = 'hidden';
+  d.innerHTML = html; world.appendChild(d);
+  const h = Math.ceil(d.offsetHeight / cellPx); d.remove(); return h;
+}
+const bodyHTML = `<div class="meta">${C.meta}</div>` + C.body.map(p => `<p>${p}</p>`).join('');
+
+function nav(pins, x0, w, y) {
+  const items = ['ABOUT', 'EXPERIENCE', 'PROJECTS', 'CONTACT'];
+  const full = items.join('  ');
+  if ((('ANDREW ABURUSTUM'.length + 4 + full.length) * 6) <= w) {
+    drawText(pins, 'ANDREW ABURUSTUM', x0, y);
+    drawText(pins, full, x0 + w - full.length * 6 + 1, y);
+  } else {
+    drawText(pins, 'AA', x0, y);
+    drawText(pins, 'MENU', x0 + w - 4 * 6 + 1, y);
+  }
+}
+function button(pins, label, x, y) {
+  const tw = label.length * 6 - 1, bw = tw + 6, bh = 7 + 6;
+  drawText(pins, label, x + 3, y + 3);
+  const border = [];
+  for (let i = 0; i < bw; i++) { border.push([x + i, y]); border.push([x + i, y + bh - 1]); }
+  for (let j = 1; j < bh - 1; j++) { border.push([x, y + j]); border.push([x + bw - 1, y + j]); }
+  border.forEach(p => pins.push(p));
+  buttons.push({ x, y, w: bw, h: bh, border, hover: false });
+  return bh;
+}
+function frame(walls, labels, x, y, w) {
+  const h = Math.round(w * 9 / 16);
+  walls.push([x, y, w, h]); labels.push({ x, y, w, h, text: 'Frame · media placeholder' });
+  return h;
+}
+
+function buildLayout() {
+  buttons = [];
+  const pins = [], walls = [], labels = [], html = [], quietRects = [];
+  const narrow = cols < 160;
+  const g = narrow ? 4 : 8;
+  const maxW = Math.min(cols - 2 * g, 230);
+  const x0 = narrow ? g : Math.floor((cols - maxW) / 2);
+  let y = 4;
+  nav(pins, g, cols - 2 * g, y); y += 7 + 14;
+  drawText(pins, C.crumb, x0, y); y += 7 + 6;
+  const titleScale = narrow ? 1 : 2;
+
+  if (variant === 'A') {
+    y += textBlock(pins, C.title, x0, y, maxW, titleScale) + 4;
+    const colW = Math.min(maxW, 6 * 70); // cap measure ~70 chars
+    y += textBlock(pins, C.meta, x0, y, colW, 1) + 6;
+    for (const p of C.body) y += textBlock(pins, p, x0, y, colW, 1) + 6;
+    y += frame(walls, labels, x0, y, Math.min(maxW, 160)) + 8;
+    y += button(pins, C.button, x0, y) + 8;
+  } else if (variant === 'B') {
+    const side = !narrow && maxW >= 180;
+    const lw = side ? Math.floor(maxW * 0.48) : maxW;
+    const rx = side ? x0 + lw + 10 : x0, rw = side ? maxW - lw - 10 : maxW;
+    let ly = y;
+    ly += textBlock(pins, C.title, x0, ly, lw, titleScale) + 6;
+    ly += frame(walls, labels, x0, ly, lw) + 8;
+    let ry = side ? y : ly;
+    const pad = 3, inner = rw - 2 * pad;
+    const hh = measureHTML(bodyHTML, inner, 'panel');
+    walls.push([rx, ry, rw, hh + 2 * pad]);
+    html.push({ x: rx + pad, y: ry + pad, w: inner, cls: 'panel', html: bodyHTML, panel: [rx, ry, rw, hh + 2 * pad] });
+    ry += hh + 2 * pad + 8;
+    let by = side ? ly : ry;
+    by += button(pins, C.button, x0, by) + 8;
+    y = Math.max(by, ry);
+  } else {
+    y += textBlock(pins, C.title, x0, y, maxW, titleScale) + 4;
+    const w = Math.min(maxW, Math.ceil(68 * 9.2 / cellPx));
+    const hh = measureHTML(bodyHTML, w, 'emerge');
+    html.push({ x: x0, y, w, cls: 'emerge', html: bodyHTML });
+    quietRects.push([x0 - 1, y - 1, w + 2, hh + 2]);
+    y += hh + 4;
+    y += frame(walls, labels, x0, y, Math.min(maxW, 160)) + 8;
+    y += button(pins, C.button, x0, y) + 8;
+  }
+  return { pins, walls, labels, html, quietRects, height: y + 4 };
+}
+
+// ---------- grid ----------
+const idx = (x, y) => (y + M) * W + (x + M);
+function rebuild() {
+  const vw = stage.clientWidth, vh = stage.clientHeight;
+  cols = Math.floor(vw / cellPx);
+  world.querySelectorAll('.html-block,.frame-label').forEach(e => e.remove());
+  rows = 1; layout = buildLayout();
+  rows = Math.max(Math.floor(vh / cellPx), layout.height);
+  W = cols + 2 * M; H = rows + 2 * M;
+  alive = new Uint8Array(W * H); nxt = new Uint8Array(W * H); pinned = new Uint8Array(W * H);
+  wall = new Uint8Array(W * H); ghost = new Float32Array(W * H); quiet = new Uint8Array(W * H); near = new Uint8Array(W * H);
+  for (const [x, y, w, h] of layout.walls) for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) wall[idx(x + i, y + j)] = 1;
+  for (const [x, y, w, h] of layout.quietRects) for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) quiet[idx(x + i, y + j)] = 1;
+  for (let i = 0; i < W * H; i++) if (!wall[i] && Math.random() < 0.09) alive[i] = 1;
+  for (const [x, y] of layout.pins) { pinned[idx(x, y)] = 1; alive[idx(x, y)] = 1; }
+  // cells touching static content: the 'fringe' where births never stop
+  for (const [x, y] of layout.pins) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const i = idx(x + dx, y + dy); if (!pinned[i]) near[i] = 1;
+  }
+  if (fringe === 'ring') for (let i = 0; i < W * H; i++) if (near[i]) { wall[i] = 1; alive[i] = 0; }
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cols * cellPx * dpr; canvas.height = rows * cellPx * dpr;
+  canvas.style.width = cols * cellPx + 'px'; canvas.style.height = rows * cellPx + 'px';
+  world.style.height = rows * cellPx + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  for (const l of layout.labels) {
+    const d = document.createElement('div'); d.className = 'frame-label'; d.textContent = l.text;
+    Object.assign(d.style, { left: l.x * cellPx + 'px', top: l.y * cellPx + 'px', width: l.w * cellPx + 'px', height: l.h * cellPx + 'px' });
+    world.appendChild(d);
+  }
+  for (const b of layout.html) {
+    const d = document.createElement('div'); d.className = 'html-block ' + b.cls; d.innerHTML = b.html;
+    Object.assign(d.style, { left: b.x * cellPx + 'px', top: b.y * cellPx + 'px', width: b.w * cellPx + 'px' });
+    world.appendChild(d); b.el = d;
+  }
+  if (variant === 'C') emerge();
+  updateUI();
+}
+
+// C: the paragraph region condenses as Pinned Cells, then releases into Life as the HTML fades in.
+let emergeTimer;
+function emerge() {
+  const b = layout.html[0]; if (!b) return;
+  b.el.classList.add('hidden');
+  const lineH = Math.round(17 * 1.6 / cellPx);
+  const hRows = Math.ceil(b.el.offsetHeight / cellPx);
+  const held = [];
+  for (let y = 0; y < hRows; y++) {
+    if ((y % lineH) >= Math.ceil(lineH * 0.6)) continue;
+    const lineLen = b.w * (0.75 + 0.25 * Math.random());
+    for (let x = 0; x < lineLen; x++) if (Math.random() < 0.55) { const i = idx(b.x + x, b.y + y); pinned[i] = 1; alive[i] = 1; held.push(i); }
+  }
+  clearTimeout(emergeTimer);
+  emergeTimer = setTimeout(() => { held.forEach(i => pinned[i] = 0); b.el.classList.remove('hidden'); }, 450);
+}
+
+function step() {
+  for (let y = 1; y < H - 1; y++) {
+    let o = y * W;
+    for (let x = 1; x < W - 1; x++) {
+      const i = o + x;
+      if (wall[i]) { nxt[i] = 0; continue; }
+      if (pinned[i]) { nxt[i] = 1; continue; }
+      const n = alive[i - W - 1] + alive[i - W] + alive[i - W + 1] + alive[i - 1] + alive[i + 1] + alive[i + W - 1] + alive[i + W] + alive[i + W + 1];
+      nxt[i] = (n === 3 || (n === 2 && alive[i])) ? 1 : 0;
+    }
+  }
+  [alive, nxt] = [nxt, alive];
+  for (let i = 0; i < W * H; i++) ghost[i] = alive[i] ? 1 : ghost[i] * 0.72;
+}
+
+// spaceships entering from the edges to reseed
+const GLIDER = [[1,0],[2,1],[0,2],[1,2],[2,2]];
+function placePattern(pat, x, y, fx, fy) { for (const [a, b] of pat) { const i = idx(x + (fx ? -a : a), y + (fy ? -b : b)); if (!wall[i] && !pinned[i]) alive[i] = 1; } }
+function spawnShip() {
+  const fx = Math.random() < .5, fy = Math.random() < .5;
+  const x = fx ? cols + M - 4 : -M + 2, y = Math.floor(Math.random() * rows);
+  placePattern(GLIDER, x, y, fx, fy);
+}
+
+// ---------- render ----------
+function readColors() {
+  const s = getComputedStyle(document.documentElement);
+  for (const k of ['bg', 'pinned', 'free', 'text', 'muted', 'panel']) colors[k] = s.getPropertyValue('--' + k).trim();
+}
+function draw() {
+  const cs = cellPx, r = Math.max(0.6, cs * 0.28), inset = cs >= 4 ? 0.5 : 0.25, sz = cs - 2 * inset;
+  ctx.fillStyle = colors.bg; ctx.fillRect(0, 0, cols * cs, rows * cs);
+  for (const b of layout.html) if (b.panel) {
+    const [x, y, w, h] = b.panel; ctx.fillStyle = colors.panel;
+    ctx.beginPath(); ctx.roundRect(x * cs, y * cs, w * cs, h * cs, 10); ctx.fill();
+  }
+  const buckets = [[], [], [], []]; // pinned, free, free-quiet, ghost
+  const ghostB = [[], [], []];
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const i = idx(x, y);
+    const dimmed = quiet[i] || (fringe === 'dim' && near[i]);
+    if (alive[i]) buckets[pinned[i] ? 0 : (dimmed ? 2 : 1)].push(x, y);
+    else if (ghost[i] > 0.05 && !dimmed) ghostB[ghost[i] > 0.5 ? 0 : ghost[i] > 0.2 ? 1 : 2].push(x, y);
+  }
+  const fillB = (arr, color, alpha) => {
+    if (!arr.length) return;
+    ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.beginPath();
+    for (let k = 0; k < arr.length; k += 2) ctx.roundRect(arr[k] * cs + inset, arr[k + 1] * cs + inset, sz, sz, r);
+    ctx.fill();
+  };
+  fillB(ghostB[2], colors.free, 0.12); fillB(ghostB[1], colors.free, 0.25); fillB(ghostB[0], colors.free, 0.4);
+  fillB(buckets[2], colors.free, 0.22); fillB(buckets[1], colors.free, 1); fillB(buckets[0], colors.pinned, 1);
+  ctx.globalAlpha = 1;
+}
+
+// ---------- loop + perf ----------
+let last = 0, acc = 0, frames = 0, fpsT = performance.now(), fps = 0, stepMs = 0, drawMs = 0, shipT = 0;
+function frame_(t) {
+  requestAnimationFrame(frame_);
+  if (document.hidden) return;
+  const dt = Math.min(250, t - (last || t)); last = t; acc += dt; shipT += dt;
+  if (acc >= 120) { acc = 0; const a = performance.now(); step(); stepMs = performance.now() - a; }
+  if (shipT > 1500) { shipT = 0; spawnShip(); }
+  const b = performance.now(); draw(); drawMs = performance.now() - b;
+  frames++;
+  if (t - fpsT > 1000) { fps = frames * 1000 / (t - fpsT); frames = 0; fpsT = t; updateReadout(); }
+}
+
+// ---------- contrast ----------
+function lum(hex) {
+  const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const cr = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return ((x + 0.05) / (y + 0.05)).toFixed(2); };
+function updateReadout() {
+  const dark = document.documentElement.dataset.theme === 'dark' || (themeMode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.getElementById('readout').textContent =
+    `${fps.toFixed(0)} fps  step ${stepMs.toFixed(1)}ms  draw ${drawMs.toFixed(1)}ms\n` +
+    `grid ${cols}×${rows} visible (+${M} margin) @ ${cellPx}px\n` +
+    `contrast (${dark ? 'dark' : 'light'}):\n` +
+    `  pinned/bg  ${cr(colors.pinned, colors.bg)}   free/bg ${cr(colors.free, colors.bg)}\n` +
+    `  text/bg    ${cr(colors.text, colors.bg)}   muted/bg ${cr(colors.muted, colors.bg)}\n` +
+    `  text/free  ${cr(colors.text, colors.free)}   pinned/free ${cr(colors.pinned, colors.free)}`;
+}
+
+// ---------- interaction ----------
+let lastCell = null;
+function cellAt(e) { const r = canvas.getBoundingClientRect(); return [Math.floor((e.clientX - r.left) / cellPx), Math.floor((e.clientY - r.top) / cellPx)]; }
+canvas.addEventListener('pointermove', e => {
+  const [x, y] = cellAt(e);
+  const key = x + ',' + y;
+  if (key !== lastCell && x >= 0 && y >= 0 && x < cols && y < rows) {
+    lastCell = key; const i = idx(x, y); if (!wall[i]) alive[i] = 1;
+  }
+  for (const b of buttons) {
+    const over = x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
+    if (over !== b.hover) {
+      b.hover = over; canvas.style.cursor = over ? 'pointer' : '';
+      for (const [bx, by] of b.border) { const i = idx(bx, by); pinned[i] = over ? 0 : 1; if (!over) alive[i] = 1; }
+    }
+  }
+});
+canvas.addEventListener('click', e => {
+  const [x, y] = cellAt(e);
+  if (buttons.some(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)) return;
+  placePattern(GLIDER, x - 1, y - 1, Math.random() < .5, Math.random() < .5);
+});
+
+function applyTheme() {
+  if (themeMode === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = themeMode;
+  readColors(); updateReadout();
+}
+function updateUI() {
+  document.getElementById('vlabel').textContent = `${variant} (${VARIANTS[variant]})`;
+  document.getElementById('theme').textContent = 'theme: ' + themeMode;
+  document.getElementById('width').textContent = phone ? 'phone 390' : 'full width';
+  document.getElementById('cell').value = cellPx; document.getElementById('cellv').textContent = cellPx;
+  document.getElementById('fringe').textContent = 'fringe: ' + fringe;
+  document.getElementById('replay').style.display = variant === 'C' ? '' : 'none';
+}
+function setVariant(d) {
+  variant = KEYS[(KEYS.indexOf(variant) + d + KEYS.length) % KEYS.length]; setParam('variant', variant); rebuild();
+}
+document.getElementById('prev').onclick = () => setVariant(-1);
+document.getElementById('next').onclick = () => setVariant(1);
+document.getElementById('theme').onclick = () => {
+  themeMode = { system: 'light', light: 'dark', dark: 'system' }[themeMode]; setParam('theme', themeMode); applyTheme(); updateUI();
+};
+document.getElementById('width').onclick = () => {
+  phone = !phone; document.body.classList.toggle('phone', phone); setParam('w', phone ? 'phone' : 'full'); rebuild();
+};
+document.getElementById('cell').oninput = e => { cellPx = +e.target.value; setParam('cell', cellPx); rebuild(); };
+document.getElementById('replay').onclick = () => emerge();
+document.getElementById('fringe').onclick = () => {
+  fringe = FRINGES[(FRINGES.indexOf(fringe) + 1) % FRINGES.length]; setParam('fringe', fringe); rebuild();
+};
+document.getElementById('info').onclick = () => document.getElementById('readout').classList.toggle('off');
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea,[contenteditable]')) return;
+  if (e.key === 'ArrowLeft') setVariant(-1);
+  if (e.key === 'ArrowRight') setVariant(1);
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(rebuild, 150); });
+
+document.body.classList.toggle('phone', phone);
+applyTheme(); rebuild(); requestAnimationFrame(frame_);
+</script>
+</body>
+</html>
