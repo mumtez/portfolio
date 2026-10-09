@@ -1,0 +1,3 @@
+# Intro Seeds are precomputed offline, drawn at random from a pool
+
+The name must form out of chaos under strict Life, but running Life forward from random soup never lands on a specific pattern, so Intro Seeds are found ahead of time by searching backward from the name (SAT-based predecessor search) and shipped as data. A pool of several seeds is kept for each name layout (one line on wide screens, two stacked lines on narrow ones) and one is picked at random per visit, so the Intro is real Life and still varies. If the search can't reach ~8 generations back within a time-boxed attempt, the Intro becomes a hybrid: guided emergence (Pinned Cells condensing out of soup) for the early chaos, ending on however many strict generations were found.
