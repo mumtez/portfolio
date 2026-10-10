@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import prototypeLayouts from "../../tests/fixtures/prototype-name-layouts.json";
 import {
+  bodyTextCondensate,
   boxContains,
   nameMask,
   navItemAt,
@@ -10,7 +11,7 @@ import {
   type CellMask,
 } from "./cell-typesetter";
 import type { Point } from "./life-engine";
-import { boxesOverlap, boxInside, rowsIn, TEST_CONTENT } from "./test-support";
+import { boxesOverlap, boxInside, mulberry32, rowsIn, TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
 
@@ -266,6 +267,81 @@ describe("Cell Typesetter", () => {
 
     it("has no name layout on other Sections", () => {
       expect(typesetSection(VIEWPORT, TEST_CONTENT, "/about/").nameLayout).toBeUndefined();
+    });
+  });
+
+  describe("the Body Text region", () => {
+    it.each(TEST_CONTENT.sections.map((s) => s.path))("on %s sits below the title, clear of every Pinned Cell, down to the bottom", (path) => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, path);
+      const { body, title } = layout;
+      expect(body.y).toBeGreaterThan(title.y + title.height);
+      expect(body.y + body.height).toBe(VIEWPORT.height);
+      expect(boxInside(body, VIEWPORT)).toBe(true);
+      for (const cell of layout.pinned) expect(boxContains(body, cell)).toBe(false);
+    });
+
+    it("is a centred column about 44rem (704px) wide on a wide screen", () => {
+      // 8px cells: 704px is 88 cells.
+      const { body } = typesetSection({ width: 240, height: 110, cellPx: 8 }, TEST_CONTENT, "/about/");
+      expect(body.width).toBe(88);
+      expect(body.x).toBe(76);
+    });
+
+    it("spans the screen less a 16px gutter on each side on a phone", () => {
+      // A 390px phone at 2px cells: 195 cells, gutters of 8 cells.
+      const { body } = typesetSection({ width: 195, height: 422, cellPx: 2 }, TEST_CONTENT, "/projects/baja/");
+      expect(body.x).toBe(8);
+      expect(body.width).toBe(179);
+    });
+
+    it("is empty when the title leaves no room below it", () => {
+      const { body } = typesetSection({ width: 201, height: 20 }, TEST_CONTENT, "/about/");
+      expect(body.height).toBe(0);
+    });
+  });
+
+  describe("the Body Text condensate", () => {
+    const viewport = { width: 240, height: 110, cellPx: 8 };
+    const { body } = typesetSection(viewport, TEST_CONTENT, "/projects/roborebels/");
+    const cells = bodyTextCondensate(body, viewport, mulberry32(1));
+
+    it("lies inside the Body Text region", () => {
+      expect(cells.length).toBeGreaterThan(0);
+      for (const cell of cells) expect(boxContains(body, cell)).toBe(true);
+    });
+
+    it("looks like lines of text: bands of rows with blank rows between them", () => {
+      // 8px cells and ~25px lines: a 3-row pitch, 2 rows of text and 1 blank.
+      const rows = new Set(cells.map((c) => c.y - body.y));
+      expect(rows.has(0)).toBe(true);
+      expect(rows.has(1)).toBe(true);
+      expect(rows.has(2)).toBe(false);
+      expect(rows.has(3)).toBe(true);
+      expect(rows.has(5)).toBe(false);
+    });
+
+    it("starts each line at the column's left edge, ragged on the right", () => {
+      const lines = Map.groupBy(cells, (c) => Math.floor((c.y - body.y) / 3));
+      const rights = [...lines.values()].map((line) => Math.max(...line.map((c) => c.x)));
+      for (const line of lines.values()) expect(Math.min(...line.map((c) => c.x))).toBeLessThan(body.x + 4);
+      expect(new Set(rights).size).toBeGreaterThan(1);
+    });
+
+    it("condenses a few lines, not the whole column", () => {
+      const lines = new Set(cells.map((c) => Math.floor((c.y - body.y) / 3)));
+      expect(lines.size).toBeGreaterThan(3);
+      expect(lines.size).toBeLessThanOrEqual(10);
+    });
+
+    it("is sparse enough to read as cells, not a solid block", () => {
+      const rows = new Set(cells.map((c) => c.y));
+      const density = cells.length / (rows.size * body.width);
+      expect(density).toBeGreaterThan(0.3);
+      expect(density).toBeLessThan(0.7);
+    });
+
+    it("is empty for an empty region", () => {
+      expect(bodyTextCondensate({ x: 0, y: 10, width: 50, height: 0 }, viewport, mulberry32(1))).toEqual([]);
     });
   });
 });

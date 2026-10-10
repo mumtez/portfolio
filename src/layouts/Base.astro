@@ -129,9 +129,17 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
     overflow-y: auto;
     text-shadow: 0 0 6px var(--bg);
   }
-  /* A Section arriving in a Transition fades in as its cells pin in. */
-  html.grid-on main.arriving {
-    animation: arrive 600ms ease-out;
+  /*
+   * A Section arriving in a Transition: its Body Text stays hidden while it condenses
+   * out of cells, then fades in as the Grid script releases them into Life (ADR 0004).
+   * It stays in the accessibility tree throughout, and its heading takes focus at once.
+   */
+  html.grid-on main.arriving:not(.released) {
+    opacity: 0;
+    pointer-events: none;
+  }
+  html.grid-on main.arriving.released {
+    animation: arrive 500ms ease-out;
   }
   @keyframes arrive {
     from {

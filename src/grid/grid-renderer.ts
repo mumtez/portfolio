@@ -2,10 +2,13 @@
  * Grid Renderer: draws the Life Engine's readout to a Canvas2D. No logic beyond drawing.
  *
  * Only the viewport is drawn, and cells are batched into one path per colour and
- * opacity: rounded squares, no gridlines.
+ * opacity: rounded squares, no gridlines. Free Cells under the Body Text are drawn
+ * faint and leave no ghosts there, so the HTML over them stays readable. Walls (Frames)
+ * are left empty: real media cover them.
  */
+import type { Box } from "./cell-typesetter";
 import { CellKind } from "./life-engine";
-import type { Palette } from "./palette";
+import { BODY_TEXT_CELL_ALPHA, type Palette } from "./palette";
 
 /** The part of the Life Engine the renderer reads. */
 export interface GridReadout {
@@ -28,6 +31,7 @@ const LAYERS = {
   ghostMid: { color: "free", alpha: 0.25 },
   ghostBright: { color: "free", alpha: 0.4 },
   fringe: { color: "free", alpha: 0.22 },
+  underBodyText: { color: "free", alpha: BODY_TEXT_CELL_ALPHA },
   free: { color: "free", alpha: 1 },
   pinned: { color: "pinned", alpha: 1 },
 } as const;
@@ -60,13 +64,14 @@ export class GridRenderer {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  draw(grid: GridReadout): void {
+  /** Draw the Grid; `bodyText` is where the Body Text lies over it, in cells. */
+  draw(grid: GridReadout, bodyText?: Box): void {
     const { ctx, layers, palette } = this;
     for (const layer of Object.values(layers)) layer.cells.length = 0;
 
     for (let y = 0; y < grid.height; y++) {
       for (let x = 0; x < grid.width; x++) {
-        const layer = this.layerFor(grid, x, y);
+        const layer = this.layerFor(grid, x, y, bodyText);
         if (layer) layer.cells.push(x, y);
       }
     }
@@ -92,9 +97,13 @@ export class GridRenderer {
     ctx.globalAlpha = 1;
   }
 
-  private layerFor(grid: GridReadout, x: number, y: number): Layer | undefined {
+  private layerFor(grid: GridReadout, x: number, y: number, bodyText?: Box): Layer | undefined {
     const { layers } = this;
-    switch (grid.kindAt(x, y)) {
+    const kind = grid.kindAt(x, y);
+    if (kind !== CellKind.Pinned && bodyText && inBox(bodyText, x, y)) {
+      return kind === CellKind.Free || kind === CellKind.Fringe ? layers.underBodyText : undefined;
+    }
+    switch (kind) {
       case CellKind.Pinned:
         return layers.pinned;
       case CellKind.Free:
@@ -109,4 +118,8 @@ export class GridRenderer {
         return undefined;
     }
   }
+}
+
+function inBox(box: Box, x: number, y: number): boolean {
+  return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
 }

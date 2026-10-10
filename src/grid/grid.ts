@@ -5,15 +5,18 @@
  * session, the history and the renderer. Home plays the Intro on a first visit. Every
  * Section pins its heading and the nav; the nav's real `<a>` elements are laid over
  * their cells, and clicking one (or going back or forward) runs a Transition while the
- * next Section's Plain View is swapped in. Each nav item is a button drawn in cells,
- * whose border decays for a moment on hover or focus. Soup is kept alive by spaceships flying in
- * from the edges, and stirred by the pointer.
+ * next Section's Plain View is swapped in. That Section's Body Text stays hidden while
+ * it condenses out of cells, and fades in as they're released (ADR 0004). Its Frames are
+ * measured where they lie in the page and walled off in the Life Engine. Each nav item is
+ * a button drawn in cells, whose border decays for a moment on hover or focus. Soup is
+ * kept alive by spaceships flying in from the edges, and stirred by the pointer.
  */
 import { countPageView } from "../lib/analytics";
 import { cellSize } from "./cell-size";
-import { navItemAt, type SectionLayout } from "./cell-typesetter";
+import { navItemAt, type Box, type SectionLayout } from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
+import { cellBoxCovering } from "./html-regions";
 import type { Point } from "./life-engine";
 import { prefetchSection, swapToSection } from "./page-swap";
 import { DARK } from "./palette";
@@ -84,13 +87,17 @@ export function startGrid({ canvas, content }: GridOptions): void {
   let director: GridDirector;
   let cellPx = 1;
   let ticker: Ticker | undefined;
+  /** The Section whose HTML is in the page; unknown while a swap is on its way. */
+  let shownRoute: string | undefined = sectionPath(window.location.pathname);
+  /** The Frames last walled off, to skip setting the same ones again. */
+  let framesKey = "";
 
   function rebuild(): void {
     cellPx = cellSize(window.innerWidth, window.devicePixelRatio || 1);
     const width = Math.ceil(window.innerWidth / cellPx);
     const height = Math.ceil(window.innerHeight / cellPx);
     director = new GridDirector({
-      viewport: { width, height },
+      viewport: { width, height, cellPx },
       margin: MARGIN,
       route: window.location.pathname,
       reducedMotion,
@@ -98,14 +105,55 @@ export function startGrid({ canvas, content }: GridOptions): void {
       content,
     });
     renderer.resize(width, height, cellPx);
+    framesKey = "";
     redraw();
     placeHtml(director.layout, cellPx);
   }
 
   /** Draw now, and give what was drawn (a fresh Intro seed, say) a full tick on screen. */
   function redraw(): void {
-    renderer.draw(director.engine);
+    draw();
     ticker?.restart();
+  }
+
+  function draw(): void {
+    renderer.draw(director.engine, syncHtml());
+  }
+
+  /**
+   * Wall off the Frames of the Section on screen where they are now (they scroll with
+   * the Body Text), and return where its Body Text lies over the Grid, so the cells
+   * there are drawn faint: the text column, down to the end of the text.
+   */
+  function syncHtml(): Box {
+    const { body } = director.layout;
+    const main = document.querySelector("main");
+    if (!main || !director.bodyTextReleased || shownRoute !== director.route) {
+      setFrames([]);
+      return body;
+    }
+    const view = { x: 0, y: 0, width: director.engine.width, height: director.engine.height };
+    const scrollBox = cellBoxCovering(main.getBoundingClientRect(), cellPx, view) ?? view;
+    setFrames(
+      [...main.querySelectorAll(".frame-slot")].flatMap(
+        (el) => cellBoxCovering(el.getBoundingClientRect(), cellPx, scrollBox) ?? [],
+      ),
+    );
+    const textBottom = main.lastElementChild?.getBoundingClientRect().bottom ?? 0;
+    const bottom = Math.min(body.y + body.height, Math.ceil(textBottom / cellPx));
+    return { ...body, height: Math.max(0, bottom - body.y) };
+  }
+
+  function setFrames(frames: Box[]): void {
+    const key = JSON.stringify(frames);
+    if (key === framesKey) return;
+    framesKey = key;
+    director.setFrames(frames);
+  }
+
+  /** Fade the arriving Section's HTML in once the Director has released its Body Text. */
+  function revealBodyText(): void {
+    if (director.bodyTextReleased) document.querySelector("main.arriving:not(.released)")?.classList.add("released");
   }
 
   // A resize starts a new Director. The Intro is already marked seen, so a resize
@@ -122,13 +170,19 @@ export function startGrid({ canvas, content }: GridOptions): void {
    */
   function goTo(path: string, push?: string): void {
     if (!director.navigate(path)) return;
+    shownRoute = undefined;
     if (push !== undefined) history.pushState(null, "", push);
     placeHtml(director.layout, cellPx);
     redraw();
     // If the page can't be fetched, load it the ordinary way: the URL already points at it.
     // A page load is counted by GoatCounter's script; a swap has to be counted here.
     swapToSection(path).then(
-      (landed) => landed && countPageView(path),
+      (landed) => {
+        if (!landed) return;
+        shownRoute = path;
+        revealBodyText();
+        countPageView(path);
+      },
       () => window.location.reload(),
     );
   }
@@ -255,6 +309,7 @@ export function startGrid({ canvas, content }: GridOptions): void {
   ticker = startTicker(() => {
     if (director.phase !== "intro") maybeLaunch(director.engine);
     director.tick();
-    renderer.draw(director.engine);
+    revealBodyText();
+    draw();
   }, TICK_MS);
 }

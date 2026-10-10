@@ -104,6 +104,11 @@ export function boxContains(box: Box, { x, y }: Point): boolean {
 export interface ViewportCells {
   readonly width: number;
   readonly height: number;
+  /**
+   * CSS pixels per cell (default 8). The Body Text is HTML set in CSS pixels, so its
+   * region and line spacing in cells depend on it.
+   */
+  readonly cellPx?: number;
 }
 
 /** One link in the nav, drawn in cells as a button: its label inside a border. */
@@ -131,6 +136,11 @@ export interface SectionLayout {
   /** On Home only: which name layout `title` holds, so the Intro can pick a matching Intro Seed. */
   readonly nameLayout?: NameLayout;
   readonly nav: readonly NavItem[];
+  /**
+   * Where the Section's Body Text (its HTML content) lies over the Grid: the centred
+   * text column below the title, down to the bottom of the viewport. Pins nothing.
+   */
+  readonly body: Box;
 }
 
 /** Rows above the nav. */
@@ -187,18 +197,23 @@ export function typesetSection(viewport: ViewportCells, content: GridContent, pa
     const x = Math.floor((viewport.width - mask.width) / 2);
     const y = Math.max(top, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
     place(mask, x, y);
-    return { pinned, title: { x, y, width: mask.width, height: mask.height }, nameLayout, nav };
+    const title = { x, y, width: mask.width, height: mask.height };
+    return { pinned, title, nameLayout, nav, body: bodyRegion(viewport, title) };
   }
 
   const section = content.sections.find((s) => s.path === path);
-  if (!section) return { pinned, title: { x: 0, y: top, width: viewport.width, height: 0 }, nav };
+  if (!section) {
+    const title = { x: 0, y: top, width: viewport.width, height: 0 };
+    return { pinned, title, nav, body: bodyRegion(viewport, title) };
+  }
 
   const lines = wrap(section.heading, viewport.width - 2 * SIDE).map(textMask);
   const width = Math.max(...lines.map((l) => l.width));
   const x0 = Math.floor((viewport.width - width) / 2);
   lines.forEach((line, i) => place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH));
   const height = (lines.length - 1) * HEADING_LINE_PITCH + GLYPH_HEIGHT;
-  return { pinned, title: { x: x0, y: top, width, height }, nav };
+  const title = { x: x0, y: top, width, height };
+  return { pinned, title, nav, body: bodyRegion(viewport, title) };
 }
 
 /** The nav item whose hit region holds `at`, if any. */
@@ -278,4 +293,52 @@ function wrap(text: string, maxWidth: number): string[] {
     else lines.push(word);
   }
   return lines.length ? lines : [""];
+}
+
+/*
+ * Body Text. These mirror the page CSS for the Section's content when the Grid is on
+ * (`Base.astro` and `Section.astro`): it starts 1.25rem below the title, in a centred
+ * column at most 44rem wide with at least 16px either side, with 16px type at a
+ * line-height of 1.55.
+ */
+const DEFAULT_CELL_PX = 8;
+const BODY_GAP_PX = 20;
+const BODY_COLUMN_PX = 704;
+const BODY_GUTTER_PX = 16;
+const BODY_LINE_PX = 16 * 1.55;
+/** The condensate fills this share of each line's rows, like the x-height of a line of text. */
+const CONDENSATE_INK_ROWS = 0.6;
+/** Chance that a Cell on a condensate line is alive. */
+const CONDENSATE_DENSITY = 0.55;
+/** Lines the condensate holds at most: enough to read as a paragraph, not a wall. */
+const CONDENSATE_MAX_LINES = 8;
+
+function bodyRegion(viewport: ViewportCells, title: Box): Box {
+  const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
+  const gutter = Math.max(BODY_GUTTER_PX, (viewport.width * cellPx - BODY_COLUMN_PX) / 2);
+  const x = Math.min(Math.ceil(gutter / cellPx), Math.floor(viewport.width / 2));
+  const y = Math.min(title.y + title.height + Math.ceil(BODY_GAP_PX / cellPx), viewport.height);
+  return { x, y, width: viewport.width - 2 * x, height: viewport.height - y };
+}
+
+/**
+ * The cells a Section's Body Text condenses out of as it arrives (ADR 0004): a few
+ * lines of scattered cells shaped like a paragraph at the top of its region, ragged on
+ * the right. The Grid Director pins them during a Transition, then releases them into
+ * Life as the HTML fades in over them.
+ */
+export function bodyTextCondensate(body: Box, viewport: ViewportCells, random: () => number): Point[] {
+  const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
+  const pitch = Math.max(2, Math.round(BODY_LINE_PX / cellPx));
+  const ink = Math.ceil(pitch * CONDENSATE_INK_ROWS);
+  const lines = Math.min(CONDENSATE_MAX_LINES, Math.floor(body.height / pitch));
+  const cells: Point[] = [];
+  for (let line = 0; line < lines; line++) {
+    const length = Math.round(body.width * (0.75 + 0.25 * random()));
+    for (let row = 0; row < ink; row++) {
+      const y = body.y + line * pitch + row;
+      for (let dx = 0; dx < length; dx++) if (random() < CONDENSATE_DENSITY) cells.push({ x: body.x + dx, y });
+    }
+  }
+  return cells;
 }

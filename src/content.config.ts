@@ -72,6 +72,23 @@ const projects = defineCollection({
     deepDive: z.boolean().default(false),
     /** What's still missing from a Deep Dive's story, until Andrew writes it. */
     placeholder: z.string().optional(),
+    /**
+     * A Deep Dive's Frames, for photos and videos. Each one's media is the file
+     * `public/media/<file name>/<slot>.<ext>` (see `src/lib/frames.ts`); place one in the
+     * Body Text with a `<!-- frame: <slot> -->` line, or it follows the Body Text.
+     */
+    frames: z
+      .array(
+        z.object({
+          slot: z.string().regex(/^[a-z0-9-]+$/),
+          /** What the photo or video shows, for screen readers and if it fails to load. */
+          alt: z.string(),
+          caption: z.string().optional(),
+          /** The Frame's shape, as a CSS aspect ratio. Media keep their own shape inside it. */
+          aspect: z.string().regex(/^\d+ \/ \d+$/).default("3 / 2"),
+        }),
+      )
+      .default([]),
   }),
 });
 

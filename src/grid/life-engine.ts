@@ -7,6 +7,10 @@
  * so nothing wraps, and a margin Cell that has been alive too much lately dies
  * (see `MARGIN_MAX_HEAT`), so patterns that leave are discarded instead of
  * leaving debris against the dead ring.
+ *
+ * Walls (a Section's Frames) are dead Cells: they never come alive, so they count as
+ * dead neighbours and absorb whatever flies into them. A wall wins over a pin: a
+ * Pinned Cell inside a wall is dead until the wall goes.
  */
 
 export interface Point {
@@ -23,6 +27,8 @@ export const CellKind = {
   /** A live Free Cell touching a Pinned Cell, continually reborn. */
   Fringe: 3,
   Pinned: 4,
+  /** Inside a wall (a Frame): always dead, and covered by real media on the page. */
+  Wall: 5,
 } as const;
 export type CellKind = (typeof CellKind)[keyof typeof CellKind];
 
@@ -61,6 +67,8 @@ export class LifeEngine {
   private alive: Uint8Array;
   private next: Uint8Array;
   private readonly pinned: Uint8Array;
+  /** 1 for wall Cells (Frames). */
+  private readonly wall: Uint8Array;
   /** 1 where a non-pinned Cell touches a Pinned Cell. */
   private readonly fringe: Uint8Array;
   /** 1 while alive, then decays towards 0 after death. */
@@ -79,6 +87,7 @@ export class LifeEngine {
     this.alive = new Uint8Array(this.stride * this.rows);
     this.next = new Uint8Array(this.stride * this.rows);
     this.pinned = new Uint8Array(this.stride * this.rows);
+    this.wall = new Uint8Array(this.stride * this.rows);
     this.fringe = new Uint8Array(this.stride * this.rows);
     this.ghost = new Float32Array(this.stride * this.rows);
     this.heat = new Float32Array(this.stride * this.rows);
@@ -101,7 +110,25 @@ export class LifeEngine {
     this.classifyFringe();
   }
 
-  /** Bring Free Cells to life. Points outside the Grid are ignored. */
+  /**
+   * Replace the walls (Frames). Cells inside a wall die at once and leave no ghost; a
+   * Pinned Cell whose wall goes comes back to life.
+   */
+  setWalls(points: Iterable<Point>): void {
+    const { wall, pinned, alive, ghost } = this;
+    for (let i = 0; i < wall.length; i++) if (wall[i] && pinned[i]) alive[i] = ghost[i] = 1;
+    wall.fill(0);
+    for (const p of points) {
+      const i = this.index(p.x, p.y);
+      if (i < 0) continue;
+      wall[i] = 1;
+      alive[i] = 0;
+      ghost[i] = 0;
+    }
+    this.classifyFringe();
+  }
+
+  /** Bring Free Cells to life. Points outside the Grid or inside a wall are ignored. */
   inject(points: Iterable<Point>): void {
     for (const p of points) {
       const i = this.index(p.x, p.y);
@@ -111,11 +138,12 @@ export class LifeEngine {
 
   /** Advance one tick of B3/S23. */
   step(): void {
-    const { stride: W, rows: H, alive: a, next, pinned, inMargin, heat } = this;
+    const { stride: W, rows: H, alive: a, next, pinned, wall, inMargin, heat } = this;
     next.fill(0);
     for (let y = 1; y < H - 1; y++) {
       for (let x = 1; x < W - 1; x++) {
         const i = y * W + x;
+        if (wall[i]) continue;
         if (pinned[i]) {
           next[i] = 1;
           continue;
@@ -144,12 +172,13 @@ export class LifeEngine {
 
   isPinned(x: number, y: number): boolean {
     const i = this.index(x, y);
-    return i >= 0 && this.pinned[i] === 1;
+    return i >= 0 && this.pinned[i] === 1 && this.wall[i] === 0;
   }
 
   kindAt(x: number, y: number): CellKind {
     const i = this.index(x, y);
     if (i < 0) return CellKind.Dead;
+    if (this.wall[i]) return CellKind.Wall;
     if (this.pinned[i]) return CellKind.Pinned;
     if (this.alive[i]) return this.fringe[i] ? CellKind.Fringe : CellKind.Free;
     if (!this.fringe[i] && this.ghost[i] > GHOST_FLOOR) return CellKind.Ghost;
@@ -163,16 +192,17 @@ export class LifeEngine {
   }
 
   private revive(i: number): void {
+    if (this.wall[i]) return;
     this.alive[i] = 1;
     this.ghost[i] = 1;
   }
 
   private classifyFringe(): void {
-    const { stride: W, rows: H, pinned, fringe } = this;
+    const { stride: W, rows: H, pinned, wall, fringe } = this;
     fringe.fill(0);
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
-        if (!pinned[y * W + x]) continue;
+        if (!pinned[y * W + x] || wall[y * W + x]) continue;
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
             const nx = x + dx;

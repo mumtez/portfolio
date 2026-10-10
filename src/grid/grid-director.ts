@@ -4,16 +4,33 @@
  * Phases: Intro → Settled ⇄ Transition. On a first visit to Home the Intro plays a
  * random Intro Seed under strict Life, then pins the name. A Transition releases the
  * current Section's pins into Free Cells and pins the next Section in while real Life
- * runs. (Paused is the Ticker's job, and Off is the Plain View with no Grid at all.)
+ * runs, while the next Section's Body Text condenses out of Cells in its region; when
+ * the Transition settles, that condensate is released into Life as the Body Text's HTML
+ * fades in (ADR 0004). (Paused is the Ticker's job, and Off is the Plain View with no
+ * Grid at all.)
+ *
+ * Frames are walls in the Life Engine. Their media are real HTML that scrolls with the
+ * Body Text, so the page measures them and hands them over with `setFrames`.
  */
-import { boxContains, navItemAt, typesetSection, type Box, type SectionLayout, type ViewportCells } from "./cell-typesetter";
+import {
+  bodyTextCondensate,
+  boxContains,
+  navItemAt,
+  typesetSection,
+  type Box,
+  type SectionLayout,
+  type ViewportCells,
+} from "./cell-typesetter";
 import { INTRO_SEEDS, introCells, seedDensity, soupCells, type IntroSeed } from "./intro-seeds";
 import { LifeEngine, type Point } from "./life-engine";
 import { sectionPath, type GridContent } from "./routes";
 
 /** One generation every this many milliseconds, during the Intro and after it. */
 export const TICK_MS = 120;
-/** Generations a Transition takes to pin the next Section in: 5 × 120ms = 600ms. */
+/**
+ * Generations a Transition takes: 5 × 120ms = 600ms. The next Section's pins and its
+ * Body Text's condensate are all in by the last of them, which releases the condensate.
+ */
 export const TRANSITION_TICKS = 5;
 /** Generations a button's border stays unpinned after a hover or focus, decaying under real Life: 360ms. */
 export const BORDER_UNPIN_TICKS = 3;
@@ -60,6 +77,8 @@ export class GridDirector {
   private readonly unpinnedBorders = new Map<string, number>();
   /** The button under the pointer, so moving within it doesn't start its border over. */
   private hovered: string | undefined;
+  /** Wall Cells for the Frames on screen. */
+  private walls: readonly Point[] = [];
   private readonly random: () => number;
 
   constructor(private readonly options: GridDirectorOptions) {
@@ -87,6 +106,20 @@ export class GridDirector {
   /** What the Section on screen (or arriving) pins: its title, its nav and their hit regions. */
   get layout(): SectionLayout {
     return this._layout;
+  }
+
+  /**
+   * False while a Transition condenses the arriving Section's Body Text out of Cells;
+   * true once it's released into Life, when the page should fade the HTML in.
+   */
+  get bodyTextReleased(): boolean {
+    return this._phase !== "transition";
+  }
+
+  /** Wall off the Frames on screen (boxes in viewport cells), replacing any before. */
+  setFrames(frames: readonly Box[]): void {
+    this.walls = frames.flatMap(boxCells);
+    this._engine.setWalls(this.walls);
   }
 
   /** Advance one generation. */
@@ -143,11 +176,15 @@ export class GridDirector {
 
     this._route = route;
     this._layout = this.typeset(route);
-    const next = new Set(this._layout.pinned.map(key));
+    // Its Frames come with its HTML; the page sets them once that's in.
+    this.setFrames([]);
+    const condensate = bodyTextCondensate(this._layout.body, this.options.viewport, this.random);
+    const target = [...this._layout.pinned, ...condensate];
+    const next = new Set(target.map(key));
     const now = new Set(this.pinnedNow.map(key));
     this.kept = this.pinnedNow.filter((p) => next.has(key(p)));
     this.arriving = shuffle(
-      this._layout.pinned.filter((p) => !now.has(key(p))),
+      target.filter((p) => !now.has(key(p))),
       this.random,
     );
     this._phase = "transition";
@@ -156,13 +193,17 @@ export class GridDirector {
     return true;
   }
 
-  /** Pin the share of the arriving pins due after `tick` generations of the Transition. */
+  /**
+   * Pin the share of the arriving pins due after `tick` generations of the Transition:
+   * all of them on the generation before the last, which then settles, releasing the
+   * condensate.
+   */
   private pinArriving(tick: number): void {
     if (tick >= TRANSITION_TICKS) {
       this.pinLayout();
       return;
     }
-    const count = Math.ceil((this.arriving.length * tick) / TRANSITION_TICKS);
+    const count = Math.ceil((this.arriving.length * tick) / (TRANSITION_TICKS - 1));
     this.setPinned([...this.kept, ...this.arriving.slice(0, count)]);
   }
 
@@ -239,6 +280,7 @@ export class GridDirector {
   private resetEngine(): Box {
     const { viewport, margin } = this.options;
     this._engine = new LifeEngine({ width: viewport.width, height: viewport.height, margin });
+    this._engine.setWalls(this.walls);
     return { x: -margin, y: -margin, width: viewport.width + 2 * margin, height: viewport.height + 2 * margin };
   }
 }
@@ -250,5 +292,12 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
     const j = Math.floor(random() * (i + 1));
     [out[i], out[j]] = [out[j], out[i]];
   }
+  return out;
+}
+
+/** Every Cell in a box. */
+function boxCells({ x, y, width, height }: Box): Point[] {
+  const out: Point[] = [];
+  for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) out.push({ x: x + dx, y: y + dy });
   return out;
 }

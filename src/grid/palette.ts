@@ -20,6 +20,12 @@ export const DARK: Palette = {
   text: "#dbe7dd",
 };
 
+/**
+ * Cells under Body Text (its region of the Grid) are drawn at this opacity, like the
+ * Fringe, so the HTML over them keeps its contrast.
+ */
+export const BODY_TEXT_CELL_ALPHA = 0.22;
+
 function relativeLuminance(hex: string): number {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [n >> 16, (n >> 8) & 0xff, n & 0xff].map((v) => {

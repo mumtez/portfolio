@@ -54,6 +54,7 @@ export async function swapToSection(path: string): Promise<boolean> {
   document.title = next.title;
   syncMeta(next);
   const incoming = document.importNode(nextMain, true);
+  // Hidden until the Grid releases its Body Text's condensate (see `Base.astro`).
   incoming.classList.add("arriving");
   main.replaceWith(incoming);
   markCurrent(path);

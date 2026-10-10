@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, DARK } from "./palette";
+import { BODY_TEXT_CELL_ALPHA, contrastRatio, DARK } from "./palette";
+
+/** `fg` drawn at `alpha` over `bg`, as `#rrggbb`. */
+function over(fg: string, alpha: number, bg: string): string {
+  const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [f, b] = [channels(fg), channels(bg)];
+  return `#${f.map((c, i) => Math.round(c * alpha + b[i] * (1 - alpha)).toString(16).padStart(2, "0")).join("")}`;
+}
 
 describe("dark palette", () => {
   it("uses the hunter greens", () => {
@@ -22,5 +29,15 @@ describe("dark palette", () => {
   it("keeps Pinned Cells and text readable against the background (WCAG AA)", () => {
     expect(contrastRatio(DARK.pinned, DARK.background)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(DARK.text, DARK.background)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps Body Text above 7:1 (WCAG AAA) over the faint cells drawn under it", () => {
+    for (const cell of [DARK.free, DARK.pinned]) {
+      expect(contrastRatio(DARK.text, over(cell, BODY_TEXT_CELL_ALPHA, DARK.background))).toBeGreaterThanOrEqual(7);
+    }
+  });
+
+  it("needs the cells under Body Text drawn faint: at full strength they'd pull it below 7:1", () => {
+    expect(contrastRatio(DARK.text, DARK.free)).toBeLessThan(7);
   });
 });

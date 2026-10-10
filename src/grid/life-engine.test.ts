@@ -87,6 +87,96 @@ describe("LifeEngine", () => {
     });
   });
 
+  describe("walls (Frames)", () => {
+    /** Every Cell in a box, as Points. */
+    const boxCells = (x0: number, y0: number, w: number, h: number): Point[] =>
+      Array.from({ length: w * h }, (_, i) => ({ x: x0 + (i % w), y: y0 + Math.floor(i / w) }));
+
+    it("kill any Cell inside them and leave no ghost there", () => {
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
+      const block = BLOCK.map((p) => ({ x: p.x + 4, y: p.y + 4 }));
+      engine.inject(block);
+      engine.setWalls(boxCells(3, 3, 4, 4));
+      for (const p of block) {
+        expect(engine.isAlive(p.x, p.y)).toBe(false);
+        expect(engine.kindAt(p.x, p.y)).toBe(CellKind.Wall);
+      }
+    });
+
+    it("never come alive, even with three live neighbours", () => {
+      // The middle of a blinker's neighbourhood is a wall: the blinker can't turn.
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
+      engine.setWalls([{ x: 4, y: 3 }, { x: 4, y: 5 }]);
+      engine.inject([{ x: 3, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 4 }]);
+      engine.step();
+      expect(engine.isAlive(4, 3)).toBe(false);
+      expect(engine.isAlive(4, 5)).toBe(false);
+    });
+
+    it("count as dead neighbours", () => {
+      // A block with one Cell inside a wall is three Cells: an L that grows back
+      // into a block only if the walled Cell counted. With the wall it can't.
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
+      engine.inject(BLOCK.map((p) => ({ x: p.x + 4, y: p.y + 4 })));
+      engine.setWalls([{ x: 5, y: 5 }]);
+      engine.step();
+      expect(engine.isAlive(5, 5)).toBe(false);
+      expect(liveCells(engine)).toEqual(["4,4", "4,5", "5,4"]);
+    });
+
+    it("ignore Free Cells injected into them", () => {
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
+      engine.setWalls([{ x: 5, y: 5 }]);
+      engine.inject([{ x: 5, y: 5 }]);
+      expect(engine.isAlive(5, 5)).toBe(false);
+    });
+
+    it("win over pins: a Pinned Cell inside a wall is dead until the wall goes", () => {
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
+      engine.setWalls([{ x: 5, y: 5 }]);
+      engine.setPinned([{ x: 5, y: 5 }]);
+      engine.step();
+      expect(engine.isAlive(5, 5)).toBe(false);
+      expect(engine.isPinned(5, 5)).toBe(false);
+      engine.setWalls([]);
+      engine.step();
+      expect(engine.isPinned(5, 5)).toBe(true);
+      expect(engine.isAlive(5, 5)).toBe(true);
+    });
+
+    it("are replaced, not accumulated, by a new set of walls", () => {
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
+      engine.setWalls([{ x: 2, y: 2 }]);
+      engine.setWalls([{ x: 7, y: 7 }]);
+      expect(engine.kindAt(2, 2)).toBe(CellKind.Dead);
+      expect(engine.kindAt(7, 7)).toBe(CellKind.Wall);
+      engine.inject([{ x: 2, y: 2 }]);
+      expect(engine.isAlive(2, 2)).toBe(true);
+    });
+
+    it.each([0, 1, 2, 3])("stay dead and absorb a glider that hits them (phase %i)", (phase) => {
+      // A glider flying down-right into a wall 10 cells thick: nothing ever lives in
+      // the wall, nothing gets past it, and what's left stops moving.
+      const engine = new LifeEngine({ width: 40, height: 40, margin: 4 });
+      const wall = boxCells(20, 0, 10, 40);
+      engine.setWalls(wall);
+      const ship = spaceship("glider", { x: 1, y: 1 });
+      engine.inject(ship.cells.map((p) => ({ x: p.x + 4 + phase, y: p.y + 10 })));
+      const walled = new Set(wall.map((p) => `${p.x},${p.y}`));
+      for (let t = 0; t < 120; t++) {
+        engine.step();
+        for (const p of allLive(engine)) {
+          expect(walled.has(`${p.x},${p.y}`)).toBe(false);
+          expect(p.x).toBeLessThan(20);
+        }
+      }
+      const before = liveCells(engine);
+      engine.step();
+      engine.step();
+      expect(liveCells(engine)).toEqual(before);
+    });
+  });
+
   describe("readout", () => {
     it("classifies Free Cells touching a Pinned Cell (including diagonally) as Fringe", () => {
       const engine = new LifeEngine({ width: 12, height: 12, margin: 2 });

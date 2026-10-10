@@ -164,6 +164,33 @@ describe("Deep Dive Body Text", () => {
   });
 });
 
+describe("Deep Dive Frames", () => {
+  it.each(["roborebels", "baja", "ftc-event-viewer"])("%s has Frame slots inside its Body Text", (id) => {
+    const frames = builtPage(`/projects/${id}/`).querySelectorAll("main .body-text figure.frame .frame-slot");
+    expect(frames.length).toBeGreaterThan(0);
+  });
+
+  it.each(["roborebels", "baja", "ftc-event-viewer"])("%s shows, for each missing photo or video, the file it wants", (id) => {
+    for (const frame of builtPage(`/projects/${id}/`).querySelectorAll("figure.frame")) {
+      const slot = frame.getAttribute("data-frame");
+      const media = frame.querySelector("img, video");
+      if (media) {
+        expect(media.getAttribute("src")).toMatch(new RegExp(`^/media/${id}/${slot}\\.`));
+        expect(media.getAttribute("alt") ?? media.getAttribute("aria-label")).toBeTruthy();
+      } else {
+        expect(text(frame.querySelector(".placeholder"))).toContain(`public/media/${id}/${slot}.jpg`);
+      }
+    }
+  });
+
+  it("places a Frame where its marker is in the Markdown", () => {
+    const body = builtPage("/projects/roborebels/").querySelector(".body-text");
+    const order = [...(body?.children ?? [])].map((el) => el.getAttribute("data-frame") ?? el.tagName.toLowerCase());
+    expect(order.indexOf("robot")).toBeLessThan(order.indexOf("h2"));
+    expect(order.indexOf("match")).toBeGreaterThan(order.indexOf("h2"));
+  });
+});
+
 describe("Privacy", () => {
   const pages = allBuiltHtml();
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { boxContains } from "./cell-typesetter";
 import { BORDER_UNPIN_TICKS, GridDirector, TICK_MS, type GridDirectorOptions, type IntroMemory } from "./grid-director";
 import { INTRO_SEEDS } from "./intro-seeds";
+import { CellKind } from "./life-engine";
 import { TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
@@ -491,6 +493,105 @@ describe("Grid Director", () => {
       expect(d.phase).toBe("intro");
       ticksToSettle(d);
       expect(nameIsPinned(d)).toBe(true);
+    });
+  });
+
+  describe("Body Text arriving in a Transition", () => {
+    const settledAt = (route: string) => director({ route, introMemory: memory(true) });
+    const pinnedInBody = (d: GridDirector) => [...pinnedKeys(d)].filter((k) => {
+      const [x, y] = k.split(",").map(Number);
+      return boxContains(d.layout.body, { x, y });
+    });
+
+    it("is released at once when a Section loads directly", () => {
+      const d = settledAt("/projects/baja/");
+      expect(d.bodyTextReleased).toBe(true);
+      expect(pinnedInBody(d)).toEqual([]);
+    });
+
+    it("condenses out of Cells, pinned in its region, as the Transition runs", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/roborebels/");
+      expect(d.bodyTextReleased).toBe(false);
+      const counts: number[] = [];
+      while (d.phase === "transition") {
+        counts.push(pinnedInBody(d).length);
+        d.tick();
+      }
+      expect(counts[0]).toBe(0);
+      for (let i = 1; i < counts.length; i++) expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+    });
+
+    it("releases into Life when the Transition settles, which is when its HTML fades in", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/roborebels/");
+      let condensed: string[] = [];
+      while (d.phase === "transition") {
+        condensed = pinnedInBody(d);
+        d.tick();
+      }
+      expect(condensed.length).toBeGreaterThan(50);
+      expect(d.bodyTextReleased).toBe(true);
+      expect(pinnedInBody(d)).toEqual([]);
+      for (const k of condensed) {
+        const [x, y] = k.split(",").map(Number);
+        expect(d.engine.isAlive(x, y), k).toBe(true);
+      }
+      // Real Life tears it apart from there.
+      d.tick();
+      expect(condensed.some((k) => {
+        const [x, y] = k.split(",").map(Number);
+        return !d.engine.isAlive(x, y);
+      })).toBe(true);
+    });
+
+    it("still settles within the Transition's budget of about 600ms", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/baja/");
+      expect(ticksToSettle(d) * TICK_MS).toBeLessThanOrEqual(600);
+    });
+
+    it("starts condensing again for the latest Section when redirected", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/");
+      d.tick();
+      d.tick();
+      d.navigate("/contact/");
+      expect(d.bodyTextReleased).toBe(false);
+      ticksToSettle(d);
+      expect(d.bodyTextReleased).toBe(true);
+      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)));
+    });
+  });
+
+  describe("Frames", () => {
+    const settledAt = (route: string) => director({ route, introMemory: memory(true) });
+    const frame = { x: 60, y: 40, width: 30, height: 12 };
+
+    it("wall off their region: no Cell lives there, whatever flies in", () => {
+      const d = settledAt("/projects/baja/");
+      d.setFrames([frame]);
+      for (let t = 0; t < 40; t++) {
+        d.tick();
+        for (let y = frame.y; y < frame.y + frame.height; y++) {
+          for (let x = frame.x; x < frame.x + frame.width; x++) expect(d.engine.isAlive(x, y)).toBe(false);
+        }
+      }
+    });
+
+    it("move with their media: a new set replaces the old", () => {
+      const d = settledAt("/projects/baja/");
+      d.setFrames([frame]);
+      d.setFrames([{ ...frame, y: frame.y - 5 }]);
+      expect(d.engine.kindAt(frame.x, frame.y + frame.height - 1)).not.toBe(CellKind.Wall);
+      expect(d.engine.kindAt(frame.x, frame.y - 5)).toBe(CellKind.Wall);
+    });
+
+    it("go when a Transition leaves their Section", () => {
+      const d = settledAt("/projects/baja/");
+      d.setFrames([frame]);
+      d.navigate("/about/");
+      expect(d.engine.kindAt(frame.x, frame.y)).not.toBe(CellKind.Wall);
     });
   });
 });

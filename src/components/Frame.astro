@@ -1,0 +1,69 @@
+---
+/**
+ * A Frame in a Deep Dive: a real photo or video when its file is in the Deep Dive's
+ * media folder, or a placeholder naming the file it wants. With the Grid on, the Grid
+ * script finds `.frame-slot` boxes and walls them off in the Life Engine.
+ */
+import { FRAME_EXTENSIONS, frameMedia, mediaDir, type FrameMedia } from "../lib/frames";
+import Placeholder from "./Placeholder.astro";
+
+interface Props {
+  /** The Deep Dive's id (its Markdown file name). */
+  deepDive: string;
+  slot: string;
+  alt: string;
+  caption?: string;
+  aspect: string;
+  /** The file names in the Deep Dive's media folder. */
+  files: readonly string[];
+}
+
+const { deepDive, slot, alt, caption, aspect, files } = Astro.props;
+const media: FrameMedia | undefined = frameMedia(deepDive, slot, files);
+const [first, ...others] = FRAME_EXTENSIONS;
+const note = `Photo or video: add ${mediaDir(deepDive)}/${slot}.${first} (or ${others.map((e) => `.${e}`).join(", ")})`;
+---
+
+<figure class="frame" data-frame={slot}>
+  <div class="frame-slot" style={`aspect-ratio: ${aspect}`}>
+    {media?.kind === "image" && <img src={media.src} alt={alt} loading="lazy" decoding="async" />}
+    {media?.kind === "video" && <video src={media.src} aria-label={alt} controls preload="metadata" playsinline />}
+    {!media && <Placeholder note={note} />}
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .frame {
+    margin: 1.5em 0;
+  }
+  .frame-slot {
+    width: 100%;
+  }
+  .frame-slot img,
+  .frame-slot video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+  /* The placeholder fills the Frame, so its size and place are plain to see. */
+  .frame-slot > :global(.placeholder) {
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25em;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  figcaption {
+    margin-top: 0.5em;
+    font-size: 0.9em;
+    opacity: 0.8;
+  }
+</style>
