@@ -8,6 +8,7 @@
  * next Section's Plain View is swapped in. Soup is kept alive by spaceships flying in
  * from the edges, and stirred by the pointer.
  */
+import { countPageView } from "../lib/analytics";
 import { navItemAt, type SectionLayout } from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
@@ -127,7 +128,11 @@ export function startGrid({ canvas, content }: GridOptions): void {
     placeHtml(director.layout, cellPx);
     redraw();
     // If the page can't be fetched, load it the ordinary way: the URL already points at it.
-    swapToSection(path).catch(() => window.location.reload());
+    // A page load is counted by GoatCounter's script; a swap has to be counted here.
+    swapToSection(path).then(
+      (landed) => landed && countPageView(path),
+      () => window.location.reload(),
+    );
   }
 
   // Links to other Sections run a Transition instead of a page load. They stay real
