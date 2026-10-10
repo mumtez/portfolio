@@ -1,7 +1,9 @@
 /**
  * Cell Typesetter: turns content into Pinned Cell masks. Pure, headless.
  */
+import { FONT_5X7 } from "./font-5x7";
 import type { Point } from "./life-engine";
+import type { GridContent } from "./routes";
 
 /** A set of cells inside a width×height box, with (0,0) at its top-left. */
 export interface CellMask {
@@ -58,6 +60,24 @@ function maskFromRows(rows: readonly string[]): CellMask {
   return { width: rows[0].length, height: rows.length, cells };
 }
 
+/** Rows of every glyph in the 5×7 font. */
+const GLYPH_HEIGHT = FONT_5X7.A.length;
+const GLYPH_WIDTH = FONT_5X7.A[0].length;
+const BLANK_GLYPH: readonly string[] = Array(GLYPH_HEIGHT).fill(".".repeat(GLYPH_WIDTH));
+/** Cells between glyphs. A space is a blank glyph, so words sit 7 cells apart. */
+const LETTER_GAP = 1;
+
+/** One line of text in the 5×7 font, in capitals. Characters the font lacks are left blank. */
+export function textMask(text: string): CellMask {
+  let rows: string[] = Array(GLYPH_HEIGHT).fill("");
+  [...text.toUpperCase()].forEach((ch, i) => {
+    const glyph = FONT_5X7[ch] ?? BLANK_GLYPH;
+    const gap = i ? ".".repeat(LETTER_GAP) : "";
+    rows = rows.map((r, y) => r + gap + glyph[y]);
+  });
+  return maskFromRows(rows);
+}
+
 /** The name as a Pinned Cell mask. */
 export function nameMask(layout: NameLayout): CellMask {
   const [first, last] = NAME_WORDS.map(wordRows);
@@ -86,26 +106,139 @@ export interface ViewportCells {
   readonly height: number;
 }
 
-export interface HomeLayout {
-  /** Every Pinned Cell on Home, in viewport coordinates. */
-  readonly pinned: readonly Point[];
-  /** Where the name sits; the tagline goes below it. */
-  readonly name: Box;
-  /** Which name layout is in `name`, so the Intro can pick a matching Intro Seed. */
-  readonly nameLayout: NameLayout;
+/** One link in the nav drawn in cells. */
+export interface NavItem {
+  /** The Section it goes to. */
+  readonly path: string;
+  readonly label: string;
+  /** Its hit region: the label plus a little padding. */
+  readonly box: Box;
+  /** True for the Section on screen (or, on a Deep Dive, for Projects). Drawn underlined. */
+  readonly current: boolean;
 }
 
-/** The name's bottom edge sits at this fraction of the viewport height. */
+/** Everything one Section pins, for a given viewport. */
+export interface SectionLayout {
+  /** Every Pinned Cell, in viewport coordinates: the title and the nav. */
+  readonly pinned: readonly Point[];
+  /**
+   * The name on Home, the heading elsewhere; the Section's HTML content goes below it.
+   * Zero height at a path the Grid has no Section for.
+   */
+  readonly title: Box;
+  /** On Home only: which name layout `title` holds, so the Intro can pick a matching Intro Seed. */
+  readonly nameLayout?: NameLayout;
+  readonly nav: readonly NavItem[];
+}
+
+/** Rows above the nav. */
+const NAV_TOP = 3;
+/** Cells between one nav label and the next on the same line. */
+const NAV_GAP = 8;
+/** Padding around a nav label in its hit region (the underline sits inside it). */
+const NAV_PAD_X = 2;
+const NAV_PAD_Y = 1;
+/** The current item's underline is this many rows below the top of its label. */
+const UNDERLINE_ROW = GLYPH_HEIGHT + 1;
+const NAV_LINE_PITCH = UNDERLINE_ROW + 1 + 2 * NAV_PAD_Y;
+/** Cells kept clear at the viewport's left and right edges. */
+const SIDE = 3;
+/** Rows between the nav and the title. */
+const TITLE_GAP = 4;
+/** Rows from the top of one heading line to the next. */
+const HEADING_LINE_PITCH = GLYPH_HEIGHT + 3;
+/** The name's bottom edge sits at this fraction of the viewport height, unless the nav pushes it down. */
 const NAME_BASELINE = 0.45;
 
-export function typesetHome(viewport: ViewportCells): HomeLayout {
-  const nameLayout: NameLayout = "one-line";
-  const mask = nameMask(nameLayout);
-  const x = Math.floor((viewport.width - mask.width) / 2);
-  const y = Math.max(0, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
-  return {
-    pinned: mask.cells.map((c) => ({ x: c.x + x, y: c.y + y })),
-    name: { x, y, width: mask.width, height: mask.height },
-    nameLayout,
+/** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport. */
+export function typesetSection(viewport: ViewportCells, content: GridContent, path: string): SectionLayout {
+  const pinned: Point[] = [];
+  const place = (mask: CellMask, x: number, y: number) => {
+    for (const c of mask.cells) pinned.push({ x: c.x + x, y: c.y + y });
   };
+
+  const nav = typesetNav(viewport, content, path, place);
+  const navBottom = Math.max(NAV_TOP, ...nav.map((i) => i.box.y + i.box.height));
+  const top = navBottom + TITLE_GAP;
+
+  if (path === "/") {
+    const nameLayout: NameLayout = "one-line";
+    const mask = nameMask(nameLayout);
+    const x = Math.floor((viewport.width - mask.width) / 2);
+    const y = Math.max(top, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
+    place(mask, x, y);
+    return { pinned, title: { x, y, width: mask.width, height: mask.height }, nameLayout, nav };
+  }
+
+  const section = content.sections.find((s) => s.path === path);
+  if (!section) return { pinned, title: { x: 0, y: top, width: viewport.width, height: 0 }, nav };
+
+  const lines = wrap(section.heading, viewport.width - 2 * SIDE).map(textMask);
+  const width = Math.max(...lines.map((l) => l.width));
+  const x0 = Math.floor((viewport.width - width) / 2);
+  lines.forEach((line, i) => place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH));
+  const height = (lines.length - 1) * HEADING_LINE_PITCH + GLYPH_HEIGHT;
+  return { pinned, title: { x: x0, y: top, width, height }, nav };
+}
+
+/** The nav item whose hit region holds `at`, if any. */
+export function navItemAt(layout: SectionLayout, at: Point): NavItem | undefined {
+  return layout.nav.find((item) => boxContains(item.box, at));
+}
+
+function typesetNav(
+  viewport: ViewportCells,
+  content: GridContent,
+  path: string,
+  place: (mask: CellMask, x: number, y: number) => void,
+): NavItem[] {
+  const entries = content.sections.flatMap((s) => (s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : []));
+  const maxWidth = viewport.width - 2 * SIDE;
+  const lines: (typeof entries)[] = [];
+  let lineWidth = 0;
+  for (const entry of entries) {
+    const line = lines.at(-1);
+    if (line && lineWidth + NAV_GAP + entry.mask.width <= maxWidth) {
+      line.push(entry);
+      lineWidth += NAV_GAP + entry.mask.width;
+    } else {
+      lines.push([entry]);
+      lineWidth = entry.mask.width;
+    }
+  }
+
+  const items: NavItem[] = [];
+  lines.forEach((line, row) => {
+    const width = line.reduce((sum, e) => sum + e.mask.width, 0) + NAV_GAP * (line.length - 1);
+    let x = Math.floor((viewport.width - width) / 2);
+    const y = NAV_TOP + NAV_PAD_Y + row * NAV_LINE_PITCH;
+    for (const { path: to, label, mask } of line) {
+      const current = to === path || (to !== "/" && path.startsWith(to));
+      place(mask, x, y);
+      if (current) place(underline(mask.width), x, y + UNDERLINE_ROW);
+      items.push({
+        path: to,
+        label,
+        current,
+        box: { x: x - NAV_PAD_X, y: y - NAV_PAD_Y, width: mask.width + 2 * NAV_PAD_X, height: NAV_LINE_PITCH },
+      });
+      x += mask.width + NAV_GAP;
+    }
+  });
+  return items;
+}
+
+function underline(width: number): CellMask {
+  return { width, height: 1, cells: Array.from({ length: width }, (_, x) => ({ x, y: 0 })) };
+}
+
+/** Split `text` into lines no wider than `maxWidth` cells, breaking between words. */
+function wrap(text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const line = lines.at(-1);
+    if (line !== undefined && textMask(`${line} ${word}`).width <= maxWidth) lines[lines.length - 1] = `${line} ${word}`;
+    else lines.push(word);
+  }
+  return lines.length ? lines : [""];
 }

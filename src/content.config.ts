@@ -19,6 +19,8 @@ const placeholder = z.object({ placeholder: z.string() });
 const sections = defineCollection({
   loader: file("src/content/sections.yaml"),
   schema: z.object({
+    /** Position in the nav. */
+    order: z.number(),
     path: z.string().regex(/^\/([a-z0-9-]+\/)*$/),
     nav: z.string(),
     heading: z.string(),

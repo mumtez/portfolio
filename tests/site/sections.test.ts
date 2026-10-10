@@ -43,6 +43,11 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
     expect(hrefs.sort()).toEqual([...SECTIONS].sort());
   });
 
+  it("lists the top-level Sections in nav order", () => {
+    const top = [...doc.querySelectorAll("nav > ul > li > a")].map((a) => a.getAttribute("href"));
+    expect(top).toEqual(["/", "/about/", "/experience/", "/projects/", "/contact/"]);
+  });
+
   it("marks its own nav link as the current page", () => {
     const current = doc.querySelectorAll('nav a[aria-current="page"]');
     expect([...current].map((a) => a.getAttribute("href"))).toEqual([url]);
@@ -56,6 +61,20 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
   it("puts its content in a main landmark", () => {
     expect(doc.querySelectorAll("main")).toHaveLength(1);
     expect(doc.querySelector("main h1")).not.toBeNull();
+  });
+
+  it("has the Grid, hidden from assistive tech", () => {
+    expect(doc.querySelector("canvas#grid")?.getAttribute("aria-hidden")).toBe("true");
+    expect(doc.querySelector('script[type="module"]')).not.toBeNull();
+  });
+
+  it("embeds the Grid's cell content: every Section, with this one's heading as its h1", () => {
+    const json = doc.querySelector("script#grid-content")?.textContent ?? "";
+    const content = JSON.parse(json) as { sections: { path: string; heading: string; nav?: string }[] };
+    expect(content.sections.map((s) => s.path).sort()).toEqual([...SECTIONS].sort());
+    const navLinks = [...doc.querySelectorAll("nav > ul > li > a")].map((a) => [a.getAttribute("href"), text(a)]);
+    expect(content.sections.filter((s) => s.nav).map((s) => [s.path, s.nav])).toEqual(navLinks);
+    expect(content.sections.find((s) => s.path === url)?.heading).toBe(text(doc.querySelector("h1")));
   });
 });
 

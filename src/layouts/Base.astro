@@ -3,6 +3,7 @@ import Analytics from "../components/Analytics.astro";
 import SharingMeta from "../components/SharingMeta.astro";
 import SiteNav from "../components/SiteNav.astro";
 import { DARK } from "../grid/palette";
+import { getGridContent } from "../lib/content";
 
 interface Props {
   title: string;
@@ -12,6 +13,9 @@ interface Props {
 }
 
 const { title, description, path } = Astro.props;
+// What the Grid draws in cells, from the same content as this page. `<` is escaped so
+// no heading can close the script element.
+const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003c");
 ---
 
 <!doctype html>
@@ -26,12 +30,29 @@ const { title, description, path } = Astro.props;
     <Analytics />
   </head>
   <body>
+    <canvas id="grid" aria-hidden="true"></canvas>
     <header>
       <SiteNav current={path} />
     </header>
     <slot />
+    <script type="application/json" id="grid-content" set:html={gridContent} />
   </body>
 </html>
+
+<script>
+  import { startGrid } from "../grid/grid";
+  import type { GridContent } from "../grid/routes";
+
+  const canvas = document.querySelector<HTMLCanvasElement>("#grid");
+  const data = document.querySelector("#grid-content")?.textContent;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Reduced motion gets the Plain View: no Grid, ordinary page loads.
+  if (canvas && data && !reducedMotion) {
+    document.documentElement.classList.add("grid-on");
+    startGrid({ canvas, content: JSON.parse(data) as GridContent });
+  }
+</script>
 
 <style is:global define:vars={{ bg: DARK.background, text: DARK.text, accent: DARK.pinned }}>
   html {
@@ -44,5 +65,77 @@ const { title, description, path } = Astro.props;
   }
   a {
     color: var(--accent);
+  }
+  #grid {
+    display: none;
+  }
+
+  /*
+   * Grid on: headings and the nav are drawn in Pinned Cells. The real nav links sit
+   * transparently over their cells (placed by the Grid script), each h1 stays in the
+   * accessibility tree but out of sight, and the Section's content scrolls in its own
+   * box below the pinned title, over the live Grid.
+   */
+  html.grid-on #grid {
+    display: block;
+    position: fixed;
+    inset: 0;
+  }
+  html.grid-on header {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 0;
+    z-index: 2;
+  }
+  html.grid-on header nav > ul > li > a.on-grid {
+    position: fixed;
+    color: transparent;
+    border-radius: 4px;
+  }
+  html.grid-on header nav > ul > li > a.on-grid:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Deep Dive links aren't drawn in cells; they show like a skip link when focused. */
+  html.grid-on header nav ul ul a,
+  html.grid-on main h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  html.grid-on header nav ul ul a:focus {
+    position: fixed;
+    left: 8px;
+    bottom: 8px;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 6px 10px;
+    clip-path: none;
+    background: var(--bg);
+    outline: 2px solid var(--accent);
+  }
+  html.grid-on main {
+    position: fixed;
+    top: calc(var(--below-title, 45vh) + 1.25rem);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    overflow-y: auto;
+    text-shadow: 0 0 6px var(--bg);
+  }
+  /* A Section arriving in a Transition fades in as its cells pin in. */
+  html.grid-on main.arriving {
+    animation: arrive 600ms ease-out;
+  }
+  @keyframes arrive {
+    from {
+      opacity: 0;
+    }
   }
 </style>

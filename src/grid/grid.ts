@@ -1,17 +1,21 @@
 /**
- * The client Grid script: hydrates over a Section's Plain View HTML.
+ * The client Grid script: hydrates over a Section's Plain View HTML, on every Section.
  *
- * For now this runs Home only: the Intro (on a first visit), then soup around the
- * pinned name, kept alive by spaceships flying in from the edges, and stirred by the
- * pointer. The Grid Director decides what happens; this file wires it to the window,
- * the session and the renderer.
+ * The Grid Director decides what happens; this file wires it to the window, the
+ * session, the history and the renderer. Home plays the Intro on a first visit. Every
+ * Section pins its heading and the nav; the nav's real `<a>` elements are laid over
+ * their cells, and clicking one (or going back or forward) runs a Transition while the
+ * next Section's Plain View is swapped in. Soup is kept alive by spaceships flying in
+ * from the edges, and stirred by the pointer.
  */
-import type { Box } from "./cell-typesetter";
+import { navItemAt, type SectionLayout } from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
 import type { Point } from "./life-engine";
+import { prefetchSection, swapToSection } from "./page-swap";
 import { DARK } from "./palette";
 import { cellLine } from "./pointer-trail";
+import { sectionPath, transitionPathFor, type GridContent } from "./routes";
 import { maybeLaunch, spaceshipAt } from "./spaceships";
 import { startTicker, type Ticker } from "./ticker";
 
@@ -27,8 +31,8 @@ const INTERACTIVE = "a, button, input, textarea, select, label, summary, [role='
 
 export interface GridOptions {
   readonly canvas: HTMLCanvasElement;
-  /** Called with the name's box, in CSS pixels, whenever the layout changes. */
-  readonly onLayout?: (name: Box) => void;
+  /** Every Section's heading and nav label, embedded in the page from the content collections. */
+  readonly content: GridContent;
 }
 
 function cellSize(viewportPx: number): number {
@@ -53,7 +57,29 @@ const sessionIntroMemory: IntroMemory = {
   },
 };
 
-export function startGrid({ canvas, onLayout }: GridOptions): void {
+/**
+ * Lay the page's HTML over the cells: each top-level nav link exactly over its drawn
+ * label (so clicks, focus and screen readers use the real link), and the Section's
+ * content just below its pinned title.
+ */
+function placeHtml(layout: SectionLayout, cellPx: number): void {
+  const px = (cells: number) => `${cells * cellPx}px`;
+  const { title } = layout;
+  document.documentElement.style.setProperty("--below-title", px(title.y + title.height));
+  for (const a of document.querySelectorAll<HTMLAnchorElement>("header nav > ul > li > a")) {
+    const item = layout.nav.find((i) => i.path === sectionPath(a.pathname));
+    if (!item) continue;
+    a.classList.add("on-grid");
+    Object.assign(a.style, {
+      left: px(item.box.x),
+      top: px(item.box.y),
+      width: px(item.box.width),
+      height: px(item.box.height),
+    });
+  }
+}
+
+export function startGrid({ canvas, content }: GridOptions): void {
   const renderer = new GridRenderer(canvas, DARK);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let director: GridDirector;
@@ -70,11 +96,11 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
       route: window.location.pathname,
       reducedMotion,
       introMemory: sessionIntroMemory,
+      content,
     });
     renderer.resize(width, height, cellPx);
     redraw();
-    const { x, y, width: w, height: h } = director.home.name;
-    onLayout?.({ x: x * cellPx, y: y * cellPx, width: w * cellPx, height: h * cellPx });
+    placeHtml(director.layout, cellPx);
   }
 
   /** Draw now, and give what was drawn (a fresh Intro seed, say) a full tick on screen. */
@@ -90,6 +116,55 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(rebuild, 150);
   });
+
+  /**
+   * Run a Transition to the Section at `path` and swap its Plain View in. `push` adds a
+   * history entry for `href` (a link click); back and forward have already moved the URL.
+   */
+  function goTo(path: string, push?: string): void {
+    if (!director.navigate(path)) return;
+    if (push !== undefined) history.pushState(null, "", push);
+    placeHtml(director.layout, cellPx);
+    redraw();
+    // If the page can't be fetched, load it the ordinary way: the URL already points at it.
+    swapToSection(path).catch(() => window.location.reload());
+  }
+
+  // Links to other Sections run a Transition instead of a page load. They stay real
+  // links: with JS off, or for new-tab clicks, the browser follows them as usual.
+  document.addEventListener("click", (e) => {
+    if (e.defaultPrevented || !(e.target instanceof Element)) return;
+    const a = e.target.closest<HTMLAnchorElement>("a[href]");
+    if (!a) return;
+    const path = transitionPathFor(
+      {
+        href: a.getAttribute("href") ?? "",
+        target: a.target,
+        download: a.hasAttribute("download"),
+        button: e.button,
+        modified: e.metaKey || e.ctrlKey || e.shiftKey || e.altKey,
+      },
+      new URL(window.location.href),
+      content,
+    );
+    if (!path) return;
+    e.preventDefault();
+    goTo(path, a.href);
+  });
+  window.addEventListener("popstate", () => goTo(sectionPath(window.location.pathname)));
+  // Fetch a Section's page as soon as its link is pointed at or focused.
+  for (const type of ["pointerover", "focusin"] as const) {
+    document.addEventListener(
+      type,
+      (e) => {
+        const a = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
+        if (!a || a.origin !== window.location.origin) return;
+        const path = sectionPath(a.pathname);
+        if (path !== director.route && content.sections.some((s) => s.path === path)) prefetchSection(path);
+      },
+      { passive: true },
+    );
+  }
 
   // Listeners are on the window and passive, and the canvas keeps the default
   // touch-action, so dragging a finger still scrolls.
@@ -116,7 +191,8 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
         director.input();
         redraw();
       },
-      { passive: true },
+      // Capture, so scrolling the Section's content (its own scroll box) counts too.
+      { passive: true, capture: true },
     );
   }
 
@@ -149,7 +225,7 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
     if (!window.getSelection()?.isCollapsed) return;
     const at = cellAt(e);
     const engine = director.engine;
-    if (engine.isPinned(at.x, at.y)) return;
+    if (engine.isPinned(at.x, at.y) || navItemAt(director.layout, at)) return;
     engine.inject(spaceshipAt("glider", at));
   });
 

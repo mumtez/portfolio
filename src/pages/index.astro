@@ -7,34 +7,14 @@ const profile = await getProfile();
 ---
 
 <Base title={home.title} description={home.description} path={home.path}>
-  <canvas id="grid" aria-hidden="true"></canvas>
   <main class="home">
     <h1>{home.heading}</h1>
     <p>{profile.tagline}</p>
   </main>
 </Base>
 
-<script>
-  import { startGrid } from "../grid/grid";
-
-  const canvas = document.querySelector<HTMLCanvasElement>("#grid");
-  const home = document.querySelector<HTMLElement>(".home");
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  if (canvas && home && !reducedMotion) {
-    document.documentElement.classList.add("grid-on");
-    startGrid({
-      canvas,
-      onLayout: (name) => home.style.setProperty("--below-name", `${name.y + name.height}px`),
-    });
-  }
-</script>
-
 <style>
   /* Plain View: the content as a centred page. */
-  canvas {
-    display: none;
-  }
   .home {
     min-height: 100vh;
     display: flex;
@@ -56,35 +36,12 @@ const profile = await getProfile();
     line-height: 1.5;
   }
 
-  /* Grid on: the name is drawn in Pinned Cells, the tagline sits under it over the Grid. */
-  :global(html.grid-on) canvas {
-    display: block;
-    position: fixed;
-    inset: 0;
-  }
-  /* Out of flow, so the tagline's offset below the name is measured from the viewport top. */
-  :global(html.grid-on header) {
-    position: absolute;
-    inset: 0 0 auto;
-    z-index: 1;
-  }
+  /* Grid on: the name is drawn in Pinned Cells, and the tagline sits just under it. */
   :global(html.grid-on) .home {
-    position: relative;
     display: block;
     min-height: 0;
-    padding-top: calc(var(--below-name, 45vh) + 1.25rem);
-  }
-  :global(html.grid-on) h1 {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
   :global(html.grid-on) p {
     margin: 0 auto;
-    text-shadow: 0 0 6px var(--bg);
   }
 </style>

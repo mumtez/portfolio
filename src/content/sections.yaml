@@ -1,7 +1,8 @@
-# The top-level Sections, in nav order. Deep Dives are defined in projects/*.md.
+# The top-level Sections; `order` is their position in the nav. Deep Dives are defined in projects/*.md.
 # `heading` is the Section's h1; `title` and `description` are for the browser tab and search results.
 
 - id: home
+  order: 1
   path: /
   nav: Home
   heading: Andrew Aburustum
@@ -9,6 +10,7 @@
   description: "Andrew Aburustum: electrical and computer engineering student at Olin College, building robots, circuit boards, ML models and web apps."
 
 - id: about
+  order: 2
   path: /about/
   nav: About
   heading: About
@@ -16,6 +18,7 @@
   description: Andrew Aburustum studies electrical and computer engineering at Olin College. Education, languages and activities.
 
 - id: experience
+  order: 3
   path: /experience/
   nav: Experience
   heading: Experience
@@ -23,6 +26,7 @@
   description: "Andrew Aburustum's work experience: biomedical engineering at Memorial Sloan Kettering and IT support at Olin College."
 
 - id: projects
+  order: 4
   path: /projects/
   nav: Projects
   heading: Projects
@@ -30,6 +34,7 @@
   description: "Andrew Aburustum's projects: FTC robots, a Baja fuel-level estimator, an FTC scouting web app, ML models, a homelab and hardware repair."
 
 - id: contact
+  order: 5
   path: /contact/
   nav: Contact
   heading: Contact

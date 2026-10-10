@@ -2,6 +2,7 @@
  * Reads Section content from the collections in `src/content.config.ts`.
  */
 import { getCollection, getEntry, type CollectionEntry } from "astro:content";
+import type { GridContent, GridSection } from "../grid/routes";
 
 export type Section = CollectionEntry<"sections">["data"];
 export type Project = CollectionEntry<"projects">;
@@ -14,7 +15,7 @@ export async function getSection(id: string): Promise<Section> {
 
 /** The top-level Sections, in nav order. */
 export async function getSections(): Promise<Section[]> {
-  return (await getCollection("sections")).map((entry) => entry.data);
+  return (await getCollection("sections")).map((entry) => entry.data).sort((a, b) => a.order - b.order);
 }
 
 export async function getProfile(): Promise<CollectionEntry<"profile">["data"]> {
@@ -34,4 +35,14 @@ export async function getDeepDives(): Promise<Project[]> {
 
 export function deepDivePath(project: Project): string {
   return `/projects/${project.id}/`;
+}
+
+/**
+ * What the Grid draws in cells for every Section: headings and nav labels, from the
+ * same entries the Plain View renders. Embedded in each page for the Grid script.
+ */
+export async function getGridContent(): Promise<GridContent> {
+  const sections: GridSection[] = (await getSections()).map(({ path, nav, heading }) => ({ path, nav, heading }));
+  const deepDives = (await getDeepDives()).map((project) => ({ path: deepDivePath(project), heading: project.data.title }));
+  return { sections: [...sections, ...deepDives] };
 }

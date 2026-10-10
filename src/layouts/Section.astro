@@ -3,7 +3,7 @@
 import type { Section } from "../lib/content";
 import Base from "./Base.astro";
 
-type Props = Omit<Section, "nav">;
+type Props = Omit<Section, "nav" | "order">;
 
 const { path, heading, title, description } = Astro.props;
 ---
@@ -33,5 +33,16 @@ const { path, heading, title, description } = Astro.props;
   .section :global(.meta) {
     margin-top: -0.75em;
     opacity: 0.8;
+  }
+
+  /* Grid on: the whole width scrolls, with the content kept in the same centred column. */
+  :global(html.grid-on) .section {
+    max-width: none;
+    margin: 0;
+    padding: 0 max(16px, calc((100% - 44rem) / 2)) 64px;
+  }
+  :global(html.grid-on) .section > :global(:first-child:not(h1)),
+  :global(html.grid-on) .section > :global(h1 + *) {
+    margin-top: 0;
   }
 </style>
