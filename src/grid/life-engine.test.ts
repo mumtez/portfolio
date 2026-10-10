@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CellKind, LifeEngine, type Point } from "./life-engine";
 import { HEADINGS, spaceship, type SpaceshipKind } from "./spaceships";
+import { allLive, inViewport, mulberry32, soup } from "./test-support";
 
 const BLOCK: Point[] = [
   { x: 0, y: 0 },
@@ -132,18 +133,6 @@ describe("LifeEngine", () => {
   });
 
   describe("margin discard", () => {
-    /** Live cells anywhere in the Grid, margin included. */
-    function allLive(engine: LifeEngine): string[] {
-      const out: string[] = [];
-      const m = engine.margin;
-      for (let y = -m; y < engine.height + m; y++) {
-        for (let x = -m; x < engine.width + m; x++) {
-          if (engine.isAlive(x, y)) out.push(`${x},${y}`);
-        }
-      }
-      return out;
-    }
-
     const ships = (Object.keys(HEADINGS) as SpaceshipKind[]).flatMap((kind) =>
       HEADINGS[kind].flatMap((heading) => [0, 1, 2, 3].map((phase) => ({ kind, heading, phase }))),
     );
@@ -165,6 +154,18 @@ describe("LifeEngine", () => {
       engine.inject(BLOCK.map((p) => ({ x: p.x - 4, y: p.y + 3 })));
       for (let t = 0; t < 10; t++) engine.step();
       expect(allLive(engine)).toEqual([]);
+    });
+
+    it.each([1, 2, 3, 4, 5, 6])("leaves no residue in the margin after 5 minutes of soup (seed %i)", (seed) => {
+      const engine = new LifeEngine({ width: 150, height: 85, margin: 12 });
+      engine.inject(soup(engine, 0.09, mulberry32(seed)));
+      const residue = new Set<string>();
+      for (let t = 0; t < 2500; t++) {
+        engine.step();
+        if (t < 2400) continue;
+        for (const p of allLive(engine)) if (!inViewport(engine, p)) residue.add(`${p.x},${p.y}`);
+      }
+      expect([...residue]).toEqual([]);
     });
 
     it("leaves still lifes in the viewport alone", () => {

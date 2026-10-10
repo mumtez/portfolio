@@ -1,32 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { LifeEngine, type Point } from "./life-engine";
-import { HEADINGS, launchFromEdge, maybeLaunch, spaceship, type SpaceshipKind } from "./spaceships";
-
-/** Live cells anywhere in the Grid, margin included. */
-function allLive(engine: LifeEngine): Point[] {
-  const out: Point[] = [];
-  const m = engine.margin;
-  for (let y = -m; y < engine.height + m; y++) {
-    for (let x = -m; x < engine.width + m; x++) {
-      if (engine.isAlive(x, y)) out.push({ x, y });
-    }
-  }
-  return out;
-}
+import { HEADINGS, launchFromEdge, maybeLaunch, spaceship, spaceshipAt, type SpaceshipKind } from "./spaceships";
+import { allLive, inViewport, mulberry32, soup } from "./test-support";
 
 function centroid(points: Point[]): Point {
   const n = points.length;
   return { x: points.reduce((s, p) => s + p.x, 0) / n, y: points.reduce((s, p) => s + p.y, 0) / n };
-}
-
-/** A seeded RNG so the tests are repeatable. */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 describe("spaceship", () => {
@@ -53,6 +32,17 @@ describe("spaceship", () => {
   });
 });
 
+describe("spaceshipAt", () => {
+  it("centres a spaceship's box on the given Cell", () => {
+    const cells = spaceshipAt("glider", { x: 10, y: 20 }, mulberry32(1));
+    expect(cells).toHaveLength(5);
+    for (const p of cells) {
+      expect(Math.abs(p.x - 10)).toBeLessThanOrEqual(1);
+      expect(Math.abs(p.y - 20)).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
 describe("maybeLaunch", () => {
   const FIVE_MINUTES = 2500; // ticks at 120ms
   const WINDOW = 200;
@@ -65,11 +55,7 @@ describe("maybeLaunch", () => {
   function lateNovelBirths(width: number, height: number, seed: number, launch: boolean): number {
     const random = mulberry32(seed);
     const engine = new LifeEngine({ width, height, margin: 12 });
-    const soup: Point[] = [];
-    for (let y = -12; y < height + 12; y++) {
-      for (let x = -12; x < width + 12; x++) if (random() < 0.09) soup.push({ x, y });
-    }
-    engine.inject(soup);
+    engine.inject(soup(engine, 0.09, random));
     const lastAlive = new Int32Array(width * height).fill(-1000);
     let births = 0;
     for (let t = 0; t < FIVE_MINUTES; t++) {
@@ -111,15 +97,12 @@ describe("launchFromEdge", () => {
       const engine = new LifeEngine({ width: 60, height: 40, margin: 12 });
       const cells = launchFromEdge(engine, rng);
       expect(cells.length).toBeGreaterThan(0);
-      for (const p of cells) {
-        const inViewport = p.x >= 0 && p.y >= 0 && p.x < engine.width && p.y < engine.height;
-        expect(inViewport).toBe(false);
-      }
+      for (const p of cells) expect(inViewport(engine, p)).toBe(false);
       engine.inject(cells);
       let entered = false;
       for (let t = 0; t < 40 && !entered; t++) {
         engine.step();
-        entered = allLive(engine).some((p) => p.x >= 0 && p.y >= 0 && p.x < engine.width && p.y < engine.height);
+        entered = allLive(engine).some((p) => inViewport(engine, p));
       }
       expect(entered).toBe(true);
     }

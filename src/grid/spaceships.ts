@@ -1,5 +1,6 @@
 /**
- * Spaceships: the patterns that fly in from the margin so the Grid never dies down. Pure, headless.
+ * Spaceships: the patterns that fly in from the margin so the Grid never dies down. Headless.
+ * Everything here is pure except `maybeLaunch`, which injects into the engine.
  */
 import type { CellMask } from "./cell-typesetter";
 import type { LifeEngine, Point } from "./life-engine";
@@ -45,6 +46,18 @@ export function spaceship(kind: SpaceshipKind, heading: Point): CellMask {
   return { width, height, cells };
 }
 
+/** A spaceship of `kind`, flying in a random heading, with its box centred on `centre`. */
+export function spaceshipAt(kind: SpaceshipKind, centre: Point, random: () => number = Math.random): Point[] {
+  const headings = HEADINGS[kind];
+  const ship = spaceship(kind, headings[Math.floor(random() * headings.length)]);
+  const ox = centre.x - Math.floor(ship.width / 2);
+  const oy = centre.y - Math.floor(ship.height / 2);
+  return ship.cells.map((p) => ({ x: p.x + ox, y: p.y + oy }));
+}
+
+/** Share of launches that are gliders; the rest are LWSSs. */
+const GLIDER_SHARE = 0.6;
+
 /** The Grid dimensions a launch needs. */
 export interface GridBounds {
   readonly width: number;
@@ -63,7 +76,7 @@ export function launchFromEdge({ width, height }: GridBounds, random: () => numb
     { x: 0, y: 1 },
     { x: 0, y: -1 },
   ]);
-  const kind: SpaceshipKind = random() < 0.6 ? "glider" : "lwss";
+  const kind: SpaceshipKind = random() < GLIDER_SHARE ? "glider" : "lwss";
   // A glider flies diagonally: inward, plus a random sideways drift.
   const drift = pick([-1, 1]);
   const heading = kind === "glider" ? { x: inward.x || drift, y: inward.y || drift } : inward;

@@ -12,7 +12,7 @@ import { GridRenderer } from "./grid-renderer";
 import type { Point } from "./life-engine";
 import { DARK } from "./palette";
 import { cellLine } from "./pointer-trail";
-import { HEADINGS, maybeLaunch, spaceship } from "./spaceships";
+import { maybeLaunch, spaceshipAt } from "./spaceships";
 import { startTicker, type Ticker } from "./ticker";
 
 /** Off-screen cells on every side, so patterns enter and leave naturally. Wider than any spaceship plus the dead ring. */
@@ -92,7 +92,7 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
   });
 
   // Listeners are on the window and passive, and the canvas keeps the default
-  // touch-action, so dragging a finger still scrolls the page.
+  // touch-action, so dragging a finger still scrolls.
   const cellAt = (e: PointerEvent | MouseEvent): Point => ({
     x: Math.floor(e.clientX / cellPx),
     y: Math.floor(e.clientY / cellPx),
@@ -150,9 +150,7 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
     const at = cellAt(e);
     const engine = director.engine;
     if (engine.isPinned(at.x, at.y)) return;
-    const headings = HEADINGS.glider;
-    const glider = spaceship("glider", headings[Math.floor(Math.random() * headings.length)]);
-    engine.inject(glider.cells.map((p) => ({ x: p.x + at.x - 1, y: p.y + at.y - 1 })));
+    engine.inject(spaceshipAt("glider", at));
   });
 
   rebuild();
