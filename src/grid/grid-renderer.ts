@@ -6,7 +6,7 @@
  * faint and leave no ghosts there, so the HTML over them stays readable. Walls (Frames)
  * are left empty: real media cover them.
  */
-import type { Box } from "./cell-typesetter";
+import { boxContains, type Box } from "./cell-typesetter";
 import { CellKind } from "./life-engine";
 import { BODY_TEXT_CELL_ALPHA, type Palette } from "./palette";
 
@@ -100,7 +100,7 @@ export class GridRenderer {
   private layerFor(grid: GridReadout, x: number, y: number, bodyText?: Box): Layer | undefined {
     const { layers } = this;
     const kind = grid.kindAt(x, y);
-    if (kind !== CellKind.Pinned && bodyText && inBox(bodyText, x, y)) {
+    if (kind !== CellKind.Pinned && bodyText && boxContains(bodyText, { x, y })) {
       return kind === CellKind.Free || kind === CellKind.Fringe ? layers.underBodyText : undefined;
     }
     switch (kind) {
@@ -118,8 +118,4 @@ export class GridRenderer {
         return undefined;
     }
   }
-}
-
-function inBox(box: Box, x: number, y: number): boolean {
-  return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
 }

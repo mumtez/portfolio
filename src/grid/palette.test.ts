@@ -31,10 +31,8 @@ describe("dark palette", () => {
     expect(contrastRatio(DARK.text, DARK.background)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("keeps Body Text above 7:1 (WCAG AAA) over the faint cells drawn under it", () => {
-    for (const cell of [DARK.free, DARK.pinned]) {
-      expect(contrastRatio(DARK.text, over(cell, BODY_TEXT_CELL_ALPHA, DARK.background))).toBeGreaterThanOrEqual(7);
-    }
+  it("keeps Body Text above 7:1 (WCAG AAA) over the faint Free Cells drawn under it", () => {
+    expect(contrastRatio(DARK.text, over(DARK.free, BODY_TEXT_CELL_ALPHA, DARK.background))).toBeGreaterThanOrEqual(7);
   });
 
   it("needs the cells under Body Text drawn faint: at full strength they'd pull it below 7:1", () => {

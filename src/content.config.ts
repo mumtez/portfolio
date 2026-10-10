@@ -75,7 +75,9 @@ const projects = defineCollection({
     /**
      * A Deep Dive's Frames, for photos and videos. Each one's media is the file
      * `public/media/<file name>/<slot>.<ext>` (see `src/lib/frames.ts`); place one in the
-     * Body Text with a `<!-- frame: <slot> -->` line, or it follows the Body Text.
+     * Body Text with a `<!-- frame: <slot> -->` line, or it follows the Body Text. Put
+     * photos and videos in Frames, not Markdown images: the Deep Dive page renders the
+     * Body Text's HTML as it is, so relative Markdown image paths aren't processed.
      */
     frames: z
       .array(

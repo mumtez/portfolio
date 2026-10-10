@@ -34,7 +34,7 @@ export function frameMedia(deepDive: string, slot: string, files: readonly strin
   const named = (extensions: readonly string[]) =>
     files.find((file) => {
       const dot = file.lastIndexOf(".");
-      return file.slice(0, dot) === slot && extensions.includes(file.slice(dot + 1).toLowerCase());
+      return dot > 0 && file.slice(0, dot) === slot && extensions.includes(file.slice(dot + 1).toLowerCase());
     });
   const video = named(VIDEO_EXTENSIONS);
   const file = video ?? named(IMAGE_EXTENSIONS);

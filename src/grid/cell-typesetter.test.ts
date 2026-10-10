@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import prototypeLayouts from "../../tests/fixtures/prototype-name-layouts.json";
 import {
+  BODY_TEXT_CSS,
   bodyTextCondensate,
   boxContains,
   nameMask,
@@ -271,6 +273,14 @@ describe("Cell Typesetter", () => {
   });
 
   describe("the Body Text region", () => {
+    it("is laid out from the same measurements as the page CSS", () => {
+      const css = (file: string) => readFileSync(new URL(`../layouts/${file}`, import.meta.url), "utf8");
+      const { gapRem, columnRem, gutterPx, lineHeight } = BODY_TEXT_CSS;
+      expect(css("Base.astro")).toContain(`top: calc(var(--below-title, 45vh) + ${gapRem}rem)`);
+      expect(css("Section.astro")).toContain(`padding: 0 max(${gutterPx}px, calc((100% - ${columnRem}rem) / 2)) 64px`);
+      expect(css("Section.astro")).toContain(`line-height: ${lineHeight};`);
+    });
+
     it.each(TEST_CONTENT.sections.map((s) => s.path))("on %s sits below the title, clear of every Pinned Cell, down to the bottom", (path) => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, path);
       const { body, title } = layout;

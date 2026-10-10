@@ -4,19 +4,17 @@
  * media folder, or a placeholder naming the file it wants. With the Grid on, the Grid
  * script finds `.frame-slot` boxes and walls them off in the Life Engine.
  */
+import type { Project } from "../lib/content";
 import { FRAME_EXTENSIONS, frameMedia, mediaDir, type FrameMedia } from "../lib/frames";
 import Placeholder from "./Placeholder.astro";
 
-interface Props {
+/** One of a Deep Dive's `frames:`, plus where to look for its media. */
+type Props = Project["data"]["frames"][number] & {
   /** The Deep Dive's id (its Markdown file name). */
   deepDive: string;
-  slot: string;
-  alt: string;
-  caption?: string;
-  aspect: string;
   /** The file names in the Deep Dive's media folder. */
   files: readonly string[];
-}
+};
 
 const { deepDive, slot, alt, caption, aspect, files } = Astro.props;
 const media: FrameMedia | undefined = frameMedia(deepDive, slot, files);

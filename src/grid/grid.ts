@@ -254,6 +254,17 @@ export function startGrid({ canvas, content }: GridOptions): void {
     );
   }
 
+  // Frames scroll with the Body Text: redraw as it scrolls, so their walls (and the
+  // faint region) follow the media between ticks instead of trailing by up to one.
+  let scrollFrame = 0;
+  document.addEventListener(
+    "scroll",
+    () => {
+      if (!scrollFrame) scrollFrame = requestAnimationFrame(() => ((scrollFrame = 0), draw()));
+    },
+    { passive: true, capture: true },
+  );
+
   let trailEnd: Point | undefined;
   function trail(e: PointerEvent): void {
     if (director.phase === "intro") return;

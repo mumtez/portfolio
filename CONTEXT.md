@@ -63,7 +63,7 @@ Something to press that is drawn in Cells: its label in Pinned Cells inside a pi
 _Avoid_: Tile, chip
 
 **Frame**:
-A region of a Section reserved for real media (photos, video), where no Cells live and the Grid steps around it.
+A region of a Section reserved for real media (photos, video), where no Cells live and the Grid steps around it. In the Life Engine its Cells are **walls**: always dead and counted as dead neighbours, so whatever flies in is absorbed.
 _Avoid_: Embed, media box
 
 **Plain View**:

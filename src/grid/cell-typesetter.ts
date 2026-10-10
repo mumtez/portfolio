@@ -295,17 +295,19 @@ function wrap(text: string, maxWidth: number): string[] {
   return lines.length ? lines : [""];
 }
 
-/*
- * Body Text. These mirror the page CSS for the Section's content when the Grid is on
- * (`Base.astro` and `Section.astro`): it starts 1.25rem below the title, in a centred
- * column at most 44rem wide with at least 16px either side, with 16px type at a
- * line-height of 1.55.
+/**
+ * Body Text as the page CSS sets it when the Grid is on (`Base.astro` and
+ * `Section.astro`; a test checks they agree): it starts `gapRem` below the title, in a
+ * centred column at most `columnRem` wide with at least `gutterPx` either side, in 16px
+ * type at `lineHeight`.
  */
+export const BODY_TEXT_CSS = { gapRem: 1.25, columnRem: 44, gutterPx: 16, lineHeight: 1.55 } as const;
+const REM_PX = 16;
 const DEFAULT_CELL_PX = 8;
-const BODY_GAP_PX = 20;
-const BODY_COLUMN_PX = 704;
-const BODY_GUTTER_PX = 16;
-const BODY_LINE_PX = 16 * 1.55;
+const BODY_GAP_PX = BODY_TEXT_CSS.gapRem * REM_PX;
+const BODY_COLUMN_PX = BODY_TEXT_CSS.columnRem * REM_PX;
+const BODY_GUTTER_PX = BODY_TEXT_CSS.gutterPx;
+const BODY_LINE_PX = REM_PX * BODY_TEXT_CSS.lineHeight;
 /** The condensate fills this share of each line's rows, like the x-height of a line of text. */
 const CONDENSATE_INK_ROWS = 0.6;
 /** Chance that a Cell on a condensate line is alive. */
