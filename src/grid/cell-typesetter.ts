@@ -154,20 +154,21 @@ const HEADING_LINE_PITCH = GLYPH_HEIGHT + 3;
 /** The name's bottom edge sits at this fraction of the viewport height, unless the nav pushes it down. */
 const NAME_BASELINE = 0.45;
 
-/** Cells wide the one-line name needs: the name plus `SIDE` clear at each side. */
-const ONE_LINE_MIN_WIDTH = nameMask("one-line").width + 2 * SIDE;
+/** Cells across a mask needs: the mask plus `SIDE` clear at each side. */
+const widthWithSides = (mask: CellMask) => mask.width + 2 * SIDE;
 const STACKED_NAME = nameMask("stacked");
+const ONE_LINE_MIN_CELLS = widthWithSides(nameMask("one-line"));
 
-/**
- * Fewest cells across a viewport needs for the narrowest layout: the stacked name plus
- * `SIDE` clear at each side. The Grid sizes its cells so the viewport is at least this wide.
- */
-export const MIN_VIEWPORT_WIDTH = STACKED_NAME.width + 2 * SIDE;
+/** Fewest cells across a viewport needs for the narrowest layout: the stacked name with its sides. */
+export const MIN_VIEWPORT_CELLS = widthWithSides(STACKED_NAME);
 
 /** The one-line name wherever it fits, else the stacked name. */
 function nameLayoutFor(viewport: ViewportCells): NameLayout {
-  return viewport.width >= ONE_LINE_MIN_WIDTH ? "one-line" : "stacked";
+  return viewport.width >= ONE_LINE_MIN_CELLS ? "one-line" : "stacked";
 }
+
+/** The top row of the nav's `row`th line (its hit regions), so also the bottom of the `row` lines above it. */
+const navRowTop = (row: number) => NAV_TOP + row * NAV_LINE_PITCH;
 
 /** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport. */
 export function typesetSection(viewport: ViewportCells, content: GridContent, path: string): SectionLayout {
@@ -231,7 +232,7 @@ function typesetNav(
   lines.forEach((line, row) => {
     const width = line.reduce((sum, e) => sum + e.mask.width, 0) + NAV_GAP * (line.length - 1);
     let x = Math.floor((viewport.width - width) / 2);
-    const y = NAV_TOP + BUTTON_PAD + row * NAV_LINE_PITCH;
+    const y = navRowTop(row) + BUTTON_PAD;
     for (const { path: to, label, mask } of line) {
       const current = currentness(to, path) !== undefined;
       const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: mask.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT };
@@ -261,8 +262,7 @@ function edgeCells({ x, y, width, height }: Box): Point[] {
  * so every Section has the same nav and a Transition leaves it pinned.
  */
 function navIsColumn(viewport: ViewportCells, items: number): boolean {
-  const columnBottom = NAV_TOP + items * NAV_LINE_PITCH;
-  return nameLayoutFor(viewport) === "stacked" && columnBottom + TITLE_GAP + STACKED_NAME.height <= viewport.height;
+  return nameLayoutFor(viewport) === "stacked" && navRowTop(items) + TITLE_GAP + STACKED_NAME.height <= viewport.height;
 }
 
 function underline(width: number): CellMask {

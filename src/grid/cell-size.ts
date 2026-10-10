@@ -7,7 +7,7 @@
  * narrowest layout (the stacked name) shrinks them, just enough for it to fit. The layout
  * reflows to the cells across instead (see the Cell Typesetter).
  */
-import { MIN_VIEWPORT_WIDTH } from "./cell-typesetter";
+import { MIN_VIEWPORT_CELLS } from "./cell-typesetter";
 
 /** A Cell's size in CSS pixels wherever the viewport has room. */
 const CELL_PX = 6;
@@ -18,6 +18,6 @@ const CELL_PX = 6;
  * least one), so cells stay crisp.
  */
 export function cellSize(viewportPx: number, dpr: number): number {
-  const fit = Math.min(CELL_PX, viewportPx / MIN_VIEWPORT_WIDTH);
+  const fit = Math.min(CELL_PX, viewportPx / MIN_VIEWPORT_CELLS);
   return Math.max(1, Math.floor(fit * dpr)) / dpr;
 }

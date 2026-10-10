@@ -184,7 +184,7 @@ describe("Cell Typesetter", () => {
         for (const { path } of TEST_CONTENT.sections) expect(boxes(path)).toEqual(boxes("/"));
       });
 
-      it("wraps into rows instead when a column would push the stacked name off a short screen", () => {
+      it("wraps into rows instead when a column would push the stacked name off a short viewport", () => {
         const landscape = { width: 140, height: 65 };
         const home = typesetSection(landscape, TEST_CONTENT, "/");
         expect(home.nameLayout).toBe("stacked");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cellSize } from "./cell-size";
-import { MIN_VIEWPORT_WIDTH } from "./cell-typesetter";
+import { MIN_VIEWPORT_CELLS } from "./cell-typesetter";
 
 const cellsAcross = (widthPx: number, dpr: number) => Math.ceil(widthPx / cellSize(widthPx, dpr));
 
@@ -12,7 +12,7 @@ describe("cell size", () => {
     expect(sizes[0]).toBeLessThanOrEqual(8);
   });
 
-  it("doesn't depend on the screen's pixel density on a wide screen", () => {
+  it("doesn't depend on the display's pixel density on a wide viewport", () => {
     expect(cellSize(1440, 1)).toBe(cellSize(1440, 2));
   });
 
@@ -23,9 +23,9 @@ describe("cell size", () => {
     [320, 2],
   ])("shrinks on a %ipx-wide phone (@%ix) only as far as the stacked name needs", (width, dpr) => {
     const across = cellsAcross(width, dpr);
-    expect(across).toBeGreaterThanOrEqual(MIN_VIEWPORT_WIDTH);
+    expect(across).toBeGreaterThanOrEqual(MIN_VIEWPORT_CELLS);
     // As big as the stacked name allows: one device pixel more would no longer fit.
-    expect(Math.floor(width / (cellSize(width, dpr) + 1 / dpr))).toBeLessThan(MIN_VIEWPORT_WIDTH);
+    expect(Math.floor(width / (cellSize(width, dpr) + 1 / dpr))).toBeLessThan(MIN_VIEWPORT_CELLS);
   });
 
   it("keeps cells on a phone much closer to a desktop's size than a fixed cell count would (≥ 4 CSS px at 390)", () => {
