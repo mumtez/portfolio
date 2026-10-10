@@ -1,0 +1,83 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base
+  title="Andrew Aburustum"
+  description="Andrew Aburustum: electrical and computer engineering student at Olin College, building robots, circuit boards, ML models and web apps."
+>
+  <canvas id="grid" aria-hidden="true"></canvas>
+  <main class="home">
+    <h1>Andrew Aburustum</h1>
+    <p>Electrical and computer engineering student at Olin College. I build robots, circuit boards, ML models and web apps.</p>
+  </main>
+</Base>
+
+<script>
+  import { startGrid } from "../grid/grid";
+
+  const canvas = document.querySelector<HTMLCanvasElement>("#grid");
+  const home = document.querySelector<HTMLElement>(".home");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (canvas && home && !reducedMotion) {
+    document.documentElement.classList.add("grid-on");
+    startGrid({
+      canvas,
+      onLayout: (name) => home.style.setProperty("--below-name", `${name.y + name.height}px`),
+    });
+  }
+</script>
+
+<style>
+  /* Plain View: the content as a centred page. */
+  canvas {
+    display: none;
+  }
+  .home {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    text-align: center;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 6vw, 4rem);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  p {
+    max-width: 40rem;
+    font-size: 1.125rem;
+    line-height: 1.5;
+  }
+
+  /* Grid on: the name is drawn in Pinned Cells, the tagline sits under it over the Grid. */
+  :global(html.grid-on) canvas {
+    display: block;
+    position: fixed;
+    inset: 0;
+  }
+  :global(html.grid-on) .home {
+    position: relative;
+    display: block;
+    min-height: 0;
+    padding-top: calc(var(--below-name, 45vh) + 1.25rem);
+  }
+  :global(html.grid-on) h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  :global(html.grid-on) p {
+    margin: 0 auto;
+    text-shadow: 0 0 6px var(--bg);
+  }
+</style>

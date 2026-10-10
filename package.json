@@ -1,0 +1,24 @@
+{
+  "name": "portfolio",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run --project unit",
+    "test:site": "astro build && vitest run --project site",
+    "test:all": "npm run check && npm test && npm run test:site"
+  },
+  "dependencies": {
+    "astro": "^7.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^24.19.2",
+    "linkedom": "^0.18.13",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}
