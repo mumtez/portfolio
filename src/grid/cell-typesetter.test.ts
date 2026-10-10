@@ -8,6 +8,7 @@ import {
   nameMask,
   navItemAt,
   textMask,
+  toggleAt,
   typesetSection,
   type Box,
   type CellMask,
@@ -201,6 +202,68 @@ describe("Cell Typesetter", () => {
       const projects = layout.nav[3];
       expect(navItemAt(layout, { x: projects.box.x + 2, y: projects.box.y + 2 })?.path).toBe("/projects/");
       expect(navItemAt(layout, { x: 0, y: VIEWPORT.height - 1 })).toBeUndefined();
+    });
+  });
+
+  describe("the toggles, a pair of Buttons in a corner", () => {
+    const TOGGLES = [
+      { id: "theme", label: "Dark", pressed: false },
+      { id: "simulation", label: "Life", pressed: true },
+    ];
+
+    it("draws each toggle as a Button: its label inside a pinned border", () => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", TOGGLES);
+      const pinned = new Set(layout.pinned.map(key));
+      expect(layout.toggles.map((t) => [t.id, t.label, t.pressed])).toEqual([
+        ["theme", "Dark", false],
+        ["simulation", "Life", true],
+      ]);
+      const theme = layout.toggles[0];
+      expect(rowsIn(layout.pinned, inside(theme.box, 1))).toEqual(trimmed(textMask("Dark")));
+      expect(theme.border.length).toBe(2 * theme.box.width + 2 * theme.box.height - 4);
+      for (const toggle of layout.toggles) {
+        for (const cell of toggle.border) {
+          expect(pinned.has(key(cell))).toBe(true);
+          expect(boxContains(toggle.box, cell) && !boxContains(inside(toggle.box, 1), cell)).toBe(true);
+        }
+      }
+    });
+
+    it("underlines a toggle that is pressed", () => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", TOGGLES);
+      const life = layout.toggles[1];
+      expect(rowsIn(layout.pinned, inside(life.box, 1)).at(-1)).toBe("#".repeat(textMask("Life").width));
+    });
+
+    it.each([
+      [150, 90],
+      [169, 78],
+      [260, 120],
+    ])("keeps them in the bottom-right corner of a %i×%i viewport, clear of the nav and title", (width, height) => {
+      const viewport = { width, height };
+      for (const path of ["/", "/projects/baja/"]) {
+        const layout = typesetSection(viewport, TEST_CONTENT, path, TOGGLES);
+        const [theme, life] = layout.toggles;
+        for (const t of layout.toggles) {
+          expect(boxInside(t.box, viewport)).toBe(true);
+          expect(boxesOverlap(t.box, layout.title)).toBe(false);
+          for (const item of layout.nav) expect(boxesOverlap(t.box, item.box)).toBe(false);
+        }
+        expect(boxesOverlap(theme.box, life.box)).toBe(false);
+        expect(life.box.x + life.box.width).toBeGreaterThan(width - 6);
+        expect(life.box.y + life.box.height).toBeGreaterThan(height - 6);
+      }
+    });
+
+    it("maps a cell to the toggle whose hit region holds it", () => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/", TOGGLES);
+      const life = layout.toggles[1];
+      expect(toggleAt(layout, { x: life.box.x + 1, y: life.box.y + 1 })?.id).toBe("simulation");
+      expect(toggleAt(layout, { x: 0, y: 0 })).toBeUndefined();
+    });
+
+    it("draws no toggles unless asked", () => {
+      expect(typesetSection(VIEWPORT, TEST_CONTENT, "/").toggles).toEqual([]);
     });
   });
 

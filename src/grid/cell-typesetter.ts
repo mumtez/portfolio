@@ -124,9 +124,25 @@ export interface NavItem {
   readonly current: boolean;
 }
 
+/** A toggle to draw as a button, such as the theme or the simulation. */
+export interface ToggleSpec {
+  readonly id: string;
+  readonly label: string;
+  /** On. Drawn underlined, as the current nav item is. */
+  readonly pressed: boolean;
+}
+
+/** A toggle drawn in cells as a button: its label inside a border, in a corner of the viewport. */
+export interface ToggleItem extends ToggleSpec {
+  /** Its hit region: the button out to and including its border. */
+  readonly box: Box;
+  /** The border's Pinned Cells: the edge of `box`. */
+  readonly border: readonly Point[];
+}
+
 /** Everything one Section pins, for a given viewport. */
 export interface SectionLayout {
-  /** Every Pinned Cell, in viewport coordinates: the title and the nav. */
+  /** Every Pinned Cell, in viewport coordinates: the title, the nav and the toggles. */
   readonly pinned: readonly Point[];
   /**
    * The name on Home, the heading elsewhere; the Section's HTML content goes below it.
@@ -141,6 +157,8 @@ export interface SectionLayout {
    * text column below the title, down to the bottom of the viewport. Pins nothing.
    */
   readonly body: Box;
+  /** The toggles, side by side in the bottom-right corner. */
+  readonly toggles: readonly ToggleItem[];
 }
 
 /** Rows above the nav. */
@@ -180,14 +198,20 @@ function nameLayoutFor(viewport: ViewportCells): NameLayout {
 /** The top row of the nav's `row`th line (its hit regions), so also the bottom of the `row` lines above it. */
 const navRowTop = (row: number) => NAV_TOP + row * NAV_LINE_PITCH;
 
-/** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport. */
-export function typesetSection(viewport: ViewportCells, content: GridContent, path: string): SectionLayout {
+/** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport, with `toggles` in its corner. */
+export function typesetSection(
+  viewport: ViewportCells,
+  content: GridContent,
+  path: string,
+  toggleSpecs: readonly ToggleSpec[] = [],
+): SectionLayout {
   const pinned: Point[] = [];
   const place = (mask: CellMask, x: number, y: number) => {
     for (const c of mask.cells) pinned.push({ x: c.x + x, y: c.y + y });
   };
 
   const nav = typesetNav(viewport, content, path, place);
+  const toggles = typesetToggles(viewport, toggleSpecs, place);
   const navBottom = Math.max(NAV_TOP, ...nav.map((i) => i.box.y + i.box.height));
   const top = navBottom + TITLE_GAP;
 
@@ -198,13 +222,13 @@ export function typesetSection(viewport: ViewportCells, content: GridContent, pa
     const y = Math.max(top, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
     place(mask, x, y);
     const title = { x, y, width: mask.width, height: mask.height };
-    return { pinned, title, nameLayout, nav, body: bodyRegion(viewport, title) };
+    return { pinned, title, nameLayout, nav, toggles, body: bodyRegion(viewport, title) };
   }
 
   const section = content.sections.find((s) => s.path === path);
   if (!section) {
     const title = { x: 0, y: top, width: viewport.width, height: 0 };
-    return { pinned, title, nav, body: bodyRegion(viewport, title) };
+    return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
   }
 
   const lines = wrap(section.heading, viewport.width - 2 * SIDE).map(textMask);
@@ -213,7 +237,7 @@ export function typesetSection(viewport: ViewportCells, content: GridContent, pa
   lines.forEach((line, i) => place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH));
   const height = (lines.length - 1) * HEADING_LINE_PITCH + GLYPH_HEIGHT;
   const title = { x: x0, y: top, width, height };
-  return { pinned, title, nav, body: bodyRegion(viewport, title) };
+  return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
 }
 
 /** The nav item whose hit region holds `at`, if any. */
@@ -250,16 +274,51 @@ function typesetNav(
     const y = navRowTop(row) + BUTTON_PAD;
     for (const { path: to, label, mask } of line) {
       const current = currentness(to, path) !== undefined;
-      const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: mask.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT };
-      const border = edgeCells(box);
-      place(mask, x, y);
-      if (current) place(underline(mask.width), x, y + UNDERLINE_ROW);
-      place({ ...box, cells: border }, 0, 0);
-      items.push({ path: to, label, current, box, border });
+      items.push({ path: to, label, current, ...drawButton(mask, x, y, current, place) });
       x += mask.width + NAV_GAP;
     }
   });
   return items;
+}
+
+/** Cells between the toggles, and from the last one to the viewport's right and bottom edges. */
+const TOGGLE_GAP = 4;
+
+function typesetToggles(
+  viewport: ViewportCells,
+  specs: readonly ToggleSpec[],
+  place: (mask: CellMask, x: number, y: number) => void,
+): ToggleItem[] {
+  const masks = specs.map((s) => textMask(s.label));
+  const width = masks.reduce((sum, m) => sum + m.width + 2 * BUTTON_PAD, 0) + TOGGLE_GAP * (masks.length - 1);
+  let x = viewport.width - SIDE - width + BUTTON_PAD;
+  const y = viewport.height - SIDE - BUTTON_HEIGHT + BUTTON_PAD;
+  return specs.map((spec, i) => {
+    const item = { ...spec, ...drawButton(masks[i], x, y, spec.pressed, place) };
+    x += masks[i].width + 2 * BUTTON_PAD + TOGGLE_GAP;
+    return item;
+  });
+}
+
+/** Draw a button with its label at (x, y): underlined if `underlined`, inside a border. Returns its box and border. */
+function drawButton(
+  label: CellMask,
+  x: number,
+  y: number,
+  underlined: boolean,
+  place: (mask: CellMask, x: number, y: number) => void,
+): { box: Box; border: Point[] } {
+  const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: label.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT };
+  const border = edgeCells(box);
+  place(label, x, y);
+  if (underlined) place(underline(label.width), x, y + UNDERLINE_ROW);
+  place({ ...box, cells: border }, 0, 0);
+  return { box, border };
+}
+
+/** The toggle whose hit region holds `at`, if any. */
+export function toggleAt(layout: SectionLayout, at: Point): ToggleItem | undefined {
+  return layout.toggles.find((t) => boxContains(t.box, at));
 }
 
 /** The cells on the edge of `box`, each once. */

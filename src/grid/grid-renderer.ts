@@ -43,7 +43,8 @@ export class GridRenderer {
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
-    private readonly palette: Palette,
+    /** The theme's colours; set it to switch theme, and the next draw uses it. */
+    public palette: Palette,
   ) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas2D is not available");

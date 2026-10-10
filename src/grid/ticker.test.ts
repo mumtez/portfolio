@@ -94,6 +94,19 @@ describe("startTicker", () => {
     expect(ticks).toBe(2);
   });
 
+  it("stops for good when stopped, even when the tab is shown again", () => {
+    const browser = fakeHost();
+    let ticks = 0;
+    const ticker = startTicker(() => ticks++, 100, browser.host);
+    browser.frame(0);
+    ticker.stop();
+    expect(browser.pendingFrames).toBe(0);
+    browser.setHidden(true);
+    browser.setHidden(false);
+    for (let t = 100; t <= 1000; t += 16) browser.frame(t);
+    expect(ticks).toBe(1);
+  });
+
   it("doesn't double up if shown twice in a row", () => {
     const browser = fakeHost();
     startTicker(() => {}, 100, browser.host);

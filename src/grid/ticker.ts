@@ -16,6 +16,8 @@ export interface TickerHost {
 export interface Ticker {
   /** Wait a full interval from the next frame before ticking again, e.g. after a redraw outside a tick. */
   restart(): void;
+  /** Never tick again, e.g. when the simulation is switched off. */
+  stop(): void;
 }
 
 /** Call `tick` at most once every `intervalMs` while the tab is visible. */
@@ -23,6 +25,7 @@ export function startTicker(tick: () => void, intervalMs: number, host: TickerHo
   let frameId: number | undefined;
   let last = -Infinity;
   let restarting = false;
+  let stopped = false;
 
   function frame(time: number): void {
     frameId = host.requestAnimationFrame(frame);
@@ -37,7 +40,7 @@ export function startTicker(tick: () => void, intervalMs: number, host: TickerHo
   }
 
   function sync(): void {
-    if (host.document.hidden) {
+    if (stopped || host.document.hidden) {
       if (frameId !== undefined) host.cancelAnimationFrame(frameId);
       frameId = undefined;
     } else if (frameId === undefined) {
@@ -50,6 +53,10 @@ export function startTicker(tick: () => void, intervalMs: number, host: TickerHo
   host.document.addEventListener("visibilitychange", sync);
   sync();
   return {
+    stop() {
+      stopped = true;
+      sync();
+    },
     restart() {
       restarting = true;
     },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BODY_TEXT_CELL_ALPHA, contrastRatio, DARK } from "./palette";
+import { BODY_TEXT_CELL_ALPHA, contrastRatio, DARK, LIGHT, PALETTES } from "./palette";
 
 /** `fg` drawn at `alpha` over `bg`, as `#rrggbb`. */
 function over(fg: string, alpha: number, bg: string): string {
@@ -37,5 +37,35 @@ describe("dark palette", () => {
 
   it("needs the cells under Body Text drawn faint: at full strength they'd pull it below 7:1", () => {
     expect(contrastRatio(DARK.text, DARK.free)).toBeLessThan(7);
+  });
+});
+
+describe("light palette", () => {
+  it("has a cream background, hunter-green Pinned Cells and pale sage Free Cells", () => {
+    expect(LIGHT.background.toLowerCase()).toBe("#f3eedf");
+    expect(LIGHT.pinned.toUpperCase()).toBe("#355E3B");
+    expect(LIGHT.free.toLowerCase()).toBe("#b5c9a8");
+  });
+
+  it("keeps Body Text above 7:1 (WCAG AAA) over the faint Free Cells drawn under it", () => {
+    expect(contrastRatio(LIGHT.text, over(LIGHT.free, BODY_TEXT_CELL_ALPHA, LIGHT.background))).toBeGreaterThanOrEqual(7);
+  });
+
+  it("keeps Pinned Cells and text readable against the background (WCAG AA)", () => {
+    expect(contrastRatio(LIGHT.pinned, LIGHT.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(LIGHT.text, LIGHT.background)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps Pinned Cells clearly stronger than Free Cells against the background", () => {
+    expect(contrastRatio(LIGHT.pinned, LIGHT.background)).toBeGreaterThan(
+      2 * contrastRatio(LIGHT.free, LIGHT.background),
+    );
+  });
+});
+
+describe("palettes by theme", () => {
+  it("maps each theme to its palette", () => {
+    expect(PALETTES.dark).toBe(DARK);
+    expect(PALETTES.light).toBe(LIGHT);
   });
 });

@@ -5,9 +5,9 @@
 
 export interface Palette {
   readonly background: string;
-  /** Pinned Cells: bright, so content stands out above the Free Cells. */
+  /** Pinned Cells: the strongest against the background, so content stands out above the Free Cells. */
   readonly pinned: string;
-  /** Free Cells: true hunter green. */
+  /** Free Cells: true hunter green in the dark theme, pale sage in the light one. */
   readonly free: string;
   /** HTML text over the Grid. */
   readonly text: string;
@@ -19,6 +19,20 @@ export const DARK: Palette = {
   free: "#355E3B",
   text: "#dbe7dd",
 };
+
+export const LIGHT: Palette = {
+  /** Cream. */
+  background: "#f3eedf",
+  /** Hunter green, which is dark against cream. */
+  pinned: "#355E3B",
+  /** Pale sage. */
+  free: "#b5c9a8",
+  text: "#1e2a21",
+};
+
+export type Theme = "light" | "dark";
+
+export const PALETTES: Readonly<Record<Theme, Palette>> = { light: LIGHT, dark: DARK };
 
 /**
  * Cells under Body Text (its region of the Grid) are drawn at this opacity, like the

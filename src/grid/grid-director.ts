@@ -16,9 +16,11 @@ import {
   bodyTextCondensate,
   boxContains,
   navItemAt,
+  toggleAt,
   typesetSection,
   type Box,
   type SectionLayout,
+  type ToggleSpec,
   type ViewportCells,
 } from "./cell-typesetter";
 import { INTRO_SEEDS, introCells, seedDensity, soupCells, type IntroSeed } from "./intro-seeds";
@@ -55,10 +57,14 @@ export interface GridDirectorOptions {
   readonly introMemory: IntroMemory;
   /** Every Section's heading and nav label, from the same content as the Plain View. */
   readonly content: GridContent;
+  /** Toggles drawn as buttons in a corner of every Section (the theme and the simulation). */
+  readonly toggles?: readonly ToggleSpec[];
   readonly random?: () => number;
 }
 
 const key = (p: Point) => `${p.x},${p.y}`;
+/** Buttons are told apart by key: a nav item's path, or `toggle:` and a toggle's id. */
+const toggleKey = (id: string) => `toggle:${id}`;
 
 export class GridDirector {
   private _layout!: SectionLayout;
@@ -73,7 +79,9 @@ export class GridDirector {
   private kept: readonly Point[] = [];
   private arriving: readonly Point[] = [];
   private transitionTick = 0;
-  /** Buttons whose border is unpinned for now, by path, with the generations left before it pins again. */
+  /** The toggles as they should be drawn now. */
+  private toggles: readonly ToggleSpec[];
+  /** Buttons whose border is unpinned for now, by key, with the generations left before it pins again. */
   private readonly unpinnedBorders = new Map<string, number>();
   /** The button under the pointer, so moving within it doesn't start its border over. */
   private hovered: string | undefined;
@@ -83,6 +91,7 @@ export class GridDirector {
 
   constructor(private readonly options: GridDirectorOptions) {
     this.random = options.random ?? Math.random;
+    this.toggles = options.toggles ?? [];
     this._route = sectionPath(options.route);
     this._layout = this.typeset(this._route);
     const { reducedMotion, introMemory } = options;
@@ -144,14 +153,38 @@ export class GridDirector {
    * unpins its border for a moment, so it starts to decay under real Life.
    */
   hover(at: Point | undefined): void {
-    const path = at && navItemAt(this._layout, at)?.path;
-    if (path && path !== this.hovered) this.unpinBorder(path);
-    this.hovered = path;
+    const toggle = at && toggleAt(this._layout, at);
+    const button = at && (navItemAt(this._layout, at)?.path ?? (toggle ? toggleKey(toggle.id) : undefined));
+    if (button && button !== this.hovered) this.unpinBorder(button);
+    this.hovered = button;
   }
 
   /** The button for the Section at `path` has keyboard focus: its border decays as on hover. */
   focus(path: string): void {
     this.unpinBorder(sectionPath(path));
+  }
+
+  /** The toggle `id` has keyboard focus: its border decays as on hover. */
+  focusToggle(id: string): void {
+    this.unpinBorder(toggleKey(id));
+  }
+
+  /**
+   * The toggles have changed (one was pressed): draw them as they are now, at once and
+   * without a Transition. Mid-Transition, the next Section still arrives as planned.
+   */
+  setToggles(toggles: readonly ToggleSpec[]): void {
+    this.toggles = toggles;
+    const before = new Set(this._layout.pinned.map(key));
+    this._layout = this.typeset(this._route);
+    // The Intro pins the layout as it is when the name forms.
+    if (this._phase === "intro") return;
+    const after = new Set(this._layout.pinned.map(key));
+    const stays = (p: Point) => after.has(key(p));
+    const added = this._layout.pinned.filter((p) => !before.has(key(p)));
+    this.kept = [...this.kept.filter(stays), ...added];
+    this.arriving = this.arriving.filter(stays);
+    this.setPinned([...this.pinnedNow.filter(stays), ...added]);
   }
 
   /** Whether a click or tap at `at` would replay the Intro (it's on Home's settled name). */
@@ -212,19 +245,27 @@ export class GridDirector {
    * during the Intro, which is strict Life, nor under reduced motion; and a border
    * already decaying runs its course rather than starting over.
    */
-  private unpinBorder(path: string): void {
-    if (this._phase === "intro" || this.options.reducedMotion || this.unpinnedBorders.has(path)) return;
-    if (!this._layout.nav.some((i) => i.path === path)) return;
-    this.unpinnedBorders.set(path, BORDER_UNPIN_TICKS);
+  private unpinBorder(button: string): void {
+    if (this._phase === "intro" || this.options.reducedMotion || this.unpinnedBorders.has(button)) return;
+    if (!this.buttons().some((b) => b.key === button)) return;
+    this.unpinnedBorders.set(button, BORDER_UNPIN_TICKS);
     this.setPinned(this.pinnedNow);
+  }
+
+  /** Every button on screen, nav items and toggles, by key. */
+  private buttons(): { key: string; border: readonly Point[] }[] {
+    return [
+      ...this._layout.nav.map((i) => ({ key: i.path, border: i.border })),
+      ...this._layout.toggles.map((t) => ({ key: toggleKey(t.id), border: t.border })),
+    ];
   }
 
   /** One generation has passed: pin again the borders whose time is up. */
   private countDownBorders(): void {
     let due = false;
-    for (const [path, left] of this.unpinnedBorders) {
-      if (left > 1) this.unpinnedBorders.set(path, left - 1);
-      else due = this.unpinnedBorders.delete(path);
+    for (const [button, left] of this.unpinnedBorders) {
+      if (left > 1) this.unpinnedBorders.set(button, left - 1);
+      else due = this.unpinnedBorders.delete(button);
     }
     if (due) this.setPinned(this.pinnedNow);
   }
@@ -267,13 +308,15 @@ export class GridDirector {
   private setPinned(points: readonly Point[]): void {
     this.pinnedNow = points;
     const decaying = new Set(
-      this._layout.nav.filter((i) => this.unpinnedBorders.has(i.path)).flatMap((i) => i.border.map(key)),
+      this.buttons()
+        .filter((b) => this.unpinnedBorders.has(b.key))
+        .flatMap((b) => b.border.map(key)),
     );
     this._engine.setPinned(decaying.size ? points.filter((p) => !decaying.has(key(p))) : points);
   }
 
   private typeset(route: string): SectionLayout {
-    return typesetSection(this.options.viewport, this.options.content, route);
+    return typesetSection(this.options.viewport, this.options.content, route, this.toggles);
   }
 
   /** Start over with an empty Life Engine; returns the whole Grid's area, margin included. */

@@ -484,6 +484,75 @@ describe("Grid Director", () => {
       expect(pinnedKeys(d)).toEqual(layoutKeys(d));
     });
 
+    describe("the theme and simulation toggles", () => {
+      const TOGGLES = [
+        { id: "theme", label: "Dark", pressed: true },
+        { id: "simulation", label: "Life", pressed: true },
+      ];
+      const withToggles = () => quiet({ toggles: TOGGLES });
+      const theme = (d: GridDirector) => d.layout.toggles.find((t) => t.id === "theme")!;
+      const themePinned = (d: GridDirector) => theme(d).border.filter((p) => d.engine.isPinned(p.x, p.y)).length;
+
+      it("pins them with the Section, as Buttons", () => {
+        const d = withToggles();
+        expect(d.layout.toggles.map((t) => t.id)).toEqual(["theme", "simulation"]);
+        expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+        expect(themePinned(d)).toBe(theme(d).border.length);
+      });
+
+      it("keeps them pinned through a Transition", () => {
+        const d = withToggles();
+        d.navigate("/projects/");
+        expect(themePinned(d)).toBe(theme(d).border.length);
+        ticksToSettle(d);
+        expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+      });
+
+      it("decays a toggle's border on hover, then pins it again", () => {
+        const d = withToggles();
+        const { box } = theme(d);
+        d.hover({ x: box.x + 2, y: box.y + 2 });
+        expect(themePinned(d)).toBe(0);
+        expect(borderPinned(d)).toBe(contact(d).border.length);
+        for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+        expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+      });
+
+      it("decays a toggle's border on keyboard focus", () => {
+        const d = withToggles();
+        d.focusToggle("theme");
+        expect(themePinned(d)).toBe(0);
+        const life = d.layout.toggles.find((t) => t.id === "simulation")!;
+        expect(life.border.every((p) => d.engine.isPinned(p.x, p.y))).toBe(true);
+      });
+
+      it("redraws a toggle that changes at once, without a Transition", () => {
+        const d = withToggles();
+        const underlined = (dd: GridDirector) => {
+          const { box } = theme(dd);
+          const row = box.y + box.height - 3;
+          return dd.engine.isPinned(box.x + 2, row);
+        };
+        expect(underlined(d)).toBe(true);
+        d.setToggles([{ ...TOGGLES[0], pressed: false }, TOGGLES[1]]);
+        expect(d.phase).toBe("settled");
+        expect(theme(d).pressed).toBe(false);
+        expect(underlined(d)).toBe(false);
+        expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+      });
+
+      it("redraws a changed toggle mid-Transition, and still lands on the next Section", () => {
+        const d = withToggles();
+        d.navigate("/projects/");
+        d.tick();
+        d.setToggles([{ ...TOGGLES[0], pressed: false }, TOGGLES[1]]);
+        ticksToSettle(d);
+        expect(d.route).toBe("/projects/");
+        expect(theme(d).pressed).toBe(false);
+        expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+      });
+    });
+
     it("starts the Intro clean when it replays mid-decay", () => {
       const d = director({ introMemory: memory(true) });
       const nav = d.layout.nav.find((i) => i.path === "/contact/")!;

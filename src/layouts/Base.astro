@@ -2,8 +2,9 @@
 import Analytics from "../components/Analytics.astro";
 import SharingMeta from "../components/SharingMeta.astro";
 import SiteNav from "../components/SiteNav.astro";
-import { DARK } from "../grid/palette";
+import { DARK, LIGHT, type Palette } from "../grid/palette";
 import { getGridContent } from "../lib/content";
+import { THEME_SCRIPT } from "../lib/preferences";
 
 interface Props {
   title: string;
@@ -16,6 +17,17 @@ const { title, description, path } = Astro.props;
 // What the Grid draws in cells, from the same content as this page. `<` is escaped so
 // no heading can close the script element.
 const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003c");
+
+// Both themes' colours, from the palettes the Grid draws with. Dark unless the system
+// prefers light; a `data-theme` set by the theme script (or the toggle) overrides both.
+const vars = (p: Palette) => `--bg: ${p.background}; --text: ${p.text}; --accent: ${p.pinned};`;
+const themeCss = `
+  :root { color-scheme: dark; ${vars(DARK)} }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { color-scheme: light; ${vars(LIGHT)} }
+  }
+  :root[data-theme="light"] { color-scheme: light; ${vars(LIGHT)} }
+`;
 ---
 
 <!doctype html>
@@ -23,7 +35,9 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline set:html={THEME_SCRIPT} />
+    <Fragment set:html={`<style>${themeCss}</style>`} />
     <title>{title}</title>
     <meta name="description" content={description} />
     <SharingMeta title={title} description={description} path={path} />
@@ -33,6 +47,10 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
     <canvas id="grid" aria-hidden="true"></canvas>
     <header>
       <SiteNav current={path} />
+      <div class="toggles" role="group" aria-label="Display" hidden>
+        <button type="button" data-toggle="theme" data-label="Dark" aria-pressed="false">Dark theme</button>
+        <button type="button" data-toggle="simulation" data-label="Life" aria-pressed="false">Life simulation</button>
+      </div>
     </header>
     <slot />
     <script type="application/json" id="grid-content" set:html={gridContent} />
@@ -40,21 +58,18 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
 </html>
 
 <script>
-  import { startGrid } from "../grid/grid";
   import type { GridContent } from "../grid/routes";
+  import { startToggles } from "../grid/toggles";
 
   const canvas = document.querySelector<HTMLCanvasElement>("#grid");
   const data = document.querySelector("#grid-content")?.textContent;
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Reduced motion gets the Plain View: no Grid, ordinary page loads.
-  if (canvas && data && !reducedMotion) {
-    document.documentElement.classList.add("grid-on");
-    startGrid({ canvas, content: JSON.parse(data) as GridContent });
-  }
+  // The toggles start the Grid unless the simulation is off (by default under reduced
+  // motion), which leaves the Plain View: no Grid, ordinary page loads.
+  if (canvas && data) startToggles({ canvas, content: JSON.parse(data) as GridContent });
 </script>
 
-<style is:global define:vars={{ bg: DARK.background, text: DARK.text, accent: DARK.pinned }}>
+<style is:global>
   html {
     background: var(--bg);
     color: var(--text);
@@ -68,6 +83,40 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
   }
   #grid {
     display: none;
+  }
+
+  /* Plain View: the toggles sit at the end of the header, beside the nav. */
+  html:not(.grid-on) header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .toggles {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .toggles[hidden] {
+    display: none;
+  }
+  .toggles button {
+    padding: 4px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .toggles button[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .toggles button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   /*
@@ -96,6 +145,14 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+  /* The toggles' real buttons, likewise, over the toggles drawn in the corner. */
+  html.grid-on .toggles button.on-grid {
+    position: fixed;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    color: transparent;
+  }
   /* Deep Dive links aren't drawn in cells; they show like a skip link when focused. */
   html.grid-on header nav ul ul a,
   html.grid-on main h1 {
@@ -123,7 +180,7 @@ const gridContent = JSON.stringify(await getGridContent()).replace(/</g, "\\u003
     position: fixed;
     top: calc(var(--below-title, 45vh) + 1.25rem);
     right: 0;
-    bottom: 0;
+    bottom: var(--above-toggles, 0);
     left: 0;
     z-index: 1;
     overflow-y: auto;
