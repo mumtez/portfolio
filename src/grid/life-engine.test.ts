@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CellKind, LifeEngine, type Point } from "./life-engine";
+import { HEADINGS, spaceship, type SpaceshipKind } from "./spaceships";
 
 const BLOCK: Point[] = [
   { x: 0, y: 0 },
@@ -127,6 +128,51 @@ describe("LifeEngine", () => {
       engine.step();
       expect(engine.isAlive(6, 5)).toBe(false);
       expect(engine.kindAt(6, 5)).toBe(CellKind.Dead);
+    });
+  });
+
+  describe("margin discard", () => {
+    /** Live cells anywhere in the Grid, margin included. */
+    function allLive(engine: LifeEngine): string[] {
+      const out: string[] = [];
+      const m = engine.margin;
+      for (let y = -m; y < engine.height + m; y++) {
+        for (let x = -m; x < engine.width + m; x++) {
+          if (engine.isAlive(x, y)) out.push(`${x},${y}`);
+        }
+      }
+      return out;
+    }
+
+    const ships = (Object.keys(HEADINGS) as SpaceshipKind[]).flatMap((kind) =>
+      HEADINGS[kind].flatMap((heading) => [0, 1, 2, 3].map((phase) => ({ kind, heading, phase }))),
+    );
+
+    it.each(ships)(
+      "discards a $kind flying towards ($heading.x, $heading.y), phase $phase, leaving no debris",
+      ({ kind, heading, phase }) => {
+        const engine = new LifeEngine({ width: 30, height: 30, margin: 12 });
+        const ship = spaceship(kind, heading);
+        engine.inject(ship.cells.map((p) => ({ x: p.x + 13 + heading.x * phase, y: p.y + 13 + heading.y * phase })));
+        for (let t = 0; t < phase; t++) engine.step();
+        for (let t = 0; t < 200; t++) engine.step();
+        expect(allLive(engine)).toEqual([]);
+      },
+    );
+
+    it("clears still lifes left in the margin", () => {
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 6 });
+      engine.inject(BLOCK.map((p) => ({ x: p.x - 4, y: p.y + 3 })));
+      for (let t = 0; t < 10; t++) engine.step();
+      expect(allLive(engine)).toEqual([]);
+    });
+
+    it("leaves still lifes in the viewport alone", () => {
+      const engine = new LifeEngine({ width: 10, height: 10, margin: 6 });
+      const block = BLOCK.map((p) => ({ x: p.x, y: p.y }));
+      engine.inject(block);
+      for (let t = 0; t < 10; t++) engine.step();
+      expect(liveCells(engine)).toEqual(keys(block));
     });
   });
 

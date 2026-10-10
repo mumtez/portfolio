@@ -4,8 +4,9 @@
  * Coordinates are viewport cells: (0,0) is the top-left visible Cell. The Grid
  * extends `margin` cells beyond the viewport on every side; those Cells run
  * normally but aren't drawn. The outermost ring of the margin is always dead,
- * so patterns that reach it break up off-screen instead of wrapping. Debris can
- * linger there; truly discarding patterns that leave is still to do (issue #10).
+ * so nothing wraps, and a margin Cell alive for more than `MARGIN_MAX_AGE`
+ * consecutive ticks dies, so patterns that leave are discarded instead of
+ * leaving debris against the dead ring.
  */
 
 export interface Point {
@@ -29,6 +30,12 @@ export type CellKind = (typeof CellKind)[keyof typeof CellKind];
 const GHOST_DECAY = 0.72;
 /** Below this, a ghost is no longer drawn. */
 const GHOST_FLOOR = 0.05;
+/**
+ * A margin Cell alive for more than this many consecutive ticks dies. No Cell of a
+ * glider or LWSS lives longer than 4 ticks, so spaceships pass through the margin
+ * untouched while still lifes and their debris there die. 6 or more lets debris stay.
+ */
+const MARGIN_MAX_AGE = 4;
 
 export interface LifeEngineOptions {
   /** Viewport width in cells. */
@@ -53,6 +60,10 @@ export class LifeEngine {
   private readonly fringe: Uint8Array;
   /** 1 while alive, then decays towards 0 after death. */
   private readonly ghost: Float32Array;
+  /** 1 for Cells in the margin. */
+  private readonly inMargin: Uint8Array;
+  /** Consecutive ticks each Cell has been alive. */
+  private readonly age: Uint8Array;
 
   constructor({ width, height, margin }: LifeEngineOptions) {
     this.width = width;
@@ -65,6 +76,9 @@ export class LifeEngine {
     this.pinned = new Uint8Array(this.stride * this.rows);
     this.fringe = new Uint8Array(this.stride * this.rows);
     this.ghost = new Float32Array(this.stride * this.rows);
+    this.age = new Uint8Array(this.stride * this.rows);
+    this.inMargin = new Uint8Array(this.stride * this.rows).fill(1);
+    for (let y = 0; y < height; y++) this.inMargin.fill(0, this.index(0, y), this.index(width, y));
   }
 
   /**
@@ -92,7 +106,7 @@ export class LifeEngine {
 
   /** Advance one tick of B3/S23. */
   step(): void {
-    const { stride: W, rows: H, alive: a, next, pinned } = this;
+    const { stride: W, rows: H, alive: a, next, pinned, inMargin, age } = this;
     next.fill(0);
     for (let y = 1; y < H - 1; y++) {
       for (let x = 1; x < W - 1; x++) {
@@ -103,7 +117,10 @@ export class LifeEngine {
         }
         const n =
           a[i - W - 1] + a[i - W] + a[i - W + 1] + a[i - 1] + a[i + 1] + a[i + W - 1] + a[i + W] + a[i + W + 1];
-        next[i] = n === 3 || (n === 2 && a[i]) ? 1 : 0;
+        if (n === 3 || (n === 2 && a[i])) {
+          age[i] = a[i] ? Math.min(age[i] + 1, 255) : 1;
+          next[i] = inMargin[i] && age[i] > MARGIN_MAX_AGE ? 0 : 1;
+        }
       }
     }
     this.next = a;
@@ -140,6 +157,7 @@ export class LifeEngine {
   private revive(i: number): void {
     this.alive[i] = 1;
     this.ghost[i] = 1;
+    this.age[i] = 1;
   }
 
   private classifyFringe(): void {
