@@ -58,6 +58,17 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
     expect(parents).toEqual(url.startsWith("/projects/") && url !== "/projects/" ? ["/projects/"] : []);
   });
 
+  it("gives screen readers a labelled nav, and a name for every link and button", () => {
+    expect(doc.querySelector("nav")?.getAttribute("aria-label")).toBeTruthy();
+    for (const el of doc.querySelectorAll("a, button")) {
+      const name = el.getAttribute("aria-label") ?? text(el);
+      expect(name, el.outerHTML).not.toBe("");
+      expect(el.getAttribute("aria-hidden"), el.outerHTML).not.toBe("true");
+      expect(el.getAttribute("tabindex") ?? "0", el.outerHTML).not.toBe("-1");
+    }
+    for (const a of doc.querySelectorAll("a")) expect(a.getAttribute("href"), a.outerHTML).toBeTruthy();
+  });
+
   it("has a title and description", () => {
     expect(doc.querySelector("title")?.textContent).toMatch(/Andrew Aburustum/);
     expect(doc.querySelector('meta[name="description"]')?.getAttribute("content")).toBeTruthy();

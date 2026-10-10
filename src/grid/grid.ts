@@ -5,7 +5,8 @@
  * session, the history and the renderer. Home plays the Intro on a first visit. Every
  * Section pins its heading and the nav; the nav's real `<a>` elements are laid over
  * their cells, and clicking one (or going back or forward) runs a Transition while the
- * next Section's Plain View is swapped in. Soup is kept alive by spaceships flying in
+ * next Section's Plain View is swapped in. Each nav item is a button drawn in cells,
+ * whose border decays for a moment on hover or focus. Soup is kept alive by spaceships flying in
  * from the edges, and stirred by the pointer.
  */
 import { countPageView } from "../lib/analytics";
@@ -29,6 +30,8 @@ const INTRO_SEEN_KEY = "intro-seen";
 const TRAIL_MAX_GAP = 12;
 /** Clicks on these drop no glider: they're for the content, not the Grid. */
 const INTERACTIVE = "a, button, input, textarea, select, label, summary, [role='button']";
+/** The real links laid over buttons drawn in cells (placed by `placeHtml`). */
+const BUTTON = "a.on-grid";
 
 export interface GridOptions {
   readonly canvas: HTMLCanvasElement;
@@ -223,6 +226,24 @@ export function startGrid({ canvas, content }: GridOptions): void {
   document.documentElement.addEventListener("pointerleave", endTrail, { passive: true });
   window.addEventListener("pointermove", (e) => {
     document.body.style.cursor = director.canReplayAt(cellAt(e)) ? "pointer" : "";
+  });
+
+  // A button's border decays for a moment when the pointer moves onto it or it gets
+  // keyboard focus. Which button is under the pointer comes from the Typesetter's hit
+  // regions, which the real links are laid exactly over.
+  for (const type of ["pointermove", "pointerdown"] as const) {
+    window.addEventListener(type, (e) => director.hover(cellAt(e)), { passive: true });
+  }
+  document.documentElement.addEventListener("pointerleave", () => director.hover(undefined), { passive: true });
+  document.addEventListener("focusin", (e) => {
+    if (e.target instanceof HTMLAnchorElement && e.target.matches(BUTTON)) director.focus(e.target.pathname);
+  });
+  // Buttons are links underneath, which Enter follows; Space presses them too, like a button.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== " " || e.repeat || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(BUTTON)) return;
+    e.preventDefault();
+    e.target.click();
   });
 
   window.addEventListener("click", (e) => {

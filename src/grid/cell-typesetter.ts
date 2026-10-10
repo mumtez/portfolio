@@ -106,13 +106,15 @@ export interface ViewportCells {
   readonly height: number;
 }
 
-/** One link in the nav drawn in cells. */
+/** One link in the nav, drawn in cells as a button: its label inside a border. */
 export interface NavItem {
   /** The Section it goes to. */
   readonly path: string;
   readonly label: string;
-  /** Its hit region: the label plus a little padding. */
+  /** Its hit region: the button out to and including its border. */
   readonly box: Box;
+  /** The border's Pinned Cells: the edge of `box`. Hover and focus unpin it for a moment. */
+  readonly border: readonly Point[];
   /** True for the Section on screen (or, on a Deep Dive, for Projects). Drawn underlined. */
   readonly current: boolean;
 }
@@ -133,14 +135,16 @@ export interface SectionLayout {
 
 /** Rows above the nav. */
 const NAV_TOP = 3;
-/** Cells between one nav label and the next on the same line. */
+/** Cells between one nav label and the next on the same line; both their borders sit in this gap. */
 const NAV_GAP = 8;
-/** Padding around a nav label in its hit region (the underline sits inside it). */
-const NAV_PAD_X = 2;
-const NAV_PAD_Y = 1;
+/** From a button's label (and underline) out to its border: one clear cell, then the border. */
+const BUTTON_PAD = 2;
 /** The current item's underline is this many rows below the top of its label. */
 const UNDERLINE_ROW = GLYPH_HEIGHT + 1;
-const NAV_LINE_PITCH = UNDERLINE_ROW + 1 + 2 * NAV_PAD_Y;
+const BUTTON_HEIGHT = UNDERLINE_ROW + 1 + 2 * BUTTON_PAD;
+/** Clear rows between one line of buttons and the next. */
+const NAV_LINE_GAP = 2;
+const NAV_LINE_PITCH = BUTTON_HEIGHT + NAV_LINE_GAP;
 /** Cells kept clear at the viewport's left and right edges. */
 const SIDE = 3;
 /** Rows between the nav and the title. */
@@ -211,21 +215,27 @@ function typesetNav(
   lines.forEach((line, row) => {
     const width = line.reduce((sum, e) => sum + e.mask.width, 0) + NAV_GAP * (line.length - 1);
     let x = Math.floor((viewport.width - width) / 2);
-    const y = NAV_TOP + NAV_PAD_Y + row * NAV_LINE_PITCH;
+    const y = NAV_TOP + BUTTON_PAD + row * NAV_LINE_PITCH;
     for (const { path: to, label, mask } of line) {
       const current = currentness(to, path) !== undefined;
+      const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: mask.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT };
+      const border = edgeCells(box);
       place(mask, x, y);
       if (current) place(underline(mask.width), x, y + UNDERLINE_ROW);
-      items.push({
-        path: to,
-        label,
-        current,
-        box: { x: x - NAV_PAD_X, y: y - NAV_PAD_Y, width: mask.width + 2 * NAV_PAD_X, height: NAV_LINE_PITCH },
-      });
+      place({ ...box, cells: border }, 0, 0);
+      items.push({ path: to, label, current, box, border });
       x += mask.width + NAV_GAP;
     }
   });
   return items;
+}
+
+/** The cells on the edge of `box`, each once. */
+function edgeCells({ x, y, width, height }: Box): Point[] {
+  const cells: Point[] = [];
+  for (let cx = x; cx < x + width; cx++) cells.push({ x: cx, y }, { x: cx, y: y + height - 1 });
+  for (let cy = y + 1; cy < y + height - 1; cy++) cells.push({ x, y: cy }, { x: x + width - 1, y: cy });
+  return cells;
 }
 
 function underline(width: number): CellMask {

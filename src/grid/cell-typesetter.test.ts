@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import prototypeLayouts from "../../tests/fixtures/prototype-name-layouts.json";
-import { boxContains, nameMask, navItemAt, textMask, typesetSection, type CellMask } from "./cell-typesetter";
+import {
+  boxContains,
+  nameMask,
+  navItemAt,
+  textMask,
+  typesetSection,
+  type Box,
+  type CellMask,
+} from "./cell-typesetter";
+import type { Point } from "./life-engine";
 import { boxesOverlap, boxInside, rowsIn, TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
@@ -15,6 +24,13 @@ function toRows(mask: CellMask): string[] {
 /** A mask's rows trimmed to its live cells, to compare with `rowsIn`. */
 function trimmed(mask: CellMask): string[] {
   return rowsIn(mask.cells, { x: 0, y: 0, width: mask.width, height: mask.height });
+}
+
+const key = (p: Point) => `${p.x},${p.y}`;
+
+/** `box` shrunk by `by` cells on every side. */
+function inside(box: Box, by: number): Box {
+  return { x: box.x + by, y: box.y + by, width: box.width - 2 * by, height: box.height - 2 * by };
 }
 
 describe("Cell Typesetter", () => {
@@ -71,10 +87,28 @@ describe("Cell Typesetter", () => {
       expect(layout.nav.map((item) => [item.path, item.label])).toEqual(NAV);
     });
 
-    it("draws each label in Pinned Cells inside its hit region", () => {
+    it("draws each label in Pinned Cells inside its border", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/");
       for (const item of layout.nav.filter((i) => !i.current)) {
-        expect(rowsIn(layout.pinned, item.box)).toEqual(trimmed(textMask(item.label)));
+        expect(rowsIn(layout.pinned, inside(item.box, 1))).toEqual(trimmed(textMask(item.label)));
+      }
+    });
+
+    it("draws each item as a button: a pinned border around its hit region, clear of the label", () => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/");
+      const pinned = new Set(layout.pinned.map(key));
+      for (const item of layout.nav) {
+        const { x, y, width, height } = item.box;
+        const edge = new Set<string>();
+        for (let cx = x; cx < x + width; cx++) edge.add(`${cx},${y}`).add(`${cx},${y + height - 1}`);
+        for (let cy = y; cy < y + height; cy++) edge.add(`${x},${cy}`).add(`${x + width - 1},${cy}`);
+        expect(new Set(item.border.map(key)), item.label).toEqual(edge);
+        for (const k of edge) expect(pinned.has(k), `${item.label} ${k}`).toBe(true);
+        // One clear cell between the border and the label (and underline) on every side.
+        const gap = layout.pinned.filter(
+          (p) => boxContains(inside(item.box, 1), p) && !boxContains(inside(item.box, 2), p),
+        );
+        expect(gap, item.label).toEqual([]);
       }
     });
 
@@ -82,7 +116,7 @@ describe("Cell Typesetter", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/");
       const about = layout.nav.find((i) => i.current);
       expect(about?.path).toBe("/about/");
-      const rows = rowsIn(layout.pinned, about!.box);
+      const rows = rowsIn(layout.pinned, inside(about!.box, 1));
       const label = trimmed(textMask("About"));
       expect(rows.slice(0, label.length)).toEqual(label);
       expect(rows.at(-1)).toBe("#".repeat(textMask("About").width));

@@ -6,7 +6,7 @@
  * current Section's pins into Free Cells and pins the next Section in while real Life
  * runs. (Paused is the Ticker's job, and Off is the Plain View with no Grid at all.)
  */
-import { boxContains, typesetSection, type Box, type SectionLayout, type ViewportCells } from "./cell-typesetter";
+import { boxContains, navItemAt, typesetSection, type Box, type SectionLayout, type ViewportCells } from "./cell-typesetter";
 import { INTRO_SEEDS, introCells, seedDensity, soupCells, type IntroSeed } from "./intro-seeds";
 import { LifeEngine, type Point } from "./life-engine";
 import { sectionPath, type GridContent } from "./routes";
@@ -15,6 +15,8 @@ import { sectionPath, type GridContent } from "./routes";
 export const TICK_MS = 120;
 /** Generations a Transition takes to pin the next Section in: 5 × 120ms = 600ms. */
 export const TRANSITION_TICKS = 5;
+/** Generations a button's border stays unpinned after a hover or focus, decaying under real Life: 360ms. */
+export const BORDER_UNPIN_TICKS = 3;
 /** Chance that a Cell starts alive in the ambient soup when there is no Intro. */
 const AMBIENT_DENSITY = 0.09;
 
@@ -54,6 +56,10 @@ export class GridDirector {
   private kept: readonly Point[] = [];
   private arriving: readonly Point[] = [];
   private transitionTick = 0;
+  /** Buttons whose border is unpinned for now, by path, with the generations left before it pins again. */
+  private readonly unpinnedBorders = new Map<string, number>();
+  /** The button under the pointer, so moving within it doesn't start its border over. */
+  private hovered: string | undefined;
   private readonly random: () => number;
 
   constructor(private readonly options: GridDirectorOptions) {
@@ -86,6 +92,7 @@ export class GridDirector {
   /** Advance one generation. */
   tick(): void {
     this._engine.step();
+    this.countDownBorders();
     if (this._phase === "intro" && --this.ticksUntilName === 0) this.pinLayout();
     else if (this._phase === "transition") this.pinArriving(++this.transitionTick);
   }
@@ -97,6 +104,21 @@ export class GridDirector {
   input(at?: Point): void {
     if (this._phase === "intro") this.skipIntro();
     else if (at && this.canReplayAt(at)) this.playIntro();
+  }
+
+  /**
+   * The pointer is at `at` (undefined once it leaves the page). Moving onto a button
+   * unpins its border for a moment, so it starts to decay under real Life.
+   */
+  hover(at: Point | undefined): void {
+    const path = at && navItemAt(this._layout, at)?.path;
+    if (path && path !== this.hovered) this.unpinBorder(path);
+    this.hovered = path;
+  }
+
+  /** The button for the Section at `path` has keyboard focus: its border decays as on hover. */
+  focus(path: string): void {
+    this.unpinBorder(sectionPath(path));
   }
 
   /** Whether a click or tap at `at` would replay the Intro (it's on Home's settled name). */
@@ -144,6 +166,28 @@ export class GridDirector {
     this.setPinned([...this.kept, ...this.arriving.slice(0, count)]);
   }
 
+  /**
+   * Release a button's border into Free Cells for `BORDER_UNPIN_TICKS` generations. Not
+   * during the Intro, which is strict Life, nor under reduced motion; and a border
+   * already decaying runs its course rather than starting over.
+   */
+  private unpinBorder(path: string): void {
+    if (this._phase === "intro" || this.options.reducedMotion || this.unpinnedBorders.has(path)) return;
+    if (!this._layout.nav.some((i) => i.path === path)) return;
+    this.unpinnedBorders.set(path, BORDER_UNPIN_TICKS);
+    this.setPinned(this.pinnedNow);
+  }
+
+  /** One generation has passed: pin again the borders whose time is up. */
+  private countDownBorders(): void {
+    let due = false;
+    for (const [path, left] of this.unpinnedBorders) {
+      if (left > 1) this.unpinnedBorders.set(path, left - 1);
+      else due = this.unpinnedBorders.delete(path);
+    }
+    if (due) this.setPinned(this.pinnedNow);
+  }
+
   private skipIntro(): void {
     while (this.ticksUntilName > 0) this.tick();
   }
@@ -157,6 +201,7 @@ export class GridDirector {
     // Soup as dense as the seed itself, so the seed's box doesn't show as an edge.
     this._engine.inject(introCells(seed, title, { area, density: seedDensity(seed), random: this.random }));
     this.pinnedNow = [];
+    this.unpinnedBorders.clear();
     this.ticksUntilName = pool.depth;
     this._phase = "intro";
     this.options.introMemory.markSeen();
@@ -177,9 +222,13 @@ export class GridDirector {
     this._phase = "settled";
   }
 
+  /** Pin `points`, less the borders of buttons that are decaying for now. */
   private setPinned(points: readonly Point[]): void {
-    this._engine.setPinned(points);
     this.pinnedNow = points;
+    const decaying = new Set(
+      this._layout.nav.filter((i) => this.unpinnedBorders.has(i.path)).flatMap((i) => i.border.map(key)),
+    );
+    this._engine.setPinned(decaying.size ? points.filter((p) => !decaying.has(key(p))) : points);
   }
 
   private typeset(route: string): SectionLayout {

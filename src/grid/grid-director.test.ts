@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GridDirector, TICK_MS, type GridDirectorOptions, type IntroMemory } from "./grid-director";
+import { BORDER_UNPIN_TICKS, GridDirector, TICK_MS, type GridDirectorOptions, type IntroMemory } from "./grid-director";
 import { INTRO_SEEDS } from "./intro-seeds";
 import { TEST_CONTENT } from "./test-support";
 
@@ -343,6 +343,133 @@ describe("Grid Director", () => {
       expect(d.phase).toBe("transition");
       ticksToSettle(d);
       expect(d.route).toBe("/contact/");
+      expect(nameIsPinned(d)).toBe(true);
+    });
+  });
+
+  describe("buttons", () => {
+    /** Settled on About with no soup, so only the Section's own cells and their Fringe live. */
+    const quiet = (options: Partial<GridDirectorOptions> = {}) => {
+      const d = director({ route: "/about/", introMemory: memory(true), random: () => 0.99, ...options });
+      for (let t = 0; t < 10; t++) d.tick();
+      return d;
+    };
+    const contact = (d: GridDirector) => d.layout.nav.find((i) => i.path === "/contact/")!;
+    const onContact = (d: GridDirector) => ({ x: contact(d).box.x + 3, y: contact(d).box.y + 3 });
+    const borderPinned = (d: GridDirector) => contact(d).border.filter((p) => d.engine.isPinned(p.x, p.y)).length;
+    /** Live cells in and just around the Contact button, as "x,y" keys. */
+    const liveAround = (d: GridDirector) => {
+      const { x, y, width, height } = contact(d).box;
+      const out: string[] = [];
+      for (let cy = y - 2; cy < y + height + 2; cy++) {
+        for (let cx = x - 2; cx < x + width + 2; cx++) if (d.engine.isAlive(cx, cy)) out.push(`${cx},${cy}`);
+      }
+      return out;
+    };
+    const layoutKeys = (d: GridDirector) => new Set(d.layout.pinned.map((p) => `${p.x},${p.y}`));
+
+    it("unpins a button's border when the pointer moves onto it", () => {
+      const d = quiet();
+      const { border } = contact(d);
+      expect(borderPinned(d)).toBe(border.length);
+      d.hover(onContact(d));
+      expect(borderPinned(d)).toBe(0);
+      // Released into Free Cells: still alive until Life gets to them.
+      expect(border.every((p) => d.engine.isAlive(p.x, p.y))).toBe(true);
+    });
+
+    it("lets the border decay under real Life, then pins it again", () => {
+      const d = quiet();
+      const still = quiet();
+      d.hover(onContact(d));
+      d.tick();
+      still.tick();
+      expect(liveAround(d)).not.toEqual(liveAround(still));
+      for (let t = 1; t < BORDER_UNPIN_TICKS; t++) {
+        expect(borderPinned(d)).toBe(0);
+        d.tick();
+      }
+      expect(borderPinned(d)).toBe(contact(d).border.length);
+      expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+    });
+
+    it("plays once per visit: moving within the button doesn't start it over, leaving and coming back does", () => {
+      const d = quiet();
+      const { box } = contact(d);
+      d.hover(onContact(d));
+      for (let t = 0; t < BORDER_UNPIN_TICKS; t++) {
+        d.hover({ x: box.x + 4 + t, y: box.y + 3 });
+        d.tick();
+      }
+      expect(borderPinned(d)).toBe(contact(d).border.length);
+
+      d.hover({ x: 0, y: d.engine.height - 1 });
+      expect(borderPinned(d)).toBe(contact(d).border.length);
+      d.hover(onContact(d));
+      expect(borderPinned(d)).toBe(0);
+    });
+
+    it("unpins only the button under the pointer", () => {
+      const d = quiet();
+      d.hover(onContact(d));
+      for (const item of d.layout.nav.filter((i) => i.path !== "/contact/")) {
+        expect(item.border.every((p) => d.engine.isPinned(p.x, p.y)), item.label).toBe(true);
+      }
+    });
+
+    it("does the same when a button gets keyboard focus", () => {
+      const d = quiet();
+      d.focus("/contact");
+      expect(borderPinned(d)).toBe(0);
+      for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+      expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+    });
+
+    it("finds the button under a pointer from the Typesetter's hit regions, border included", () => {
+      const d = quiet();
+      const { box } = contact(d);
+      d.hover({ x: box.x, y: box.y + box.height - 1 });
+      expect(borderPinned(d)).toBe(0);
+      const e = quiet();
+      e.hover({ x: box.x - 1, y: box.y });
+      expect(borderPinned(e)).toBe(contact(e).border.length);
+    });
+
+    it("leaves the Intro alone: it's strict Life, with nothing pinned to release", () => {
+      const d = director();
+      const nav = d.layout.nav.find((i) => i.path === "/contact/")!;
+      d.hover({ x: nav.box.x + 3, y: nav.box.y + 3 });
+      d.focus("/contact/");
+      ticksToSettle(d);
+      expect(nameIsPinned(d)).toBe(true);
+      expect(nameFormedExactly(d)).toBe(true);
+    });
+
+    it("never decays under reduced motion", () => {
+      const d = quiet({ reducedMotion: true });
+      d.hover(onContact(d));
+      d.focus("/about/");
+      expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+    });
+
+    it("keeps decaying through a Transition, and the next Section's buttons end up pinned", () => {
+      const d = quiet();
+      d.hover(onContact(d));
+      d.navigate("/projects/");
+      expect(borderPinned(d)).toBe(0);
+      ticksToSettle(d);
+      for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+      expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+    });
+
+    it("starts the Intro clean when it replays mid-decay", () => {
+      const d = director({ introMemory: memory(true) });
+      const nav = d.layout.nav.find((i) => i.path === "/contact/")!;
+      d.hover({ x: nav.box.x + 3, y: nav.box.y + 3 });
+      const { title: name } = d.layout;
+      d.input({ x: name.x + 1, y: name.y + 1 });
+      expect(d.phase).toBe("intro");
+      ticksToSettle(d);
       expect(nameIsPinned(d)).toBe(true);
     });
   });
