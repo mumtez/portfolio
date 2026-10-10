@@ -385,10 +385,15 @@ describe("Grid Director", () => {
       d.tick();
       still.tick();
       expect(liveAround(d)).not.toEqual(liveAround(still));
-      for (let t = 1; t < BORDER_UNPIN_TICKS; t++) {
+      for (let t = 1; t < BORDER_UNPIN_TICKS - 1; t++) {
         expect(borderPinned(d)).toBe(0);
         d.tick();
       }
+      // Just before it pins again, most of the border has died: the decay shows.
+      const { border } = contact(d);
+      expect(borderPinned(d)).toBe(0);
+      expect(border.filter((p) => d.engine.isAlive(p.x, p.y)).length).toBeLessThan(border.length / 2);
+      d.tick();
       expect(borderPinned(d)).toBe(contact(d).border.length);
       expect(pinnedKeys(d)).toEqual(layoutKeys(d));
     });

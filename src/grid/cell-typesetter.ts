@@ -113,7 +113,7 @@ export interface NavItem {
   readonly label: string;
   /** Its hit region: the button out to and including its border. */
   readonly box: Box;
-  /** The border's Pinned Cells: the edge of `box`. Hover and focus unpin it for a moment. */
+  /** The border's Pinned Cells: the edge of `box`, kept apart so it can be released on its own. */
   readonly border: readonly Point[];
   /** True for the Section on screen (or, on a Deep Dive, for Projects). Drawn underlined. */
   readonly current: boolean;

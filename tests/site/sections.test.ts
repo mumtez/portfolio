@@ -61,7 +61,11 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
   it("gives screen readers a labelled nav, and a name for every link and button", () => {
     expect(doc.querySelector("nav")?.getAttribute("aria-label")).toBeTruthy();
     for (const el of doc.querySelectorAll("a, button")) {
-      const name = el.getAttribute("aria-label") ?? text(el);
+      const labelledBy = el.getAttribute("aria-labelledby");
+      const name =
+        el.getAttribute("aria-label") ??
+        (labelledBy ? text(doc.getElementById(labelledBy)) : null) ??
+        (text(el) || el.getAttribute("title") || "");
       expect(name, el.outerHTML).not.toBe("");
       expect(el.getAttribute("aria-hidden"), el.outerHTML).not.toBe("true");
       expect(el.getAttribute("tabindex") ?? "0", el.outerHTML).not.toBe("-1");

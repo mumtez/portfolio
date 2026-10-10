@@ -31,7 +31,7 @@ const TRAIL_MAX_GAP = 12;
 /** Clicks on these drop no glider: they're for the content, not the Grid. */
 const INTERACTIVE = "a, button, input, textarea, select, label, summary, [role='button']";
 /** The real links laid over buttons drawn in cells (placed by `placeHtml`). */
-const BUTTON = "a.on-grid";
+const DRAWN_BUTTON = "a.on-grid";
 
 export interface GridOptions {
   readonly canvas: HTMLCanvasElement;
@@ -236,12 +236,12 @@ export function startGrid({ canvas, content }: GridOptions): void {
   }
   document.documentElement.addEventListener("pointerleave", () => director.hover(undefined), { passive: true });
   document.addEventListener("focusin", (e) => {
-    if (e.target instanceof HTMLAnchorElement && e.target.matches(BUTTON)) director.focus(e.target.pathname);
+    if (e.target instanceof HTMLAnchorElement && e.target.matches(DRAWN_BUTTON)) director.focus(e.target.pathname);
   });
   // Buttons are links underneath, which Enter follows; Space presses them too, like a button.
   document.addEventListener("keydown", (e) => {
     if (e.key !== " " || e.repeat || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(BUTTON)) return;
+    if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(DRAWN_BUTTON)) return;
     e.preventDefault();
     e.target.click();
   });

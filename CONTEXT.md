@@ -58,6 +58,10 @@ _Avoid_: Case study, project page
 Paragraph-length writing in a Section, such as a Deep Dive's story. It is real HTML laid over the live Grid, never drawn in Cells.
 _Avoid_: Copy, prose, description
 
+**Button**:
+Something to press that is drawn in Cells: its label in Pinned Cells inside a pinned border. Hovering or focusing it briefly releases the border to decay under Life before it pins again. Underneath it is a real link or button, laid over its cells.
+_Avoid_: Tile, chip
+
 **Frame**:
 A region of a Section reserved for real media (photos, video), where no Cells live and the Grid steps around it.
 _Avoid_: Embed, media box
