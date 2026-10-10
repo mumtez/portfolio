@@ -1,31 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
-import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-import { GOATCOUNTER_SITE_CODE } from "../../src/lib/analytics";
+import { GOATCOUNTER_ENDPOINT, GOATCOUNTER_SCRIPT } from "../../src/lib/analytics";
+import { builtPage, builtPath, SECTIONS } from "./built";
 
 const SITE = "https://aburustum.com";
-const DIST = new URL("../../dist/", import.meta.url);
-
-const SECTIONS = [
-  "/",
-  "/about/",
-  "/experience/",
-  "/projects/",
-  "/projects/roborebels/",
-  "/projects/baja/",
-  "/projects/ftc-event-viewer/",
-  "/contact/",
-];
-
-/** The built file for a URL path on this site, e.g. `/about/` → `dist/about/index.html`. */
-function distFile(urlPath: string): URL {
-  const path = urlPath.replace(/^\//, "");
-  return new URL(path === "" || path.endsWith("/") ? `${path}index.html` : path, DIST);
-}
-
-function builtPage(urlPath: string): Document {
-  return parseHTML(readFileSync(distFile(urlPath), "utf8")).document;
-}
 
 function meta(doc: Document, key: string): string | null | undefined {
   return doc.querySelector(`meta[property="${key}"], meta[name="${key}"]`)?.getAttribute("content");
@@ -73,8 +51,8 @@ describe.each(SECTIONS)("Section %s link preview", (url) => {
     expect(meta(doc, "twitter:image:alt")).toBe(meta(doc, "og:image:alt"));
 
     const path = new URL(image!).pathname;
-    expect(existsSync(distFile(path)), path).toBe(true);
-    const size = pngSize(readFileSync(distFile(path)));
+    expect(existsSync(builtPath(path)), path).toBe(true);
+    const size = pngSize(readFileSync(builtPath(path)));
     expect(size).toEqual({ width: 1200, height: 630 });
     expect(meta(doc, "og:image:width")).toBe("1200");
     expect(meta(doc, "og:image:height")).toBe("630");
@@ -83,8 +61,8 @@ describe.each(SECTIONS)("Section %s link preview", (url) => {
   it("counts a GoatCounter view", () => {
     const scripts = [...doc.querySelectorAll("script[data-goatcounter]")];
     expect(scripts).toHaveLength(1);
-    expect(scripts[0].getAttribute("data-goatcounter")).toBe(`https://${GOATCOUNTER_SITE_CODE}.goatcounter.com/count`);
-    expect(scripts[0].getAttribute("src")).toBe("https://gc.zgo.at/count.js");
+    expect(scripts[0].getAttribute("data-goatcounter")).toBe(GOATCOUNTER_ENDPOINT);
+    expect(scripts[0].getAttribute("src")).toBe(GOATCOUNTER_SCRIPT);
     expect(scripts[0].hasAttribute("async")).toBe(true);
   });
 });
@@ -101,7 +79,7 @@ describe("Resume", () => {
   it("the resume link resolves to a PDF in the built site", () => {
     const href = link!.getAttribute("href")!;
     expect(href).toMatch(/^\//);
-    const file = distFile(href);
+    const file = builtPath(href);
     expect(existsSync(file), href).toBe(true);
     expect(readFileSync(file).subarray(0, 5).toString()).toBe("%PDF-");
   });

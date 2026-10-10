@@ -1,19 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-
-const DIST = new URL("../../dist/", import.meta.url);
-
-/** The built file Astro writes for a URL path, e.g. `/about/` → `about/index.html`. */
-function builtFile(urlPath: string): URL {
-  const path = urlPath.replace(/^\//, "");
-  return new URL(path === "" || path.endsWith("/") ? `${path}index.html` : path, DIST);
-}
-
-/** Parse a page from Astro's built output (`npm run test:site` builds first). */
-function builtPage(urlPath: string): Document {
-  return parseHTML(readFileSync(builtFile(urlPath), "utf8")).document;
-}
+import { builtPage, DIST, SECTIONS } from "./built";
 
 function text(el: Element | Document | null | undefined): string {
   const node = el && "body" in el ? el.body : el;
@@ -40,17 +28,6 @@ function readPrivateTerms(): string[] {
   if (existsSync(file)) terms = terms.concat(readFileSync(file, "utf8").split("\n"));
   return terms.map(squash).filter(Boolean);
 }
-
-const SECTIONS = [
-  "/",
-  "/about/",
-  "/experience/",
-  "/projects/",
-  "/projects/roborebels/",
-  "/projects/baja/",
-  "/projects/ftc-event-viewer/",
-  "/contact/",
-];
 
 describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) => {
   const doc = builtPage(url);

@@ -8,7 +8,8 @@
  */
 import { crc32, deflateSync } from "node:zlib";
 import { nameMask } from "../grid/cell-typesetter";
-import { CellKind, LifeEngine, type Point } from "../grid/life-engine";
+import { soupCells } from "../grid/intro-seeds";
+import { CellKind, LifeEngine } from "../grid/life-engine";
 import { DARK } from "../grid/palette";
 
 /** The size LinkedIn, Slack, iMessage and X all crop well from. */
@@ -26,7 +27,7 @@ const SOUP_SEED = 0x5eed;
 const NAME_CLEARANCE = 6;
 
 /** A small deterministic PRNG (mulberry32), so the image is the same on every build. */
-function random(seed: number): () => number {
+function seededRandom(seed: number): () => number {
   let a = seed;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -48,19 +49,14 @@ function cellColours(): ([number, number, number] | undefined)[][] {
   const engine = new LifeEngine({ width: COLS, height: ROWS, margin: 8 });
   engine.setPinned(name.cells.map((p) => ({ x: p.x + at.x, y: p.y + at.y })));
 
-  const next = random(SOUP_SEED);
-  const soup: Point[] = [];
-  for (let y = 0; y < ROWS; y++) {
-    for (let x = 0; x < COLS; x++) {
-      const nearName =
-        x >= at.x - NAME_CLEARANCE &&
-        x < at.x + name.width + NAME_CLEARANCE &&
-        y >= at.y - NAME_CLEARANCE &&
-        y < at.y + name.height + NAME_CLEARANCE;
-      if (!nearName && next() < SOUP_DENSITY) soup.push({ x, y });
-    }
-  }
-  engine.inject(soup);
+  const area = { x: 0, y: 0, width: COLS, height: ROWS };
+  const clearOfName = {
+    x: at.x - NAME_CLEARANCE,
+    y: at.y - NAME_CLEARANCE,
+    width: name.width + 2 * NAME_CLEARANCE,
+    height: name.height + 2 * NAME_CLEARANCE,
+  };
+  engine.inject(soupCells({ area, density: SOUP_DENSITY, random: seededRandom(SOUP_SEED) }, clearOfName));
   for (let i = 0; i < GENERATIONS; i++) engine.step();
 
   const bg = rgb(DARK.background);
