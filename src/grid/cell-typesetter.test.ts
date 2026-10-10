@@ -17,9 +17,17 @@ describe("Cell Typesetter", () => {
     expect(toRows(mask)).toEqual(prototypeLayouts["one-line"]);
   });
 
+  it("lays out the stacked name exactly as the prototype did (78×22)", () => {
+    const mask = nameMask("stacked");
+    expect(mask.width).toBe(78);
+    expect(mask.height).toBe(22);
+    expect(toRows(mask)).toEqual(prototypeLayouts["two-lines"]);
+  });
+
   describe("Home", () => {
     it("centres the one-line name horizontally and pins exactly its cells", () => {
       const home = typesetHome({ width: 201, height: 60 });
+      expect(home.nameLayout).toBe("one-line");
       expect(home.name).toMatchObject({ x: 33, width: 135, height: 9 });
       const { x, y } = home.name;
       const expected = nameMask("one-line").cells.map((c) => `${c.x + x},${c.y + y}`);

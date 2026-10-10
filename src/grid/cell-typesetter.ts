@@ -33,9 +33,12 @@ const NAME_GLYPHS: Readonly<Record<string, readonly string[]>> = {
 const NAME_HEIGHT = 9;
 const NAME_LETTER_GAP = 2;
 const NAME_WORD_GAP = 5;
+/** Blank rows between the two lines of the stacked name. */
+const NAME_LINE_GAP = 4;
 const NAME_WORDS = ["ANDREW", "ABURUSTUM"] as const;
 
-export type NameLayout = "one-line";
+/** One line on wide screens (135×9); two centred lines when that doesn't fit (78×22). */
+export type NameLayout = "one-line" | "stacked";
 
 function wordRows(word: string): string[] {
   let rows: string[] = Array(NAME_HEIGHT).fill("");
@@ -56,9 +59,15 @@ function maskFromRows(rows: readonly string[]): CellMask {
 }
 
 /** The name as a Pinned Cell mask. */
-export function nameMask(_layout: NameLayout): CellMask {
+export function nameMask(layout: NameLayout): CellMask {
   const [first, last] = NAME_WORDS.map(wordRows);
-  return maskFromRows(first.map((r, y) => r + ".".repeat(NAME_WORD_GAP) + last[y]));
+  if (layout === "one-line") {
+    return maskFromRows(first.map((r, y) => r + ".".repeat(NAME_WORD_GAP) + last[y]));
+  }
+  const width = last[0].length;
+  const pad = Math.floor((width - first[0].length) / 2);
+  const centred = first.map((r) => ".".repeat(pad) + r.padEnd(width - pad, "."));
+  return maskFromRows([...centred, ...Array<string>(NAME_LINE_GAP).fill(".".repeat(width)), ...last]);
 }
 
 export interface Box {
@@ -66,6 +75,10 @@ export interface Box {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+}
+
+export function boxContains(box: Box, { x, y }: Point): boolean {
+  return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
 }
 
 export interface ViewportCells {
@@ -78,17 +91,21 @@ export interface HomeLayout {
   readonly pinned: readonly Point[];
   /** Where the name sits; the tagline goes below it. */
   readonly name: Box;
+  /** Which name layout is in `name`, so the Intro can pick a matching Intro Seed. */
+  readonly nameLayout: NameLayout;
 }
 
 /** The name's bottom edge sits at this fraction of the viewport height. */
 const NAME_BASELINE = 0.45;
 
 export function typesetHome(viewport: ViewportCells): HomeLayout {
-  const mask = nameMask("one-line");
+  const nameLayout: NameLayout = "one-line";
+  const mask = nameMask(nameLayout);
   const x = Math.floor((viewport.width - mask.width) / 2);
   const y = Math.max(0, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
   return {
     pinned: mask.cells.map((c) => ({ x: c.x + x, y: c.y + y })),
     name: { x, y, width: mask.width, height: mask.height },
+    nameLayout,
   };
 }
