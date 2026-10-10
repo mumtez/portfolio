@@ -5,7 +5,7 @@ import { startTicker, type TickerHost } from "./ticker";
 function fakeHost() {
   let callbacks = new Map<number, (t: number) => void>();
   let nextId = 1;
-  const listeners: (() => void)[] = [];
+  let listeners: (() => void)[] = [];
   const host: TickerHost = {
     requestAnimationFrame(cb) {
       callbacks.set(nextId, cb);
@@ -18,6 +18,9 @@ function fakeHost() {
       hidden: false,
       addEventListener(_type, listener) {
         listeners.push(listener);
+      },
+      removeEventListener(_type, listener) {
+        listeners = listeners.filter((l) => l !== listener);
       },
     },
   };
@@ -35,6 +38,9 @@ function fakeHost() {
     },
     get pendingFrames() {
       return callbacks.size;
+    },
+    get listeners() {
+      return listeners.length;
     },
   };
 }
@@ -105,6 +111,12 @@ describe("startTicker", () => {
     browser.setHidden(false);
     for (let t = 100; t <= 1000; t += 16) browser.frame(t);
     expect(ticks).toBe(1);
+  });
+
+  it("stops listening for the tab's visibility when stopped", () => {
+    const browser = fakeHost();
+    startTicker(() => {}, 100, browser.host).stop();
+    expect(browser.listeners).toBe(0);
   });
 
   it("doesn't double up if shown twice in a row", () => {

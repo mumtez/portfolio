@@ -10,6 +10,7 @@ export interface TickerHost {
   readonly document: {
     readonly hidden: boolean;
     addEventListener(type: "visibilitychange", listener: () => void): void;
+    removeEventListener(type: "visibilitychange", listener: () => void): void;
   };
 }
 
@@ -56,6 +57,7 @@ export function startTicker(tick: () => void, intervalMs: number, host: TickerHo
     stop() {
       stopped = true;
       sync();
+      host.document.removeEventListener("visibilitychange", sync);
     },
     restart() {
       restarting = true;
