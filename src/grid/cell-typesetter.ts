@@ -154,6 +154,21 @@ const HEADING_LINE_PITCH = GLYPH_HEIGHT + 3;
 /** The name's bottom edge sits at this fraction of the viewport height, unless the nav pushes it down. */
 const NAME_BASELINE = 0.45;
 
+/** Cells wide the one-line name needs: the name plus `SIDE` clear at each side. */
+const ONE_LINE_MIN_WIDTH = nameMask("one-line").width + 2 * SIDE;
+const STACKED_NAME = nameMask("stacked");
+
+/**
+ * Fewest cells across a viewport needs for the narrowest layout: the stacked name plus
+ * `SIDE` clear at each side. The Grid sizes its cells so the viewport is at least this wide.
+ */
+export const MIN_VIEWPORT_WIDTH = STACKED_NAME.width + 2 * SIDE;
+
+/** The one-line name wherever it fits, else the stacked name. */
+function nameLayoutFor(viewport: ViewportCells): NameLayout {
+  return viewport.width >= ONE_LINE_MIN_WIDTH ? "one-line" : "stacked";
+}
+
 /** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport. */
 export function typesetSection(viewport: ViewportCells, content: GridContent, path: string): SectionLayout {
   const pinned: Point[] = [];
@@ -166,7 +181,7 @@ export function typesetSection(viewport: ViewportCells, content: GridContent, pa
   const top = navBottom + TITLE_GAP;
 
   if (path === "/") {
-    const nameLayout: NameLayout = "one-line";
+    const nameLayout = nameLayoutFor(viewport);
     const mask = nameMask(nameLayout);
     const x = Math.floor((viewport.width - mask.width) / 2);
     const y = Math.max(top, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
@@ -198,11 +213,12 @@ function typesetNav(
 ): NavItem[] {
   const entries = content.sections.flatMap((s) => (s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : []));
   const maxWidth = viewport.width - 2 * SIDE;
+  const column = navIsColumn(viewport, entries.length);
   const lines: (typeof entries)[] = [];
   let lineWidth = 0;
   for (const entry of entries) {
     const line = lines.at(-1);
-    if (line && lineWidth + NAV_GAP + entry.mask.width <= maxWidth) {
+    if (line && !column && lineWidth + NAV_GAP + entry.mask.width <= maxWidth) {
       line.push(entry);
       lineWidth += NAV_GAP + entry.mask.width;
     } else {
@@ -236,6 +252,17 @@ function edgeCells({ x, y, width, height }: Box): Point[] {
   for (let cx = x; cx < x + width; cx++) cells.push({ x: cx, y }, { x: cx, y: y + height - 1 });
   for (let cy = y + 1; cy < y + height - 1; cy++) cells.push({ x, y: cy }, { x: x + width - 1, y: cy });
   return cells;
+}
+
+/**
+ * Whether the nav stacks into a single column: on a narrow viewport (one that gets the
+ * stacked name), as long as the stacked name still fits below the column. A short one (a
+ * phone on its side) wraps the nav into rows instead. It depends on the viewport alone,
+ * so every Section has the same nav and a Transition leaves it pinned.
+ */
+function navIsColumn(viewport: ViewportCells, items: number): boolean {
+  const columnBottom = NAV_TOP + items * NAV_LINE_PITCH;
+  return nameLayoutFor(viewport) === "stacked" && columnBottom + TITLE_GAP + STACKED_NAME.height <= viewport.height;
 }
 
 function underline(width: number): CellMask {

@@ -146,6 +146,53 @@ describe("Cell Typesetter", () => {
       expect(rowsUsed(150)).toBeGreaterThan(1);
     });
 
+    describe("on a narrow viewport (a phone held upright)", () => {
+      const PHONE = { width: 90, height: 190 };
+
+      it("stacks into a single column, one item per row, in order", () => {
+        const { nav } = typesetSection(PHONE, TEST_CONTENT, "/about/");
+        expect(nav.map((i) => i.path)).toEqual(NAV.map(([path]) => path));
+        const ys = nav.map((i) => i.box.y);
+        expect([...ys].sort((a, b) => a - b)).toEqual(ys);
+        expect(new Set(ys).size).toBe(nav.length);
+        for (const item of nav) expect(boxInside(item.box, PHONE), item.label).toBe(true);
+        nav.forEach((a, i) => nav.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)));
+      });
+
+      it("centres each item and draws its label inside its hit region", () => {
+        const layout = typesetSection(PHONE, TEST_CONTENT, "/about/");
+        for (const item of layout.nav) {
+          expect(Math.abs(item.box.x + item.box.width / 2 - PHONE.width / 2), item.label).toBeLessThanOrEqual(1);
+          const label = trimmed(textMask(item.label));
+          expect(rowsIn(layout.pinned, inside(item.box, 1)).slice(0, label.length), item.label).toEqual(label);
+        }
+      });
+
+      it("maps a tap on each row to that row's item", () => {
+        const layout = typesetSection(PHONE, TEST_CONTENT, "/");
+        for (const item of layout.nav) {
+          const middle = { x: item.box.x + Math.floor(item.box.width / 2), y: item.box.y + Math.floor(item.box.height / 2) };
+          expect(navItemAt(layout, middle)?.path).toBe(item.path);
+        }
+        // Beside a short label, in the column's row, is not a link.
+        const home = layout.nav[0];
+        expect(navItemAt(layout, { x: home.box.x - 1, y: home.box.y + 2 })).toBeUndefined();
+      });
+
+      it("is the same nav on every Section, so a Transition leaves it pinned", () => {
+        const boxes = (path: string) => typesetSection(PHONE, TEST_CONTENT, path).nav.map((i) => i.box);
+        for (const { path } of TEST_CONTENT.sections) expect(boxes(path)).toEqual(boxes("/"));
+      });
+
+      it("wraps into rows instead when a column would push the stacked name off a short screen", () => {
+        const landscape = { width: 140, height: 65 };
+        const home = typesetSection(landscape, TEST_CONTENT, "/");
+        expect(home.nameLayout).toBe("stacked");
+        expect(new Set(home.nav.map((i) => i.box.y)).size).toBeLessThan(home.nav.length);
+        expect(boxInside(home.title, landscape)).toBe(true);
+      });
+    });
+
     it("maps a cell to the nav item whose hit region holds it", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/");
       const projects = layout.nav[3];
@@ -200,6 +247,21 @@ describe("Cell Typesetter", () => {
       const home = typesetSection(viewport, TEST_CONTENT, "/");
       for (const item of home.nav) expect(home.title.y).toBeGreaterThan(item.box.y + item.box.height);
       expect(home.title.y + home.title.height).toBeLessThanOrEqual(viewport.height / 2);
+    });
+
+    it("keeps the one-line name while it fits with 3 cells clear at each side (141 cells)", () => {
+      expect(typesetSection({ width: 141, height: 100 }, TEST_CONTENT, "/").nameLayout).toBe("one-line");
+    });
+
+    it.each([140, 100, 90, 84])("stacks the name when the one-line name doesn't fit (%i cells wide)", (width) => {
+      const viewport = { width, height: 150 };
+      const home = typesetSection(viewport, TEST_CONTENT, "/");
+      expect(home.nameLayout).toBe("stacked");
+      expect(home.title).toMatchObject({ width: 78, height: 22 });
+      expect(boxInside(home.title, viewport)).toBe(true);
+      expect(Math.abs(home.title.x + home.title.width / 2 - width / 2)).toBeLessThanOrEqual(1);
+      expect(rowsIn(home.pinned, home.title)).toEqual(trimmed(nameMask("stacked")));
+      for (const item of home.nav) expect(home.title.y).toBeGreaterThan(item.box.y + item.box.height);
     });
 
     it("has no name layout on other Sections", () => {

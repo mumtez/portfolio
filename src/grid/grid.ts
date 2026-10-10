@@ -10,6 +10,7 @@
  * from the edges, and stirred by the pointer.
  */
 import { countPageView } from "../lib/analytics";
+import { cellSize } from "./cell-size";
 import { navItemAt, type SectionLayout } from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
@@ -23,8 +24,6 @@ import { startTicker, type Ticker } from "./ticker";
 
 /** Off-screen cells on every side, so patterns enter and leave naturally. Wider than any spaceship plus the dead ring. */
 const MARGIN = 12;
-/** Cells are sized so the viewport is at least this many cells wide: the one-line name (135) plus room. */
-const MIN_VIEWPORT_CELLS = 150;
 const INTRO_SEEN_KEY = "intro-seen";
 /** A pointer jump longer than this many cells starts a new trail instead of drawing a long line. */
 const TRAIL_MAX_GAP = 12;
@@ -37,10 +36,6 @@ export interface GridOptions {
   readonly canvas: HTMLCanvasElement;
   /** Every Section's heading and nav label, embedded in the page from the content collections. */
   readonly content: GridContent;
-}
-
-function cellSize(viewportPx: number): number {
-  return Math.min(8, Math.max(2, Math.floor(viewportPx / MIN_VIEWPORT_CELLS)));
 }
 
 /** The Intro plays once per browser session. If storage fails, the Intro may just play again. */
@@ -91,7 +86,7 @@ export function startGrid({ canvas, content }: GridOptions): void {
   let ticker: Ticker | undefined;
 
   function rebuild(): void {
-    cellPx = cellSize(window.innerWidth);
+    cellPx = cellSize(window.innerWidth, window.devicePixelRatio || 1);
     const width = Math.ceil(window.innerWidth / cellPx);
     const height = Math.ceil(window.innerHeight / cellPx);
     director = new GridDirector({

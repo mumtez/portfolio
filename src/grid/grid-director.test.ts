@@ -132,6 +132,21 @@ describe("Grid Director", () => {
       expect(farAlive).toBeGreaterThan(0);
     });
 
+    it("on a phone-sized viewport, plays a stacked seed and lands exactly on the stacked name", () => {
+      const PHONE = { width: 90, height: 160 };
+      const { depth, seeds } = INTRO_SEEDS.stacked;
+      seeds.forEach((_, i) => {
+        const picker = seedPicker();
+        picker.pickSeed(i, seeds.length);
+        const d = director({ viewport: PHONE, random: picker.random });
+        expect(d.layout.nameLayout).toBe("stacked");
+        expect(d.phase).toBe("intro");
+        expect(ticksToSettle(d)).toBe(depth);
+        expect(nameIsPinned(d)).toBe(true);
+        expect(nameFormedExactly(d)).toBe(true);
+      });
+    });
+
     it("remembers that the Intro has been seen this session", () => {
       const introMemory = memory();
       director({ introMemory });
