@@ -7,13 +7,8 @@
  * call `countPageView` with the new path.
  */
 
-/**
- * The site code from GoatCounter: `<code>.goatcounter.com`.
- *
- * PLACEHOLDER until Andrew signs up. The underscore makes it an invalid host name, so no
- * one else can own it and views are dropped rather than sent to someone else's dashboard.
- */
-export const GOATCOUNTER_SITE_CODE = "REPLACE_ME";
+/** The site code from GoatCounter: `<code>.goatcounter.com`. */
+export const GOATCOUNTER_SITE_CODE = "coolperson11";
 
 /** Where GoatCounter's script sends views. */
 export const GOATCOUNTER_ENDPOINT = `https://${GOATCOUNTER_SITE_CODE}.goatcounter.com/count`;

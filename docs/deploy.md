@@ -52,7 +52,7 @@ dig +short ftc.aburustum.com      # unchanged: still the homelab
 
 ## Analytics (GoatCounter)
 
-Page views are counted with [GoatCounter](https://www.goatcounter.com): no cookies, so no consent banner. Each Section URL shows up as its own path. Until this is set up, the site code is a placeholder and no views are recorded.
+Page views are counted with [GoatCounter](https://www.goatcounter.com): no cookies, so no consent banner. Each Section URL shows up as its own path.
 
 1. Sign up at <https://www.goatcounter.com/signup> and pick a site code, e.g. `aburustum` (the dashboard is then `https://aburustum.goatcounter.com`).
 2. Set `GOATCOUNTER_SITE_CODE` in `src/lib/analytics.ts` to that code and push to `main`.
@@ -60,4 +60,4 @@ Page views are counted with [GoatCounter](https://www.goatcounter.com): no cooki
 
 ## Resume
 
-Contact links `public/andrew-aburustum-resume.pdf`, currently a placeholder. Replace that file with the real PDF, keeping the name, and push.
+Contact links `public/andrew-aburustum-resume.pdf`. To update the resume, replace that file, keeping the name, and push.
