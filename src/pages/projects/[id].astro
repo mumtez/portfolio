@@ -1,0 +1,29 @@
+---
+/** A Deep Dive: one project's story, with its Markdown file body as Body Text. */
+import type { GetStaticPaths } from "astro";
+import { render } from "astro:content";
+import Placeholder from "../../components/Placeholder.astro";
+import Section from "../../layouts/Section.astro";
+import { deepDivePath, getDeepDives, type Project } from "../../lib/content";
+
+export const getStaticPaths = (async () => {
+  return (await getDeepDives()).map((project) => ({ params: { id: project.id }, props: { project } }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+const { title, summary, tools, link, placeholder } = project.data;
+const { Content } = await render(project);
+---
+
+<Section path={deepDivePath(project)} heading={title} title={`${title} · Andrew Aburustum`} description={summary}>
+  <p class="meta">{tools}{link && <> · <a href={link.href}>{link.label}</a></>}</p>
+  {placeholder && <Placeholder note={placeholder} />}
+  <div class="body-text">
+    <Content />
+  </div>
+  <p><a href="/projects/">All projects</a></p>
+</Section>

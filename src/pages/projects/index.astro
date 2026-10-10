@@ -1,0 +1,33 @@
+---
+import Section from "../../layouts/Section.astro";
+import { deepDivePath, getProjects, getSection } from "../../lib/content";
+
+const section = await getSection("projects");
+const projects = await getProjects();
+---
+
+<Section {...section}>
+  {
+    projects.map((project) => {
+      const { title, tools, points, link, deepDive } = project.data;
+      return (
+        <article>
+          <h2>{title}</h2>
+          <p class="meta">{tools}</p>
+          <ul>
+            {points.map((point) => (
+              <li>{point}</li>
+            ))}
+          </ul>
+          {(deepDive || link) && (
+            <p>
+              {deepDive && <a href={deepDivePath(project)}>Read the {title} story</a>}
+              {deepDive && link && " · "}
+              {link && <a href={link.href}>{link.label}</a>}
+            </p>
+          )}
+        </article>
+      );
+    })
+  }
+</Section>

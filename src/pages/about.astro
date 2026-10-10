@@ -1,0 +1,57 @@
+---
+import Placeholder from "../components/Placeholder.astro";
+import Section from "../layouts/Section.astro";
+import { getProfile, getSection } from "../lib/content";
+
+const section = await getSection("about");
+const { education, bio, languages, skills, activities } = await getProfile();
+---
+
+<Section {...section}>
+  <h2>Education</h2>
+  <p>
+    <strong>{education.school}</strong><br />
+    {education.degree}<br />
+    {education.dates}
+  </p>
+
+  <h2>About me</h2>
+  {typeof bio === "string" ? <p>{bio}</p> : <Placeholder note={bio.placeholder} />}
+
+  <h2>Languages</h2>
+  <ul>
+    {languages.map((language) => <li>{language}</li>)}
+  </ul>
+
+  <h2>Skills</h2>
+  <dl>
+    {
+      skills.map(({ area, items }) => (
+        <>
+          <dt>{area}</dt>
+          <dd>{items}</dd>
+        </>
+      ))
+    }
+  </dl>
+
+  <h2>Activities</h2>
+  <ul>
+    {
+      activities.map(({ name, role, dates }) => (
+        <li>
+          <strong>{name}</strong>, {role} ({dates})
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+<style>
+  dt {
+    font-weight: 700;
+  }
+  dd {
+    margin: 0 0 0.75em;
+  }
+</style>

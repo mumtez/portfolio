@@ -1,0 +1,16 @@
+---
+import Section from "../layouts/Section.astro";
+import { getProfile, getSection } from "../lib/content";
+
+const section = await getSection("contact");
+const { contact } = await getProfile();
+const handle = (url: string) => url.replace(/^https:\/\/(www\.)?/, "");
+---
+
+<Section {...section}>
+  <ul>
+    <li>Email: <a href={`mailto:${contact.email}`}>{contact.email}</a></li>
+    <li>GitHub: <a href={contact.github}>{handle(contact.github)}</a></li>
+    <li>LinkedIn: <a href={contact.linkedin}>{handle(contact.linkedin)}</a></li>
+  </ul>
+</Section>

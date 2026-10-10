@@ -1,0 +1,37 @@
+---
+/** A content Section in Plain View: its heading as the only h1, then its content. */
+import type { Section } from "../lib/content";
+import Base from "./Base.astro";
+
+type Props = Omit<Section, "nav">;
+
+const { path, heading, title, description } = Astro.props;
+---
+
+<Base title={title} description={description} path={path}>
+  <main class="section">
+    <h1>{heading}</h1>
+    <slot />
+  </main>
+</Base>
+
+<style>
+  .section {
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    line-height: 1.55;
+  }
+  .section :global(h1) {
+    font-size: clamp(2rem, 6vw, 3rem);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .section :global(h2) {
+    margin-top: 2em;
+  }
+  .section :global(.meta) {
+    margin-top: -0.75em;
+    opacity: 0.8;
+  }
+</style>

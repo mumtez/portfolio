@@ -1,0 +1,21 @@
+---
+/** Marks content still waiting for Andrew's own words or media. Every one is listed in PLACEHOLDERS.md. */
+interface Props {
+  /** What's missing. */
+  note: string;
+}
+
+const { note } = Astro.props;
+---
+
+<p class="placeholder"><strong>Placeholder:</strong> {note}</p>
+
+<style>
+  .placeholder {
+    padding: 8px 12px;
+    border: 2px dashed currentColor;
+    border-radius: 6px;
+    font-style: italic;
+    opacity: 0.85;
+  }
+</style>

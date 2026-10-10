@@ -1,0 +1,66 @@
+---
+/** Plain HTML nav linking every Section, with Deep Dives nested under Projects. */
+import { deepDivePath, getDeepDives, getSections } from "../lib/content";
+
+interface Props {
+  /** The current Section's path, marked with aria-current. */
+  current: string;
+}
+
+const { current } = Astro.props;
+const sections = await getSections();
+const deepDives = await getDeepDives();
+const ariaCurrent = (path: string) => (path === current ? "page" : undefined);
+---
+
+<nav aria-label="Sections">
+  <ul>
+    {
+      sections.map((section) => (
+        <li>
+          <a href={section.path} aria-current={ariaCurrent(section.path)}>
+            {section.nav}
+          </a>
+          {section.path === "/projects/" && (
+            <ul>
+              {deepDives.map((project) => (
+                <li>
+                  <a href={deepDivePath(project)} aria-current={ariaCurrent(deepDivePath(project))}>
+                    {project.data.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<style>
+  nav {
+    padding: 12px 16px;
+  }
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+  ul ul {
+    gap: 4px 12px;
+    font-size: 0.875rem;
+  }
+  a[aria-current="page"] {
+    font-weight: 700;
+    text-decoration: none;
+  }
+</style>

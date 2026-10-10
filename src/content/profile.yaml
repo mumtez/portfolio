@@ -1,0 +1,57 @@
+# Facts about Andrew, from the resume. Keep the phone number and home town out of this file.
+# Anything written as `{ placeholder: ... }` is shown visibly marked; list it in PLACEHOLDERS.md.
+
+- id: andrew
+  name: Andrew Aburustum
+  tagline: Electrical and computer engineering student at Olin College. I build robots, circuit boards, ML models and web apps.
+
+  bio:
+    placeholder: A short bio in Andrew's own words (a few sentences on who he is and what he likes to build).
+
+  education:
+    school: Franklin W. Olin College of Engineering
+    degree: B.S. in Electrical and Computer Engineering (intended)
+    dates: Expected May 2030
+
+  experience:
+    - org: Memorial Sloan Kettering Cancer Center
+      role: Biomedical Engineering Intern, formal rotation under Paul Booth
+      location: New York, NY
+      dates: Summer 2025
+      points:
+        - Developed post-processing techniques for biomedical implants and machined parts for medical devices
+        - Operated Stratasys and resin 3D printers and helped repair a plasma cutter
+    - org: Olin College IT Department
+      role: Student IT Technician
+      location: Needham, MA
+      dates: Fall 2026 – present
+      points:
+        - Troubleshoot and repair student and staff devices at the campus IT help desk
+
+  languages:
+    - Italian (intermediate, B1)
+    - Arabic (elementary, A2)
+
+  skills:
+    - area: Software
+      items: Python, Java, TypeScript, MATLAB, PyTorch, TensorFlow, Keras, Git, Docker
+    - area: CAD & PCB design
+      items: Fusion 360, Onshape, SolidWorks, KiCad, Altium Designer
+    - area: Fabrication
+      items: 3D printing (FDM, resin, Stratasys), machining, SMD soldering, BGA rework, reflow
+
+  activities:
+    - name: Olin Handball
+      role: Division 2 athlete
+      dates: Fall 2026 – present
+    - name: EMS Summer String Festival
+      role: Volunteer camp counselor
+      dates: Summers 2023 – present
+    - name: Community Chest of Eastern Bergen County
+      role: Volunteer
+      dates: 2018 – present
+
+  contact:
+    email: aaburustum@olin.edu
+    github: https://github.com/mumtez
+    linkedin: https://www.linkedin.com/in/andrew-aburustum
