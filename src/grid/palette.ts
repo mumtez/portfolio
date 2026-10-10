@@ -5,7 +5,7 @@
 
 export interface Palette {
   readonly background: string;
-  /** Pinned Cells: bright, so content glows above the Free Cells. */
+  /** Pinned Cells: bright, so content stands out above the Free Cells. */
   readonly pinned: string;
   /** Free Cells: true hunter green. */
   readonly free: string;

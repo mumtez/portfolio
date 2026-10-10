@@ -26,6 +26,10 @@ _Avoid_: Background cell
 The Free Cells bordering Pinned Cells, continually reborn because the Pinned Cells count as live neighbours. Every piece of pinned content has one.
 _Avoid_: Halo, glow, noise
 
+**Ghost**:
+A dead Cell that died recently and is still fading, drawn as a trail behind moving patterns. The Fringe never leaves Ghosts, so pinned content stays clean.
+_Avoid_: Afterimage, echo, shadow
+
 **Set Piece**:
 A deliberate showcase moment of the Grid, choreographed rather than ambient. Runs by strict B3/S23 where feasible; may use Pinned Cells to guide it otherwise.
 

@@ -71,21 +71,21 @@ export class GridRenderer {
       }
     }
 
-    const cs = this.cellPx;
-    const inset = cs >= 4 ? 0.5 : 0.25;
-    const size = cs - 2 * inset;
-    const radius = Math.max(0.6, cs * 0.28);
+    const { cellPx } = this;
+    const inset = cellPx >= 4 ? 0.5 : 0.25;
+    const size = cellPx - 2 * inset;
+    const radius = Math.max(0.6, cellPx * 0.28);
 
     ctx.globalAlpha = 1;
     ctx.fillStyle = palette.background;
-    ctx.fillRect(0, 0, grid.width * cs, grid.height * cs);
+    ctx.fillRect(0, 0, grid.width * cellPx, grid.height * cellPx);
     for (const { color, alpha, cells } of Object.values(layers)) {
       if (!cells.length) continue;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = palette[color];
       ctx.beginPath();
       for (let k = 0; k < cells.length; k += 2) {
-        ctx.roundRect(cells[k] * cs + inset, cells[k + 1] * cs + inset, size, size, radius);
+        ctx.roundRect(cells[k] * cellPx + inset, cells[k + 1] * cellPx + inset, size, size, radius);
       }
       ctx.fill();
     }

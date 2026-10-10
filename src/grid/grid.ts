@@ -27,9 +27,9 @@ function cellSize(viewportPx: number): number {
 }
 
 function* soup(engine: LifeEngine, density: number): Generator<Point> {
-  const m = engine.margin;
-  for (let y = -m; y < engine.height + m; y++) {
-    for (let x = -m; x < engine.width + m; x++) {
+  const { margin } = engine;
+  for (let y = -margin; y < engine.height + margin; y++) {
+    for (let x = -margin; x < engine.width + margin; x++) {
       if (Math.random() < density) yield { x, y };
     }
   }
@@ -39,24 +39,24 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
   const renderer = new GridRenderer(canvas, DARK);
   let engine: LifeEngine;
 
-  function build(): void {
-    const cs = cellSize(window.innerWidth);
-    const width = Math.ceil(window.innerWidth / cs);
-    const height = Math.ceil(window.innerHeight / cs);
+  function rebuild(): void {
+    const cellPx = cellSize(window.innerWidth);
+    const width = Math.ceil(window.innerWidth / cellPx);
+    const height = Math.ceil(window.innerHeight / cellPx);
     engine = new LifeEngine({ width, height, margin: MARGIN });
     const home = typesetHome({ width, height });
     engine.inject(soup(engine, SOUP_DENSITY));
     engine.setPinned(home.pinned);
-    renderer.resize(width, height, cs);
+    renderer.resize(width, height, cellPx);
     renderer.draw(engine);
     const { x, y, width: w, height: h } = home.name;
-    onLayout?.({ x: x * cs, y: y * cs, width: w * cs, height: h * cs });
+    onLayout?.({ x: x * cellPx, y: y * cellPx, width: w * cellPx, height: h * cellPx });
   }
 
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(build, 150);
+    resizeTimer = setTimeout(rebuild, 150);
   });
 
   let last = 0;
@@ -68,6 +68,6 @@ export function startGrid({ canvas, onLayout }: GridOptions): void {
     renderer.draw(engine);
   }
 
-  build();
+  rebuild();
   requestAnimationFrame(frame);
 }
