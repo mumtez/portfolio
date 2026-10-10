@@ -1,4 +1,6 @@
 ---
+import Analytics from "../components/Analytics.astro";
+import SharingMeta from "../components/SharingMeta.astro";
 import SiteNav from "../components/SiteNav.astro";
 import { DARK } from "../grid/palette";
 
@@ -20,6 +22,8 @@ const { title, description, path } = Astro.props;
     <meta name="color-scheme" content="dark" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <SharingMeta title={title} description={description} path={path} />
+    <Analytics />
   </head>
   <body>
     <header>

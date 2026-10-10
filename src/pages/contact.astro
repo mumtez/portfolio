@@ -12,5 +12,6 @@ const handle = (url: string) => url.replace(/^https:\/\/(www\.)?/, "");
     <li>Email: <a href={`mailto:${contact.email}`}>{contact.email}</a></li>
     <li>GitHub: <a href={contact.github}>{handle(contact.github)}</a></li>
     <li>LinkedIn: <a href={contact.linkedin}>{handle(contact.linkedin)}</a></li>
+    <li>Resume: <a href={contact.resume} download>Download my resume (PDF)</a></li>
   </ul>
 </Section>

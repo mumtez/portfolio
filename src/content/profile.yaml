@@ -55,3 +55,5 @@
     email: aaburustum@olin.edu
     github: https://github.com/mumtez
     linkedin: https://www.linkedin.com/in/andrew-aburustum
+    # A file in public/. Currently a placeholder PDF; see PLACEHOLDERS.md.
+    resume: /andrew-aburustum-resume.pdf

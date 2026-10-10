@@ -46,7 +46,13 @@ const profile = defineCollection({
     languages: z.array(z.string()),
     skills: z.array(z.object({ area: z.string(), items: z.string() })),
     activities: z.array(z.object({ name: z.string(), role: z.string(), dates: z.string() })),
-    contact: z.object({ email: z.email(), github: z.url(), linkedin: z.url() }),
+    contact: z.object({
+      email: z.email(),
+      github: z.url(),
+      linkedin: z.url(),
+      /** The resume PDF's path on the site, a file in `public/`. */
+      resume: z.string().regex(/^\/[a-z0-9-]+\.pdf$/),
+    }),
   }),
 });
 

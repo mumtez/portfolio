@@ -1,0 +1,9 @@
+---
+/**
+ * GoatCounter: counts a view of this Section's URL on page load. No cookies, no banner.
+ * Client-side Section changes call `countPageView` from `lib/analytics.ts` instead.
+ */
+import { GOATCOUNTER_ENDPOINT, GOATCOUNTER_SCRIPT } from "../lib/analytics";
+---
+
+<script is:inline async data-goatcounter={GOATCOUNTER_ENDPOINT} src={GOATCOUNTER_SCRIPT}></script>
