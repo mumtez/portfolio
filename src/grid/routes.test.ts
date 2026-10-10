@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sectionPath, transitionPathFor, type LinkClick } from "./routes";
+import { currentness, hasSection, sectionPath, transitionPathFor, type LinkClick } from "./routes";
 import { TEST_CONTENT } from "./test-support";
 
 describe("sectionPath", () => {
@@ -50,5 +50,30 @@ describe("transitionPathFor: which link clicks become Transitions", () => {
     expect(transitionPathFor(click("/projects/", { button: 1 }), here, TEST_CONTENT)).toBeUndefined();
     expect(transitionPathFor(click("/projects/", { target: "_blank" }), here, TEST_CONTENT)).toBeUndefined();
     expect(transitionPathFor(click("/projects/", { download: true }), here, TEST_CONTENT)).toBeUndefined();
+  });
+});
+
+describe("currentness: which nav link marks the Section showing", () => {
+  it("marks the link to the Section itself as the current page", () => {
+    expect(currentness("/about/", "/about/")).toBe("page");
+    expect(currentness("/", "/")).toBe("page");
+    expect(currentness("/projects/baja/", "/projects/baja/")).toBe("page");
+  });
+
+  it("marks Projects as current, but not the page, on its Deep Dives", () => {
+    expect(currentness("/projects/", "/projects/baja/")).toBe("true");
+  });
+
+  it("leaves every other link unmarked, including Home", () => {
+    expect(currentness("/about/", "/projects/baja/")).toBeUndefined();
+    expect(currentness("/", "/about/")).toBeUndefined();
+    expect(currentness("/projects/baja/", "/projects/")).toBeUndefined();
+  });
+});
+
+describe("hasSection", () => {
+  it("knows every Section path, and nothing else", () => {
+    expect(hasSection(TEST_CONTENT, "/projects/baja/")).toBe(true);
+    expect(hasSection(TEST_CONTENT, "/resume.pdf/")).toBe(false);
   });
 });

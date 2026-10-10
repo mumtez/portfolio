@@ -3,7 +3,7 @@
  * HTML (the same page a reload or a visitor with JS off gets) and swaps its `<main>`,
  * title and meta tags into this page, so the one Grid keeps running underneath (ADR 0005).
  */
-import { sectionPath } from "./routes";
+import { currentness, sectionPath } from "./routes";
 
 const pages = new Map<string, Promise<Document>>();
 /** Bumped on every swap, so a slow fetch can't land after a later one. */
@@ -30,12 +30,20 @@ export function prefetchSection(path: string): void {
 
 /**
  * Show the Section at `path`: swap in its `<main>`, title and meta tags, mark its nav
- * link current, and move focus to its heading so screen readers announce it. Resolves
- * false if another swap started meanwhile. Rejects if the page can't be fetched.
+ * link current, and move focus to its heading so screen readers announce it, or to the
+ * URL's `#` target if it has one. Resolves false if another swap started meanwhile.
+ * Rejects if the page can't be fetched and no later swap has started.
  */
 export async function swapToSection(path: string): Promise<boolean> {
   const token = ++latest;
-  const next = await fetchPage(path);
+  let next: Document;
+  try {
+    next = await fetchPage(path);
+  } catch (err) {
+    // A failed fetch only matters if nothing has superseded it.
+    if (token !== latest) return false;
+    throw err;
+  }
   if (token !== latest) return false;
 
   const main = document.querySelector("main");
@@ -55,6 +63,8 @@ export async function swapToSection(path: string): Promise<boolean> {
     heading.setAttribute("tabindex", "-1");
     heading.focus({ preventScroll: true });
   }
+  const id = decodeURIComponent(window.location.hash.slice(1));
+  if (id) document.getElementById(id)?.scrollIntoView();
   return true;
 }
 
@@ -77,10 +87,11 @@ function syncMeta(next: Document): void {
   }
 }
 
-/** Mark the header nav link for `path` with aria-current, as the built page for it does. */
+/** Mark the header nav links for `path` with aria-current, as the built page for it does. */
 function markCurrent(path: string): void {
   for (const a of document.querySelectorAll<HTMLAnchorElement>("header nav a")) {
-    if (sectionPath(a.pathname) === path) a.setAttribute("aria-current", "page");
+    const value = currentness(sectionPath(a.pathname), path);
+    if (value) a.setAttribute("aria-current", value);
     else a.removeAttribute("aria-current");
   }
 }

@@ -23,6 +23,22 @@ export function sectionPath(pathname: string): string {
   return path.endsWith("/") ? path : `${path}/`;
 }
 
+/** Whether `path` is one of the Sections. */
+export function hasSection(content: GridContent, path: string): boolean {
+  return content.sections.some((s) => s.path === path);
+}
+
+/**
+ * How a link to `linkPath` is marked while the Section at `here` shows, as an
+ * aria-current value: "page" for the Section itself, "true" for Projects on its Deep
+ * Dives. The Grid underlines a nav item whenever this is set.
+ */
+export function currentness(linkPath: string, here: string): "page" | "true" | undefined {
+  if (linkPath === here) return "page";
+  if (linkPath !== "/" && here.startsWith(linkPath)) return "true";
+  return undefined;
+}
+
 /** A click on a link, as far as deciding what to do with it goes. */
 export interface LinkClick {
   /** The link's `href`, as written; it's resolved against the current URL. */
@@ -46,5 +62,5 @@ export function transitionPathFor(click: LinkClick, here: URL, content: GridCont
   if (url.origin !== here.origin) return undefined;
   const path = sectionPath(url.pathname);
   if (path === sectionPath(here.pathname)) return undefined;
-  return content.sections.some((s) => s.path === path) ? path : undefined;
+  return hasSection(content, path) ? path : undefined;
 }

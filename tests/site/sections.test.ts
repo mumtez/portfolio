@@ -53,6 +53,11 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
     expect([...current].map((a) => a.getAttribute("href"))).toEqual([url]);
   });
 
+  it("marks Projects as current on a Deep Dive, as the Grid underlines it", () => {
+    const parents = [...doc.querySelectorAll('nav a[aria-current="true"]')].map((a) => a.getAttribute("href"));
+    expect(parents).toEqual(url.startsWith("/projects/") && url !== "/projects/" ? ["/projects/"] : []);
+  });
+
   it("has a title and description", () => {
     expect(doc.querySelector("title")?.textContent).toMatch(/Andrew Aburustum/);
     expect(doc.querySelector('meta[name="description"]')?.getAttribute("content")).toBeTruthy();

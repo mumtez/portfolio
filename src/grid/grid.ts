@@ -15,7 +15,7 @@ import type { Point } from "./life-engine";
 import { prefetchSection, swapToSection } from "./page-swap";
 import { DARK } from "./palette";
 import { cellLine } from "./pointer-trail";
-import { sectionPath, transitionPathFor, type GridContent } from "./routes";
+import { hasSection, sectionPath, transitionPathFor, type GridContent } from "./routes";
 import { maybeLaunch, spaceshipAt } from "./spaceships";
 import { startTicker, type Ticker } from "./ticker";
 
@@ -119,7 +119,7 @@ export function startGrid({ canvas, content }: GridOptions): void {
 
   /**
    * Run a Transition to the Section at `path` and swap its Plain View in. `push` adds a
-   * history entry for `href` (a link click); back and forward have already moved the URL.
+   * history entry for that URL (a link click); back and forward have already moved it.
    */
   function goTo(path: string, push?: string): void {
     if (!director.navigate(path)) return;
@@ -149,7 +149,8 @@ export function startGrid({ canvas, content }: GridOptions): void {
     );
     if (!path) return;
     e.preventDefault();
-    goTo(path, a.href);
+    // Push the Section's own URL (`/about` → `/about/`), keeping any `#` target.
+    goTo(path, path + new URL(a.href).hash);
   });
   window.addEventListener("popstate", () => goTo(sectionPath(window.location.pathname)));
   // Fetch a Section's page as soon as its link is pointed at or focused.
@@ -160,7 +161,7 @@ export function startGrid({ canvas, content }: GridOptions): void {
         const a = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
         if (!a || a.origin !== window.location.origin) return;
         const path = sectionPath(a.pathname);
-        if (path !== director.route && content.sections.some((s) => s.path === path)) prefetchSection(path);
+        if (path !== director.route && hasSection(content, path)) prefetchSection(path);
       },
       { passive: true },
     );

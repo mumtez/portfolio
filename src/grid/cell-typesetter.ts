@@ -3,7 +3,7 @@
  */
 import { FONT_5X7 } from "./font-5x7";
 import type { Point } from "./life-engine";
-import type { GridContent } from "./routes";
+import { currentness, type GridContent } from "./routes";
 
 /** A set of cells inside a width×height box, with (0,0) at its top-left. */
 export interface CellMask {
@@ -213,7 +213,7 @@ function typesetNav(
     let x = Math.floor((viewport.width - width) / 2);
     const y = NAV_TOP + NAV_PAD_Y + row * NAV_LINE_PITCH;
     for (const { path: to, label, mask } of line) {
-      const current = to === path || (to !== "/" && path.startsWith(to));
+      const current = currentness(to, path) !== undefined;
       place(mask, x, y);
       if (current) place(underline(mask.width), x, y + UNDERLINE_ROW);
       items.push({

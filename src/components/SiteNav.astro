@@ -1,16 +1,17 @@
 ---
 /** Plain HTML nav linking every Section, with Deep Dives nested under Projects. */
+import { currentness } from "../grid/routes";
 import { deepDivePath, getDeepDives, getSections } from "../lib/content";
 
 interface Props {
-  /** The current Section's path, marked with aria-current. */
+  /** The current Section's path; its link, and Projects on a Deep Dive, get aria-current. */
   current: string;
 }
 
 const { current } = Astro.props;
 const sections = await getSections();
 const deepDives = await getDeepDives();
-const ariaCurrent = (path: string) => (path === current ? "page" : undefined);
+const ariaCurrent = (path: string) => currentness(path, current);
 ---
 
 <nav aria-label="Sections">
@@ -59,7 +60,7 @@ const ariaCurrent = (path: string) => (path === current ? "page" : undefined);
     gap: 4px 12px;
     font-size: 0.875rem;
   }
-  a[aria-current="page"] {
+  a[aria-current] {
     font-weight: 700;
     text-decoration: none;
   }
