@@ -19,19 +19,19 @@ Under Domains → aburustum.com → Manage DNS Records:
 
 ### Add
 
-| Type  | Host   | Answer               |
-| ----- | ------ | -------------------- |
-| A     | (blank, the apex) | 185.199.108.153 |
-| A     | (blank, the apex) | 185.199.109.153 |
-| A     | (blank, the apex) | 185.199.110.153 |
-| A     | (blank, the apex) | 185.199.111.153 |
-| AAAA  | (blank, the apex) | 2606:50c0:8000::153 |
-| AAAA  | (blank, the apex) | 2606:50c0:8001::153 |
-| AAAA  | (blank, the apex) | 2606:50c0:8002::153 |
-| AAAA  | (blank, the apex) | 2606:50c0:8003::153 |
-| CNAME | `www`  | `mumtez.github.io`   |
+| Type  | Host    | Answer              |
+| ----- | ------- | ------------------- |
+| A     | (blank) | 185.199.108.153     |
+| A     | (blank) | 185.199.109.153     |
+| A     | (blank) | 185.199.110.153     |
+| A     | (blank) | 185.199.111.153     |
+| AAAA  | (blank) | 2606:50c0:8000::153 |
+| AAAA  | (blank) | 2606:50c0:8001::153 |
+| AAAA  | (blank) | 2606:50c0:8002::153 |
+| AAAA  | (blank) | 2606:50c0:8003::153 |
+| CNAME | `www`   | `mumtez.github.io`  |
 
-The AAAA records add IPv6 and are optional. With `www` pointed at `mumtez.github.io`, Pages redirects `www.aburustum.com` to the apex.
+A blank host means the apex, `aburustum.com` itself. The AAAA records add IPv6 and are optional. With `www` pointed at `mumtez.github.io`, Pages redirects `www.aburustum.com` to the apex.
 
 ### Remove
 

@@ -1,11 +1,10 @@
-import { readFileSync } from "node:fs";
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
+import { builtFile } from "./built";
 
-/** Parse a page from Astro's built output (`npm run test:site` builds first). */
+/** Parse a page from Astro's built output. */
 function builtPage(path: string): Document {
-  const html = readFileSync(new URL(`../../dist/${path}`, import.meta.url), "utf8");
-  return parseHTML(html).document;
+  return parseHTML(builtFile(path)).document;
 }
 
 describe("Home (built HTML, as seen with JS off)", () => {

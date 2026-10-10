@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     projects: [
       {
+        // Everything that runs without a build, including checks on the CI workflow.
         test: {
           name: "unit",
           include: ["src/**/*.test.ts", "tests/ci/**/*.test.ts"],
