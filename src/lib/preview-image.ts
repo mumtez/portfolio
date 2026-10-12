@@ -56,7 +56,9 @@ function cellColours(): ([number, number, number] | undefined)[][] {
     width: name.width + 2 * NAME_CLEARANCE,
     height: name.height + 2 * NAME_CLEARANCE,
   };
-  engine.inject(soupCells({ area, density: SOUP_DENSITY, random: seededRandom(SOUP_SEED) }, clearOfName),);
+  engine.inject(
+    soupCells({ area, density: SOUP_DENSITY, random: seededRandom(SOUP_SEED) }, clearOfName),
+  );
   for (let i = 0; i < GENERATIONS; i++) engine.step();
 
   const bg = rgb(DARK.background);

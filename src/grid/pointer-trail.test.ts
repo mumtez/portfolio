@@ -9,7 +9,13 @@ describe("cellLine", () => {
   });
 
   it("joins the ends with no gaps, in order", () => {
-    expect(keys(cellLine({ x: 0, y: 0 }, { x: 4, y: 0 }))).toEqual(["0,0", "1,0", "2,0", "3,0", "4,0",]);
+    expect(keys(cellLine({ x: 0, y: 0 }, { x: 4, y: 0 }))).toEqual([
+      "0,0",
+      "1,0",
+      "2,0",
+      "3,0",
+      "4,0",
+    ]);
     expect(keys(cellLine({ x: 2, y: 2 }, { x: 0, y: 0 }))).toEqual(["2,2", "1,1", "0,0"]);
   });
 

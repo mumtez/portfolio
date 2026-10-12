@@ -25,7 +25,9 @@ const note = `Photo or video: add ${mediaDir(deepDive)}/${slot}.${first} (or ${o
 <figure class="frame" data-frame={slot}>
   <div class="frame-slot" style={`aspect-ratio: ${aspect}`}>
     {media?.kind === "image" && <img src={media.src} alt={alt} loading="lazy" decoding="async" />}
-    {media?.kind === "video" && (<video src={media.src} aria-label={alt} controls preload="metadata" playsinline />)}
+    {media?.kind === "video" && (
+      <video src={media.src} aria-label={alt} controls preload="metadata" playsinline />
+    )}
     {!media && <Placeholder note={note} />}
   </div>
   {caption && <figcaption>{caption}</figcaption>}

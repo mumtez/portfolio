@@ -15,22 +15,26 @@ function pageCss(doc: Document): string {
 
 describe.each(SECTIONS)("the toggles on %s (built HTML)", (url) => {
   const doc = builtPage(url);
-  const toggle = (id: string) => doc.querySelector<HTMLButtonElement>(`button[data-toggle="${id}"]`);
+  const toggle = (id: string) =>
+    doc.querySelector<HTMLButtonElement>(`button[data-toggle="${id}"]`);
 
   it.each([
     ["theme", /dark/i],
     ["simulation", /simulation/i],
-  ])("has a real %s toggle button with a pressed state, named to include its drawn label", (id, name) => {
-    const button = toggle(id);
-    expect(button, id).not.toBeNull();
-    expect(button!.getAttribute("type")).toBe("button");
-    expect(["true", "false"]).toContain(button!.getAttribute("aria-pressed"));
-    const accessibleName = button!.textContent!.replace(/\s+/g, " ").trim();
-    expect(accessibleName).toMatch(name);
-    const drawn = button!.getAttribute("data-label") ?? "";
-    expect(drawn).not.toBe("");
-    expect(accessibleName.toLowerCase()).toContain(drawn.toLowerCase());
-  },);
+  ])(
+    "has a real %s toggle button with a pressed state, named to include its drawn label",
+    (id, name) => {
+      const button = toggle(id);
+      expect(button, id).not.toBeNull();
+      expect(button!.getAttribute("type")).toBe("button");
+      expect(["true", "false"]).toContain(button!.getAttribute("aria-pressed"));
+      const accessibleName = button!.textContent!.replace(/\s+/g, " ").trim();
+      expect(accessibleName).toMatch(name);
+      const drawn = button!.getAttribute("data-label") ?? "";
+      expect(drawn).not.toBe("");
+      expect(accessibleName.toLowerCase()).toContain(drawn.toLowerCase());
+    },
+  );
 
   it("keeps them together in a labelled group, hidden until the script can make them work", () => {
     const group = toggle("theme")!.closest("[role='group']");
@@ -40,12 +44,16 @@ describe.each(SECTIONS)("the toggles on %s (built HTML)", (url) => {
   });
 
   it("sets the theme in the head before first paint", () => {
-    const scripts = [...doc.head.querySelectorAll("script:not([src]):not([type])")].map((s) => s.textContent?.trim(),);
+    const scripts = [...doc.head.querySelectorAll("script:not([src]):not([type])")].map((s) =>
+      s.textContent?.trim(),
+    );
     expect(scripts).toContain(THEME_SCRIPT.trim());
   });
 
   it("offers both colour schemes", () => {
-    expect(doc.querySelector('meta[name="color-scheme"]')?.getAttribute("content")).toBe("light dark",);
+    expect(doc.querySelector('meta[name="color-scheme"]')?.getAttribute("content")).toBe(
+      "light dark",
+    );
   });
 
   it("styles both themes: following the system, and as chosen", () => {

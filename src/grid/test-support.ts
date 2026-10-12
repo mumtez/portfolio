@@ -42,7 +42,12 @@ export function boxesOverlap(a: Box, b: Box): boolean {
 }
 
 export function boxInside(inner: Box, outer: { width: number; height: number }): boolean {
-  return (inner.x >= 0 && inner.y >= 0 && inner.x + inner.width <= outer.width && inner.y + inner.height <= outer.height);
+  return (
+    inner.x >= 0 &&
+    inner.y >= 0 &&
+    inner.x + inner.width <= outer.width &&
+    inner.y + inner.height <= outer.height
+  );
 }
 
 /** Live cells anywhere in the Grid, margin included. */

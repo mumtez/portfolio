@@ -21,7 +21,8 @@ function liveCells(engine: LifeEngine): string[] {
   return out.sort();
 }
 
-const keys = (points: Point[], dx = 0, dy = 0) => points.map((p) => `${p.x + dx},${p.y + dy}`).sort();
+const keys = (points: Point[], dx = 0, dy = 0) =>
+  points.map((p) => `${p.x + dx},${p.y + dy}`).sort();
 
 describe("LifeEngine", () => {
   it("leaves a block unchanged", () => {
@@ -35,8 +36,16 @@ describe("LifeEngine", () => {
 
   it("oscillates a blinker with period 2", () => {
     const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
-    const horizontal = [{ x: 3, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 4 },];
-    const vertical = [{ x: 4, y: 3 }, { x: 4, y: 4 }, { x: 4, y: 5 },];
+    const horizontal = [
+      { x: 3, y: 4 },
+      { x: 4, y: 4 },
+      { x: 5, y: 4 },
+    ];
+    const vertical = [
+      { x: 4, y: 3 },
+      { x: 4, y: 4 },
+      { x: 4, y: 5 },
+    ];
     engine.inject(horizontal);
     engine.step();
     expect(liveCells(engine)).toEqual(keys(vertical));
@@ -46,7 +55,13 @@ describe("LifeEngine", () => {
 
   it("moves a glider (1,1) every 4 ticks", () => {
     const engine = new LifeEngine({ width: 20, height: 20, margin: 2 });
-    const glider = [{ x: 1, y: 0 }, { x: 2, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 },].map((p) => ({
+    const glider = [
+      { x: 1, y: 0 },
+      { x: 2, y: 1 },
+      { x: 0, y: 2 },
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+    ].map((p) => ({
       x: p.x + 3,
       y: p.y + 3,
     }));
@@ -70,7 +85,10 @@ describe("LifeEngine", () => {
       // Two Pinned Cells plus one Free Cell in a row: the middle-adjacent dead Cells
       // above and below have exactly 3 live neighbours and are born.
       const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
-      engine.setPinned([{ x: 3, y: 5 }, { x: 4, y: 5 },]);
+      engine.setPinned([
+        { x: 3, y: 5 },
+        { x: 4, y: 5 },
+      ]);
       engine.inject([{ x: 5, y: 5 }]);
       engine.step();
       expect(engine.isAlive(4, 4)).toBe(true);
@@ -106,8 +124,15 @@ describe("LifeEngine", () => {
     it("never come alive, even with three live neighbours", () => {
       // The middle of a blinker's neighbourhood is a wall: the blinker can't turn.
       const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
-      engine.setWalls([{ x: 4, y: 3 }, { x: 4, y: 5 },]);
-      engine.inject([{ x: 3, y: 4 }, { x: 4, y: 4 }, { x: 5, y: 4 },]);
+      engine.setWalls([
+        { x: 4, y: 3 },
+        { x: 4, y: 5 },
+      ]);
+      engine.inject([
+        { x: 3, y: 4 },
+        { x: 4, y: 4 },
+        { x: 5, y: 4 },
+      ]);
       engine.step();
       expect(engine.isAlive(4, 3)).toBe(false);
       expect(engine.isAlive(4, 5)).toBe(false);
@@ -181,7 +206,12 @@ describe("LifeEngine", () => {
     it("classifies Free Cells touching a Pinned Cell (including diagonally) as Fringe", () => {
       const engine = new LifeEngine({ width: 12, height: 12, margin: 2 });
       engine.setPinned([{ x: 5, y: 5 }]);
-      engine.inject([{ x: 6, y: 6 }, { x: 4, y: 5 }, { x: 8, y: 5 }, { x: 5, y: 7 },]);
+      engine.inject([
+        { x: 6, y: 6 },
+        { x: 4, y: 5 },
+        { x: 8, y: 5 },
+        { x: 5, y: 7 },
+      ]);
       expect(engine.kindAt(5, 5)).toBe(CellKind.Pinned);
       expect(engine.kindAt(6, 6)).toBe(CellKind.Fringe);
       expect(engine.kindAt(4, 5)).toBe(CellKind.Fringe);
@@ -192,7 +222,10 @@ describe("LifeEngine", () => {
 
     it("keeps Fringe classification for Cells reborn next to pinned content", () => {
       const engine = new LifeEngine({ width: 10, height: 10, margin: 2 });
-      engine.setPinned([{ x: 3, y: 5 }, { x: 4, y: 5 },]);
+      engine.setPinned([
+        { x: 3, y: 5 },
+        { x: 4, y: 5 },
+      ]);
       engine.inject([{ x: 5, y: 5 }]);
       engine.step();
       expect(engine.kindAt(4, 4)).toBe(CellKind.Fringe);
@@ -232,7 +265,12 @@ describe("LifeEngine", () => {
       ({ kind, heading, phase }) => {
         const engine = new LifeEngine({ width: 30, height: 30, margin: 12 });
         const ship = spaceship(kind, heading);
-        engine.inject(ship.cells.map((p) => ({ x: p.x + 13 + heading.x * phase, y: p.y + 13 + heading.y * phase, })),);
+        engine.inject(
+          ship.cells.map((p) => ({
+            x: p.x + 13 + heading.x * phase,
+            y: p.y + 13 + heading.y * phase,
+          })),
+        );
         for (let t = 0; t < phase; t++) engine.step();
         for (let t = 0; t < 200; t++) engine.step();
         expect(allLive(engine)).toEqual([]);
@@ -246,17 +284,20 @@ describe("LifeEngine", () => {
       expect(allLive(engine)).toEqual([]);
     });
 
-    it.each([1, 2, 3, 4, 5, 6])("leaves no residue in the margin after 5 minutes of soup (seed %i)", (seed) => {
-      const engine = new LifeEngine({ width: 150, height: 85, margin: 12 });
-      engine.inject(soup(engine, 0.09, mulberry32(seed)));
-      const residue = new Set<string>();
-      for (let t = 0; t < 2500; t++) {
-        engine.step();
-        if (t < 2400) continue;
-        for (const p of allLive(engine)) if (!inViewport(engine, p)) residue.add(`${p.x},${p.y}`);
-      }
-      expect([...residue]).toEqual([]);
-    },);
+    it.each([1, 2, 3, 4, 5, 6])(
+      "leaves no residue in the margin after 5 minutes of soup (seed %i)",
+      (seed) => {
+        const engine = new LifeEngine({ width: 150, height: 85, margin: 12 });
+        engine.inject(soup(engine, 0.09, mulberry32(seed)));
+        const residue = new Set<string>();
+        for (let t = 0; t < 2500; t++) {
+          engine.step();
+          if (t < 2400) continue;
+          for (const p of allLive(engine)) if (!inViewport(engine, p)) residue.add(`${p.x},${p.y}`);
+        }
+        expect([...residue]).toEqual([]);
+      },
+    );
 
     it("leaves still lifes in the viewport alone", () => {
       const engine = new LifeEngine({ width: 10, height: 10, margin: 6 });
@@ -269,7 +310,13 @@ describe("LifeEngine", () => {
 
   it("lets a glider fly off through the margin without wrapping back into view", () => {
     const engine = new LifeEngine({ width: 8, height: 8, margin: 3 });
-    const glider = [{ x: 1, y: 0 }, { x: 2, y: 1 }, { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 },];
+    const glider = [
+      { x: 1, y: 0 },
+      { x: 2, y: 1 },
+      { x: 0, y: 2 },
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+    ];
     engine.inject(glider.map((p) => ({ x: p.x + 4, y: p.y + 4 })));
     for (let t = 0; t < 80; t++) {
       engine.step();

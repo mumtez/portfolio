@@ -149,7 +149,14 @@ export class LifeEngine {
           continue;
         }
         const n =
-          a[i - W - 1] + a[i - W] + a[i - W + 1] + a[i - 1] + a[i + 1] + a[i + W - 1] + a[i + W] + a[i + W + 1];
+          a[i - W - 1] +
+          a[i - W] +
+          a[i - W + 1] +
+          a[i - 1] +
+          a[i + 1] +
+          a[i + W - 1] +
+          a[i + W] +
+          a[i + W + 1];
         const lives = n === 3 || (n === 2 && a[i]) ? 1 : 0;
         if (inMargin[i]) {
           heat[i] = heat[i] * MARGIN_HEAT_DECAY + lives;

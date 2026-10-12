@@ -16,26 +16,24 @@ const ariaCurrent = (path: string) => currentness(path, current);
 
 <nav aria-label="Sections">
   <ul>
-    {
-      sections.map((section) => (
-        <li>
-          <a href={section.path} aria-current={ariaCurrent(section.path)}>
-            {section.nav}
-          </a>
-          {section.path === "/projects/" && (
-            <ul>
-              {deepDives.map((project) => (
-                <li>
-                  <a href={deepDivePath(project)} aria-current={ariaCurrent(deepDivePath(project))}>
-                    {project.data.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))
-    }
+    {sections.map((section) => (
+      <li>
+        <a href={section.path} aria-current={ariaCurrent(section.path)}>
+          {section.nav}
+        </a>
+        {section.path === "/projects/" && (
+          <ul>
+            {deepDives.map((project) => (
+              <li>
+                <a href={deepDivePath(project)} aria-current={ariaCurrent(deepDivePath(project))}>
+                  {project.data.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))}
   </ul>
 </nav>
 

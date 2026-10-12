@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { boxContains } from "./cell-typesetter";
-import { BORDER_UNPIN_TICKS, GridDirector, TICK_MS, type GridDirectorOptions, type IntroMemory, } from "./grid-director";
+import {
+  BORDER_UNPIN_TICKS,
+  GridDirector,
+  TICK_MS,
+  type GridDirectorOptions,
+  type IntroMemory,
+} from "./grid-director";
 import { INTRO_SEEDS } from "./intro-seeds";
 import { CellKind } from "./life-engine";
 import { TEST_CONTENT } from "./test-support";
@@ -44,7 +50,8 @@ function pinnedKeys(d: GridDirector): Set<string> {
 function nameIsPinned(d: GridDirector): boolean {
   const want = new Set(d.layout.pinned.map((p) => `${p.x},${p.y}`));
   for (let y = 0; y < d.engine.height; y++) {
-    for (let x = 0; x < d.engine.width; x++) if (d.engine.isPinned(x, y) !== want.has(`${x},${y}`)) return false;
+    for (let x = 0; x < d.engine.width; x++)
+      if (d.engine.isPinned(x, y) !== want.has(`${x},${y}`)) return false;
   }
   return true;
 }
@@ -54,13 +61,15 @@ function nameFormedExactly(d: GridDirector): boolean {
   const { title: name, pinned } = d.layout;
   const want = new Set(pinned.map((p) => `${p.x},${p.y}`));
   for (let y = name.y; y < name.y + name.height; y++) {
-    for (let x = name.x; x < name.x + name.width; x++) if (d.engine.isAlive(x, y) !== want.has(`${x},${y}`)) return false;
+    for (let x = name.x; x < name.x + name.width; x++)
+      if (d.engine.isAlive(x, y) !== want.has(`${x},${y}`)) return false;
   }
   return true;
 }
 
 function anyPinned(d: GridDirector): boolean {
-  for (let y = 0; y < d.engine.height; y++) for (let x = 0; x < d.engine.width; x++) if (d.engine.isPinned(x, y)) return true;
+  for (let y = 0; y < d.engine.height; y++)
+    for (let x = 0; x < d.engine.width; x++) if (d.engine.isPinned(x, y)) return true;
   return false;
 }
 
@@ -214,7 +223,8 @@ describe("Grid Director", () => {
       const rows: string[] = [];
       for (let y = 0; y < seed.rows.length; y++) {
         let row = "";
-        for (let x = 0; x < seed.rows[0].length; x++) row += d.engine.isAlive(name.x + seed.dx + x, name.y + seed.dy + y) ? "#" : ".";
+        for (let x = 0; x < seed.rows[0].length; x++)
+          row += d.engine.isAlive(name.x + seed.dx + x, name.y + seed.dy + y) ? "#" : ".";
         rows.push(row);
       }
       expect(rows).toEqual(seed.rows);
@@ -246,12 +256,15 @@ describe("Grid Director", () => {
   });
 
   describe("a Section loaded directly", () => {
-    it.each(TEST_CONTENT.sections.map((s) => s.path).filter((p) => p !== "/"))("shows %s pinned at once", (path) => {
-      const d = director({ route: path, introMemory: memory() });
-      expect(d.phase).toBe("settled");
-      expect(d.route).toBe(path);
-      expect(nameIsPinned(d)).toBe(true);
-    },);
+    it.each(TEST_CONTENT.sections.map((s) => s.path).filter((p) => p !== "/"))(
+      "shows %s pinned at once",
+      (path) => {
+        const d = director({ route: path, introMemory: memory() });
+        expect(d.phase).toBe("settled");
+        expect(d.route).toBe(path);
+        expect(nameIsPinned(d)).toBe(true);
+      },
+    );
 
     it("reads a path without its trailing slash as the same Section", () => {
       expect(director({ route: "/projects/baja" }).route).toBe("/projects/baja/");
@@ -270,7 +283,9 @@ describe("Grid Director", () => {
       expect(ticks * TICK_MS).toBeLessThanOrEqual(600);
       expect(d.phase).toBe("settled");
       expect(d.route).toBe("/projects/");
-      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/projects/").layout.pinned.map((p) => `${p.x},${p.y}`)),);
+      expect(pinnedKeys(d)).toEqual(
+        new Set(settledAt("/projects/").layout.pinned.map((p) => `${p.x},${p.y}`)),
+      );
     });
 
     it("releases the old heading into Free Cells, so real Life tears it apart", () => {
@@ -296,7 +311,10 @@ describe("Grid Director", () => {
         [...pinnedKeys(d)].filter((k) => {
           const [x, y] = k.split(",").map(Number);
           const inHeading =
-            x >= heading.x && x < heading.x + heading.width && y >= heading.y && y < heading.y + heading.height;
+            x >= heading.x &&
+            x < heading.x + heading.width &&
+            y >= heading.y &&
+            y < heading.y + heading.height;
           return inHeading && !before.has(k);
         }).length;
 
@@ -341,7 +359,9 @@ describe("Grid Director", () => {
       const ticks = ticksToSettle(d);
       expect(ticks * TICK_MS).toBeLessThanOrEqual(600);
       expect(d.route).toBe("/contact/");
-      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),);
+      expect(pinnedKeys(d)).toEqual(
+        new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),
+      );
     });
 
     it("goes back to Home without replaying the Intro", () => {
@@ -367,19 +387,26 @@ describe("Grid Director", () => {
   describe("buttons", () => {
     /** Settled on About with no soup, so only the Section's own cells and their Fringe live. */
     const quiet = (options: Partial<GridDirectorOptions> = {}) => {
-      const d = director({ route: "/about/", introMemory: memory(true), random: () => 0.99, ...options, });
+      const d = director({
+        route: "/about/",
+        introMemory: memory(true),
+        random: () => 0.99,
+        ...options,
+      });
       for (let t = 0; t < 10; t++) d.tick();
       return d;
     };
     const contact = (d: GridDirector) => d.layout.nav.find((i) => i.path === "/contact/")!;
     const onContact = (d: GridDirector) => ({ x: contact(d).box.x + 3, y: contact(d).box.y + 3 });
-    const borderPinned = (d: GridDirector) => contact(d).border.filter((p) => d.engine.isPinned(p.x, p.y)).length;
+    const borderPinned = (d: GridDirector) =>
+      contact(d).border.filter((p) => d.engine.isPinned(p.x, p.y)).length;
     /** Live cells in and just around the Contact button, as "x,y" keys. */
     const liveAround = (d: GridDirector) => {
       const { x, y, width, height } = contact(d).box;
       const out: string[] = [];
       for (let cy = y - 2; cy < y + height + 2; cy++) {
-        for (let cx = x - 2; cx < x + width + 2; cx++) if (d.engine.isAlive(cx, cy)) out.push(`${cx},${cy}`);
+        for (let cx = x - 2; cx < x + width + 2; cx++)
+          if (d.engine.isAlive(cx, cy)) out.push(`${cx},${cy}`);
       }
       return out;
     };
@@ -409,7 +436,9 @@ describe("Grid Director", () => {
       // Just before it pins again, most of the border has died: the decay shows.
       const { border } = contact(d);
       expect(borderPinned(d)).toBe(0);
-      expect(border.filter((p) => d.engine.isAlive(p.x, p.y)).length).toBeLessThan(border.length / 2,);
+      expect(border.filter((p) => d.engine.isAlive(p.x, p.y)).length).toBeLessThan(
+        border.length / 2,
+      );
       d.tick();
       expect(borderPinned(d)).toBe(contact(d).border.length);
       expect(pinnedKeys(d)).toEqual(layoutKeys(d));
@@ -435,7 +464,10 @@ describe("Grid Director", () => {
       const d = quiet();
       d.hover(onContact(d));
       for (const item of d.layout.nav.filter((i) => i.path !== "/contact/")) {
-        expect(item.border.every((p) => d.engine.isPinned(p.x, p.y)), item.label,).toBe(true);
+        expect(
+          item.border.every((p) => d.engine.isPinned(p.x, p.y)),
+          item.label,
+        ).toBe(true);
       }
     });
 
@@ -491,7 +523,8 @@ describe("Grid Director", () => {
       ];
       const withToggles = () => quiet({ toggles: TOGGLES });
       const theme = (d: GridDirector) => d.layout.toggles.find((t) => t.id === "theme")!;
-      const themePinned = (d: GridDirector) => theme(d).border.filter((p) => d.engine.isPinned(p.x, p.y)).length;
+      const themePinned = (d: GridDirector) =>
+        theme(d).border.filter((p) => d.engine.isPinned(p.x, p.y)).length;
 
       it("pins them with the Section, as Buttons", () => {
         const d = withToggles();
@@ -567,10 +600,11 @@ describe("Grid Director", () => {
 
   describe("Body Text arriving in a Transition", () => {
     const settledAt = (route: string) => director({ route, introMemory: memory(true) });
-    const pinnedInBody = (d: GridDirector) => [...pinnedKeys(d)].filter((k) => {
-      const [x, y] = k.split(",").map(Number);
-      return boxContains(d.layout.body, { x, y });
-    });
+    const pinnedInBody = (d: GridDirector) =>
+      [...pinnedKeys(d)].filter((k) => {
+        const [x, y] = k.split(",").map(Number);
+        return boxContains(d.layout.body, { x, y });
+      });
 
     it("is released at once when a Section loads directly", () => {
       const d = settledAt("/projects/baja/");
@@ -608,10 +642,12 @@ describe("Grid Director", () => {
       }
       // Real Life tears it apart from there.
       d.tick();
-      expect(condensed.some((k) => {
-        const [x, y] = k.split(",").map(Number);
-        return !d.engine.isAlive(x, y);
-      }),).toBe(true);
+      expect(
+        condensed.some((k) => {
+          const [x, y] = k.split(",").map(Number);
+          return !d.engine.isAlive(x, y);
+        }),
+      ).toBe(true);
     });
 
     it("still settles within the Transition's budget of about 600ms", () => {
@@ -629,7 +665,9 @@ describe("Grid Director", () => {
       expect(d.bodyTextReleased).toBe(false);
       ticksToSettle(d);
       expect(d.bodyTextReleased).toBe(true);
-      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),);
+      expect(pinnedKeys(d)).toEqual(
+        new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),
+      );
     });
   });
 
@@ -643,7 +681,8 @@ describe("Grid Director", () => {
       for (let t = 0; t < 40; t++) {
         d.tick();
         for (let y = frame.y; y < frame.y + frame.height; y++) {
-          for (let x = frame.x; x < frame.x + frame.width; x++) expect(d.engine.isAlive(x, y)).toBe(false);
+          for (let x = frame.x; x < frame.x + frame.width; x++)
+            expect(d.engine.isAlive(x, y)).toBe(false);
         }
       }
     });

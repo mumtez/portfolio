@@ -3,7 +3,10 @@ import { frameMedia, placeFrames } from "./frames";
 
 describe("a Frame's media", () => {
   it("is a photo when a picture file named after the slot is there", () => {
-    expect(frameMedia("baja", "pcb", ["pcb.jpg", "other.png"])).toEqual({ kind: "image", src: "/media/baja/pcb.jpg", });
+    expect(frameMedia("baja", "pcb", ["pcb.jpg", "other.png"])).toEqual({
+      kind: "image",
+      src: "/media/baja/pcb.jpg",
+    });
   });
 
   it.each(["png", "jpeg", "webp", "avif", "gif", "JPG"])("accepts .%s photos", (ext) => {
@@ -43,7 +46,11 @@ describe("placing Frames in the Body Text", () => {
   });
 
   it("puts Frames without a marker after the Body Text, in order", () => {
-    expect(placeFrames("<p>One.</p>", ["a", "b"])).toEqual([{ html: "<p>One.</p>" }, { frame: "a" }, { frame: "b" },]);
+    expect(placeFrames("<p>One.</p>", ["a", "b"])).toEqual([
+      { html: "<p>One.</p>" },
+      { frame: "a" },
+      { frame: "b" },
+    ]);
   });
 
   it("tolerates spacing inside the marker", () => {

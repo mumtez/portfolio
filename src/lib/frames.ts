@@ -30,11 +30,19 @@ export function mediaDir(deepDive: string): string {
  * The media for Frame `slot` of Deep Dive `deepDive`, given the file names in its media
  * folder, or undefined if there isn't one yet. A video wins over a photo of the same name.
  */
-export function frameMedia(deepDive: string, slot: string, files: readonly string[],): FrameMedia | undefined {
+export function frameMedia(
+  deepDive: string,
+  slot: string,
+  files: readonly string[],
+): FrameMedia | undefined {
   const named = (extensions: readonly string[]) =>
     files.find((file) => {
       const dot = file.lastIndexOf(".");
-      return (dot > 0 && file.slice(0, dot) === slot && extensions.includes(file.slice(dot + 1).toLowerCase()));
+      return (
+        dot > 0 &&
+        file.slice(0, dot) === slot &&
+        extensions.includes(file.slice(dot + 1).toLowerCase())
+      );
     });
   const video = named(VIDEO_EXTENSIONS);
   const file = video ?? named(IMAGE_EXTENSIONS);
@@ -60,7 +68,8 @@ export function placeFrames(html: string, slots: readonly string[]): BodyPart[] 
   let from = 0;
   for (const match of html.matchAll(MARKER)) {
     const slot = match[1];
-    if (!slots.includes(slot)) throw new Error(`Frame "${slot}" is placed in the Body Text but not listed in frames:`);
+    if (!slots.includes(slot))
+      throw new Error(`Frame "${slot}" is placed in the Body Text but not listed in frames:`);
     if (placed.has(slot)) throw new Error(`Frame "${slot}" is placed twice`);
     placed.add(slot);
     if (match.index > from) parts.push({ html: html.slice(from, match.index) });

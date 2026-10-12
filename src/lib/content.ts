@@ -15,7 +15,9 @@ export async function getSection(id: string): Promise<Section> {
 
 /** The top-level Sections, in nav order. */
 export async function getSections(): Promise<Section[]> {
-  return (await getCollection("sections")).map((entry) => entry.data).sort((a, b) => a.order - b.order);
+  return (await getCollection("sections"))
+    .map((entry) => entry.data)
+    .sort((a, b) => a.order - b.order);
 }
 
 export async function getProfile(): Promise<CollectionEntry<"profile">["data"]> {
@@ -42,7 +44,14 @@ export function deepDivePath(project: Project): string {
  * same entries the Plain View renders. Embedded in each page for the Grid script.
  */
 export async function getGridContent(): Promise<GridContent> {
-  const sections: GridSection[] = (await getSections()).map(({ path, nav, heading }) => ({ path, nav, heading, }));
-  const deepDives = (await getDeepDives()).map((project) => ({ path: deepDivePath(project), heading: project.data.title, }));
+  const sections: GridSection[] = (await getSections()).map(({ path, nav, heading }) => ({
+    path,
+    nav,
+    heading,
+  }));
+  const deepDives = (await getDeepDives()).map((project) => ({
+    path: deepDivePath(project),
+    heading: project.data.title,
+  }));
   return { sections: [...sections, ...deepDives] };
 }

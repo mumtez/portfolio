@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { resolveSimulation, resolveTheme, safeStore, THEME_SCRIPT } from "./preferences";
 
 /** Run the inline theme script against a stand-in window; returns the `data-theme` it set on <html>. */
-function runThemeScript({ stored, systemLight, storageThrows = false, }: {
+function runThemeScript({
+  stored,
+  systemLight,
+  storageThrows = false,
+}: {
   stored: string | null;
   systemLight: boolean;
   storageThrows?: boolean;
@@ -14,7 +18,9 @@ function runThemeScript({ stored, systemLight, storageThrows = false, }: {
       if (storageThrows) throw new DOMException("denied", "SecurityError");
       return { getItem: (key: string) => (key === "theme" ? stored : null) };
     },
-    matchMedia: (query: string) => ({ matches: query === "(prefers-color-scheme: light)" && systemLight, }),
+    matchMedia: (query: string) => ({
+      matches: query === "(prefers-color-scheme: light)" && systemLight,
+    }),
   };
   runInNewContext(THEME_SCRIPT, { window, document: { documentElement: { dataset } } });
   return dataset.theme;
@@ -32,7 +38,9 @@ describe("the theme script, run before first paint", () => {
   });
 
   it("falls back to the system setting when storage throws", () => {
-    expect(runThemeScript({ stored: "dark", systemLight: true, storageThrows: true })).toBe("light",);
+    expect(runThemeScript({ stored: "dark", systemLight: true, storageThrows: true })).toBe(
+      "light",
+    );
   });
 });
 

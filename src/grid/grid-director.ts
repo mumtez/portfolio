@@ -154,7 +154,8 @@ export class GridDirector {
    */
   hover(at: Point | undefined): void {
     const toggle = at && toggleAt(this._layout, at);
-    const button = at && (navItemAt(this._layout, at)?.path ?? (toggle ? toggleKey(toggle.id) : undefined));
+    const button =
+      at && (navItemAt(this._layout, at)?.path ?? (toggle ? toggleKey(toggle.id) : undefined));
     if (button && button !== this.hovered) this.unpinBorder(button);
     this.hovered = button;
   }
@@ -246,7 +247,8 @@ export class GridDirector {
    * already decaying runs its course rather than starting over.
    */
   private unpinBorder(button: string): void {
-    if (this._phase === "intro" || this.options.reducedMotion || this.unpinnedBorders.has(button)) return;
+    if (this._phase === "intro" || this.options.reducedMotion || this.unpinnedBorders.has(button))
+      return;
     if (!this.buttons().some((b) => b.key === button)) return;
     this.unpinnedBorders.set(button, BORDER_UNPIN_TICKS);
     this.setPinned(this.pinnedNow);
@@ -281,7 +283,9 @@ export class GridDirector {
     const seed: IntroSeed = pool.seeds[Math.floor(this.random() * pool.seeds.length)];
     const area = this.resetEngine();
     // Soup as dense as the seed itself, so the seed's box doesn't show as an edge.
-    this._engine.inject(introCells(seed, title, { area, density: seedDensity(seed), random: this.random }),);
+    this._engine.inject(
+      introCells(seed, title, { area, density: seedDensity(seed), random: this.random }),
+    );
     this.pinnedNow = [];
     this.unpinnedBorders.clear();
     this.ticksUntilName = pool.depth;
@@ -324,7 +328,12 @@ export class GridDirector {
     const { viewport, margin } = this.options;
     this._engine = new LifeEngine({ width: viewport.width, height: viewport.height, margin });
     this._engine.setWalls(this.walls);
-    return { x: -margin, y: -margin, width: viewport.width + 2 * margin, height: viewport.height + 2 * margin, };
+    return {
+      x: -margin,
+      y: -margin,
+      width: viewport.width + 2 * margin,
+      height: viewport.height + 2 * margin,
+    };
   }
 }
 
@@ -341,6 +350,7 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
 /** Every Cell in a box. */
 function boxCells({ x, y, width, height }: Box): Point[] {
   const out: Point[] = [];
-  for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) out.push({ x: x + dx, y: y + dy });
+  for (let dy = 0; dy < height; dy++)
+    for (let dx = 0; dx < width; dx++) out.push({ x: x + dx, y: y + dy });
   return out;
 }

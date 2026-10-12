@@ -7,19 +7,17 @@ const { experience } = await getProfile();
 ---
 
 <Section {...section}>
-  {
-    experience.map(({ org, role, location, dates, points }) => (
-      <article>
-        <h2>{org}</h2>
-        <p class="meta">
-          {role} · {location} · {dates}
-        </p>
-        <ul>
-          {points.map((point) => (
-            <li>{point}</li>
-          ))}
-        </ul>
-      </article>
-    ))
-  }
+  {experience.map(({ org, role, location, dates, points }) => (
+    <article>
+      <h2>{org}</h2>
+      <p class="meta">
+        {role} · {location} · {dates}
+      </p>
+      <ul>
+        {points.map((point) => (
+          <li>{point}</li>
+        ))}
+      </ul>
+    </article>
+  ))}
 </Section>

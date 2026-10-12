@@ -10,7 +10,10 @@ import { deepDivePath, getDeepDives, type Project } from "../../lib/content";
 import { mediaDir, placeFrames } from "../../lib/frames";
 
 export const getStaticPaths = (async () => {
-  return (await getDeepDives()).map((project) => ({ params: { id: project.id }, props: { project }, }));
+  return (await getDeepDives()).map((project) => ({
+    params: { id: project.id },
+    props: { project },
+  }));
 }) satisfies GetStaticPaths;
 
 interface Props {
@@ -33,19 +36,32 @@ const parts = placeFrames(
 const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
 ---
 
-<Section path={deepDivePath(project)} heading={title} title={`${title} · Andrew Aburustum`} description={summary}>
-  <p class="meta">{tools}{link && (<>{" "} · <a href={link.href}>{link.label}</a></>)}</p>
+<Section
+  path={deepDivePath(project)}
+  heading={title}
+  title={`${title} · Andrew Aburustum`}
+  description={summary}
+>
+  <p class="meta">
+    {tools}
+    {link && (
+      <>
+        {" "}
+        · <a href={link.href}>{link.label}</a>
+      </>
+    )}
+  </p>
   {placeholder && <Placeholder note={placeholder} />}
   <div class="body-text">
-    {
-      parts.map((part) =>
-        "html" in part ? (
-          <Fragment set:html={part.html} />
-        ) : (
-          <Frame deepDive={project.id} files={files} {...frameFor(part.frame)} />
-        ),
-      )
-    }
+    {parts.map((part) =>
+      "html" in part ? (
+        <Fragment set:html={part.html} />
+      ) : (
+        <Frame deepDive={project.id} files={files} {...frameFor(part.frame)} />
+      ),
+    )}
   </div>
-  <p><a href="/projects/">All projects</a></p>
+  <p>
+    <a href="/projects/">All projects</a>
+  </p>
 </Section>

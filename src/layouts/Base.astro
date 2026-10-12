@@ -48,8 +48,12 @@ const themeCss = `
     <header>
       <SiteNav current={path} />
       <div class="toggles" role="group" aria-label="Display" hidden>
-        <button type="button" data-toggle="theme" data-label="Dark" aria-pressed="false">Dark theme</button>
-        <button type="button" data-toggle="simulation" data-label="Life" aria-pressed="false">Life simulation</button>
+        <button type="button" data-toggle="theme" data-label="Dark" aria-pressed="false">
+          Dark theme
+        </button>
+        <button type="button" data-toggle="simulation" data-label="Life" aria-pressed="false">
+          Life simulation
+        </button>
       </div>
     </header>
     <slot />
@@ -73,7 +77,11 @@ const themeCss = `
   html {
     background: var(--bg);
     color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      sans-serif;
   }
   body {
     margin: 0;

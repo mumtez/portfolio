@@ -71,7 +71,9 @@ export async function swapToSection(path: string): Promise<boolean> {
 
 /** Page styles Astro inlines per page; the next Section's must be present before its HTML is. */
 function mergeHeadStyles(next: Document): void {
-  const have = new Set([...document.head.querySelectorAll("style, link[rel='stylesheet']")].map((el) => el.outerHTML),);
+  const have = new Set(
+    [...document.head.querySelectorAll("style, link[rel='stylesheet']")].map((el) => el.outerHTML),
+  );
   for (const el of next.head.querySelectorAll("style, link[rel='stylesheet']")) {
     if (!have.has(el.outerHTML)) document.head.append(document.importNode(el, true));
   }

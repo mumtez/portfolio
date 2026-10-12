@@ -20,17 +20,117 @@ export interface CellMask {
  * strict Life (ADR 0003), so changing a glyph or a gap invalidates every seed.
  */
 const NAME_GLYPHS: Readonly<Record<string, readonly string[]>> = {
-  A: [".#####.", "##...##", "##...##", "##...##", "#######", "##...##", "##...##", "##...##", "##...##",],
-  N: ["##...##", "###..##", "####.##", "#######", "##.####", "##..###", "##...##", "##...##", "##...##",],
-  D: ["######.", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "######.",],
-  R: ["######.", "##...##", "##...##", "##...##", "######.", "##.##..", "##..##.", "##...##", "##...##",],
-  E: ["#######", "##.....", "##.....", "##.....", "######.", "##.....", "##.....", "##.....", "#######",],
-  W: ["##...##", "##...##", "##...##", "##...##", "##.#.##", "##.#.##", "#######", "###.###", "##...##",],
-  B: ["######.", "##...##", "##...##", "##...##", "######.", "##...##", "##...##", "##...##", "######.",],
-  U: ["##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", ".#####.",],
-  S: [".######", "##.....", "##.....", "##.....", ".#####.", ".....##", ".....##", ".....##", "######.",],
+  A: [
+    ".#####.",
+    "##...##",
+    "##...##",
+    "##...##",
+    "#######",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+  ],
+  N: [
+    "##...##",
+    "###..##",
+    "####.##",
+    "#######",
+    "##.####",
+    "##..###",
+    "##...##",
+    "##...##",
+    "##...##",
+  ],
+  D: [
+    "######.",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "######.",
+  ],
+  R: [
+    "######.",
+    "##...##",
+    "##...##",
+    "##...##",
+    "######.",
+    "##.##..",
+    "##..##.",
+    "##...##",
+    "##...##",
+  ],
+  E: [
+    "#######",
+    "##.....",
+    "##.....",
+    "##.....",
+    "######.",
+    "##.....",
+    "##.....",
+    "##.....",
+    "#######",
+  ],
+  W: [
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##.#.##",
+    "##.#.##",
+    "#######",
+    "###.###",
+    "##...##",
+  ],
+  B: [
+    "######.",
+    "##...##",
+    "##...##",
+    "##...##",
+    "######.",
+    "##...##",
+    "##...##",
+    "##...##",
+    "######.",
+  ],
+  U: [
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+    ".#####.",
+  ],
+  S: [
+    ".######",
+    "##.....",
+    "##.....",
+    "##.....",
+    ".#####.",
+    ".....##",
+    ".....##",
+    ".....##",
+    "######.",
+  ],
   T: ["######", "..##..", "..##..", "..##..", "..##..", "..##..", "..##..", "..##..", "..##.."],
-  M: ["##...##", "###.###", "#######", "##.#.##", "##.#.##", "##...##", "##...##", "##...##", "##...##",],
+  M: [
+    "##...##",
+    "###.###",
+    "#######",
+    "##.#.##",
+    "##.#.##",
+    "##...##",
+    "##...##",
+    "##...##",
+    "##...##",
+  ],
 };
 const NAME_HEIGHT = 9;
 const NAME_LETTER_GAP = 2;
@@ -87,7 +187,11 @@ export function nameMask(layout: NameLayout): CellMask {
   const width = last[0].length;
   const pad = Math.floor((width - first[0].length) / 2);
   const centred = first.map((r) => ".".repeat(pad) + r.padEnd(width - pad, "."));
-  return maskFromRows([...centred, ...Array<string>(NAME_LINE_GAP).fill(".".repeat(width)), ...last,]);
+  return maskFromRows([
+    ...centred,
+    ...Array<string>(NAME_LINE_GAP).fill(".".repeat(width)),
+    ...last,
+  ]);
 }
 
 export interface Box {
@@ -234,7 +338,9 @@ export function typesetSection(
   const lines = wrap(section.heading, viewport.width - 2 * SIDE).map(textMask);
   const width = Math.max(...lines.map((l) => l.width));
   const x0 = Math.floor((viewport.width - width) / 2);
-  lines.forEach((line, i) => place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH),);
+  lines.forEach((line, i) =>
+    place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH),
+  );
   const height = (lines.length - 1) * HEADING_LINE_PITCH + GLYPH_HEIGHT;
   const title = { x: x0, y: top, width, height };
   return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
@@ -251,7 +357,9 @@ function typesetNav(
   path: string,
   place: (mask: CellMask, x: number, y: number) => void,
 ): NavItem[] {
-  const entries = content.sections.flatMap((s) => s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : [],);
+  const entries = content.sections.flatMap((s) =>
+    s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : [],
+  );
   const maxWidth = viewport.width - 2 * SIDE;
   const column = navIsColumn(viewport, entries.length);
   const lines: (typeof entries)[] = [];
@@ -290,7 +398,8 @@ function typesetToggles(
   place: (mask: CellMask, x: number, y: number) => void,
 ): ToggleItem[] {
   const masks = specs.map((s) => textMask(s.label));
-  const width = masks.reduce((sum, m) => sum + m.width + 2 * BUTTON_PAD, 0) + TOGGLE_GAP * (masks.length - 1);
+  const width =
+    masks.reduce((sum, m) => sum + m.width + 2 * BUTTON_PAD, 0) + TOGGLE_GAP * (masks.length - 1);
   let x = viewport.width - SIDE - width + BUTTON_PAD;
   const y = viewport.height - SIDE - BUTTON_HEIGHT + BUTTON_PAD;
   return specs.map((spec, i) => {
@@ -308,7 +417,12 @@ function drawButton(
   underlined: boolean,
   place: (mask: CellMask, x: number, y: number) => void,
 ): { box: Box; border: Point[] } {
-  const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: label.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT, };
+  const box = {
+    x: x - BUTTON_PAD,
+    y: y - BUTTON_PAD,
+    width: label.width + 2 * BUTTON_PAD,
+    height: BUTTON_HEIGHT,
+  };
   const border = edgeCells(box);
   place(label, x, y);
   if (underlined) place(underline(label.width), x, y + UNDERLINE_ROW);
@@ -325,7 +439,8 @@ export function toggleAt(layout: SectionLayout, at: Point): ToggleItem | undefin
 function edgeCells({ x, y, width, height }: Box): Point[] {
   const cells: Point[] = [];
   for (let cx = x; cx < x + width; cx++) cells.push({ x: cx, y }, { x: cx, y: y + height - 1 });
-  for (let cy = y + 1; cy < y + height - 1; cy++) cells.push({ x, y: cy }, { x: x + width - 1, y: cy });
+  for (let cy = y + 1; cy < y + height - 1; cy++)
+    cells.push({ x, y: cy }, { x: x + width - 1, y: cy });
   return cells;
 }
 
@@ -336,7 +451,10 @@ function edgeCells({ x, y, width, height }: Box): Point[] {
  * so every Section has the same nav and a Transition leaves it pinned.
  */
 function navIsColumn(viewport: ViewportCells, items: number): boolean {
-  return (nameLayoutFor(viewport) === "stacked" && navRowTop(items) + TITLE_GAP + STACKED_NAME.height <= viewport.height);
+  return (
+    nameLayoutFor(viewport) === "stacked" &&
+    navRowTop(items) + TITLE_GAP + STACKED_NAME.height <= viewport.height
+  );
 }
 
 function underline(width: number): CellMask {
@@ -348,7 +466,8 @@ function wrap(text: string, maxWidth: number): string[] {
   const lines: string[] = [];
   for (const word of text.split(/\s+/).filter(Boolean)) {
     const line = lines.at(-1);
-    if (line !== undefined && textMask(`${line} ${word}`).width <= maxWidth) lines[lines.length - 1] = `${line} ${word}`;
+    if (line !== undefined && textMask(`${line} ${word}`).width <= maxWidth)
+      lines[lines.length - 1] = `${line} ${word}`;
     else lines.push(word);
   }
   return lines.length ? lines : [""];
@@ -360,7 +479,12 @@ function wrap(text: string, maxWidth: number): string[] {
  * centred column at most `columnRem` wide with at least `gutterPx` either side, in 16px
  * type at `lineHeight`.
  */
-export const BODY_TEXT_CSS = { gapRem: 1.25, columnRem: 44, gutterPx: 16, lineHeight: 1.55, } as const;
+export const BODY_TEXT_CSS = {
+  gapRem: 1.25,
+  columnRem: 44,
+  gutterPx: 16,
+  lineHeight: 1.55,
+} as const;
 const REM_PX = 16;
 const DEFAULT_CELL_PX = 8;
 const BODY_GAP_PX = BODY_TEXT_CSS.gapRem * REM_PX;
@@ -388,7 +512,11 @@ function bodyRegion(viewport: ViewportCells, title: Box): Box {
  * the right. The Grid Director pins them during a Transition, then releases them into
  * Life as the HTML fades in over them.
  */
-export function bodyTextCondensate(body: Box, viewport: ViewportCells, random: () => number,): Point[] {
+export function bodyTextCondensate(
+  body: Box,
+  viewport: ViewportCells,
+  random: () => number,
+): Point[] {
   const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
   const pitch = Math.max(2, Math.round(BODY_LINE_PX / cellPx));
   const ink = Math.ceil(pitch * CONDENSATE_INK_ROWS);
@@ -398,7 +526,8 @@ export function bodyTextCondensate(body: Box, viewport: ViewportCells, random: (
     const length = Math.round(body.width * (0.75 + 0.25 * random()));
     for (let row = 0; row < ink; row++) {
       const y = body.y + line * pitch + row;
-      for (let dx = 0; dx < length; dx++) if (random() < CONDENSATE_DENSITY) cells.push({ x: body.x + dx, y });
+      for (let dx = 0; dx < length; dx++)
+        if (random() < CONDENSATE_DENSITY) cells.push({ x: body.x + dx, y });
     }
   }
   return cells;

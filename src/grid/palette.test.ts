@@ -5,7 +5,13 @@ import { BODY_TEXT_CELL_ALPHA, contrastRatio, DARK, LIGHT, PALETTES } from "./pa
 function over(fg: string, alpha: number, bg: string): string {
   const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   const [f, b] = [channels(fg), channels(bg)];
-  return `#${f.map((c, i) => Math.round(c * alpha + b[i] * (1 - alpha)).toString(16).padStart(2, "0"),).join("")}`;
+  return `#${f
+    .map((c, i) =>
+      Math.round(c * alpha + b[i] * (1 - alpha))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
 }
 
 describe("dark palette", () => {
@@ -32,7 +38,9 @@ describe("dark palette", () => {
   });
 
   it("keeps Body Text above 7:1 (WCAG AAA) over the faint Free Cells drawn under it", () => {
-    expect(contrastRatio(DARK.text, over(DARK.free, BODY_TEXT_CELL_ALPHA, DARK.background)),).toBeGreaterThanOrEqual(7);
+    expect(
+      contrastRatio(DARK.text, over(DARK.free, BODY_TEXT_CELL_ALPHA, DARK.background)),
+    ).toBeGreaterThanOrEqual(7);
   });
 
   it("needs the cells under Body Text drawn faint: at full strength they'd pull it below 7:1", () => {
@@ -48,7 +56,9 @@ describe("light palette", () => {
   });
 
   it("keeps Body Text above 7:1 (WCAG AAA) over the faint Free Cells drawn under it", () => {
-    expect(contrastRatio(LIGHT.text, over(LIGHT.free, BODY_TEXT_CELL_ALPHA, LIGHT.background)),).toBeGreaterThanOrEqual(7);
+    expect(
+      contrastRatio(LIGHT.text, over(LIGHT.free, BODY_TEXT_CELL_ALPHA, LIGHT.background)),
+    ).toBeGreaterThanOrEqual(7);
   });
 
   it("keeps Pinned Cells and text readable against the background (WCAG AA)", () => {

@@ -55,7 +55,11 @@ export interface LinkClick {
  * to the browser: links off the site or to files, links to the Section already showing
  * (including `#` links within it), and clicks meant for a new tab, window or download.
  */
-export function transitionPathFor(click: LinkClick, here: URL, content: GridContent,): string | undefined {
+export function transitionPathFor(
+  click: LinkClick,
+  here: URL,
+  content: GridContent,
+): string | undefined {
   if (click.button !== 0 || click.modified || click.download) return undefined;
   if (click.target && click.target !== "_self") return undefined;
   const url = new URL(click.href, here);

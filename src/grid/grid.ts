@@ -15,7 +15,13 @@
  */
 import { countPageView } from "../lib/analytics";
 import { cellSize } from "./cell-size";
-import { navItemAt, toggleAt, type Box, type SectionLayout, type ToggleSpec, } from "./cell-typesetter";
+import {
+  navItemAt,
+  toggleAt,
+  type Box,
+  type SectionLayout,
+  type ToggleSpec,
+} from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
 import { cellBoxCovering } from "./html-regions";
@@ -88,10 +94,18 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
   const root = document.documentElement.style;
   root.setProperty("--below-title", px(title.y + title.height));
   const togglesTop = Math.min(...layout.toggles.map((t) => t.box.y));
-  root.setProperty("--above-toggles", Number.isFinite(togglesTop) ? `${window.innerHeight - togglesTop * cellPx}px` : "0px",);
+  root.setProperty(
+    "--above-toggles",
+    Number.isFinite(togglesTop) ? `${window.innerHeight - togglesTop * cellPx}px` : "0px",
+  );
   const place = (el: HTMLElement, box: Box) => {
     el.classList.add("on-grid");
-    Object.assign(el.style, { left: px(box.x), top: px(box.y), width: px(box.width), height: px(box.height), });
+    Object.assign(el.style, {
+      left: px(box.x),
+      top: px(box.y),
+      width: px(box.width),
+      height: px(box.height),
+    });
   };
   for (const a of document.querySelectorAll<HTMLAnchorElement>("header nav > ul > li > a")) {
     const item = layout.nav.find((i) => i.path === sectionPath(a.pathname));
@@ -115,7 +129,13 @@ function unplaceHtml(): void {
 }
 
 /** Start the Grid over the page's Plain View. */
-export function startGrid({ canvas, content, palette, reducedMotion, toggles: initialToggles, }: GridOptions): Grid {
+export function startGrid({
+  canvas,
+  content,
+  palette,
+  reducedMotion,
+  toggles: initialToggles,
+}: GridOptions): Grid {
   let toggles = initialToggles;
   const renderer = new GridRenderer(canvas, palette);
   let director: GridDirector;
@@ -192,16 +212,21 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
 
   /** Fade the arriving Section's HTML in once the Director has released its Body Text. */
   function revealBodyText(): void {
-    if (director.bodyTextReleased) document.querySelector("main.arriving:not(.released)")?.classList.add("released");
+    if (director.bodyTextReleased)
+      document.querySelector("main.arriving:not(.released)")?.classList.add("released");
   }
 
   // A resize starts a new Director. The Intro is already marked seen, so a resize
   // mid-Intro lands on the pinned name, just like a skip.
   let resizeTimer: ReturnType<typeof setTimeout> | undefined;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(rebuild, 150);
-  }, { signal },);
+  window.addEventListener(
+    "resize",
+    () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(rebuild, 150);
+    },
+    { signal },
+  );
 
   /**
    * Run a Transition to the Section at `path` and swap its Plain View in. `push` adds a
@@ -228,33 +253,40 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
 
   // Links to other Sections run a Transition instead of a page load. They stay real
   // links: with JS off, or for new-tab clicks, the browser follows them as usual.
-  document.addEventListener("click", (e) => {
-    if (e.defaultPrevented || !(e.target instanceof Element)) return;
-    const a = e.target.closest<HTMLAnchorElement>("a[href]");
-    if (!a) return;
-    const path = transitionPathFor(
-      {
-        href: a.getAttribute("href") ?? "",
-        target: a.target,
-        download: a.hasAttribute("download"),
-        button: e.button,
-        modified: e.metaKey || e.ctrlKey || e.shiftKey || e.altKey,
-      },
-      new URL(window.location.href),
-      content,
-    );
-    if (!path) return;
-    e.preventDefault();
-    // Push the Section's own URL (`/about` → `/about/`), keeping any `#` target.
-    goTo(path, path + new URL(a.href).hash);
-  }, { signal },);
-  window.addEventListener("popstate", () => goTo(sectionPath(window.location.pathname)), { signal, });
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (e.defaultPrevented || !(e.target instanceof Element)) return;
+      const a = e.target.closest<HTMLAnchorElement>("a[href]");
+      if (!a) return;
+      const path = transitionPathFor(
+        {
+          href: a.getAttribute("href") ?? "",
+          target: a.target,
+          download: a.hasAttribute("download"),
+          button: e.button,
+          modified: e.metaKey || e.ctrlKey || e.shiftKey || e.altKey,
+        },
+        new URL(window.location.href),
+        content,
+      );
+      if (!path) return;
+      e.preventDefault();
+      // Push the Section's own URL (`/about` → `/about/`), keeping any `#` target.
+      goTo(path, path + new URL(a.href).hash);
+    },
+    { signal },
+  );
+  window.addEventListener("popstate", () => goTo(sectionPath(window.location.pathname)), {
+    signal,
+  });
   // Fetch a Section's page as soon as its link is pointed at or focused.
   for (const type of ["pointerover", "focusin"] as const) {
     document.addEventListener(
       type,
       (e) => {
-        const a = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
+        const a =
+          e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
         if (!a || a.origin !== window.location.origin) return;
         const path = sectionPath(a.pathname);
         if (path !== director.route && hasSection(content, path)) prefetchSection(path);
@@ -274,12 +306,16 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
   // The Intro is strict Life, so nothing else touches the Grid while it plays, and a
   // press that skipped or replayed it drops no glider.
   let pressWasForIntro = false;
-  window.addEventListener("pointerdown", (e) => {
-    const before = director.phase;
-    director.input(cellAt(e));
-    pressWasForIntro = before === "intro" || director.phase === "intro";
-    if (pressWasForIntro) redraw();
-  }, { signal },);
+  window.addEventListener(
+    "pointerdown",
+    (e) => {
+      const before = director.phase;
+      director.input(cellAt(e));
+      pressWasForIntro = before === "intro" || director.phase === "intro";
+      if (pressWasForIntro) redraw();
+    },
+    { signal },
+  );
   for (const type of ["keydown", "wheel", "scroll"] as const) {
     window.addEventListener(
       type,
@@ -311,7 +347,8 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
     if (e.pointerType !== "mouse" && e.buttons === 0) return;
     const cell = cellAt(e);
     const from =
-      trailEnd && Math.max(Math.abs(cell.x - trailEnd.x), Math.abs(cell.y - trailEnd.y)) <= TRAIL_MAX_GAP
+      trailEnd &&
+      Math.max(Math.abs(cell.x - trailEnd.x), Math.abs(cell.y - trailEnd.y)) <= TRAIL_MAX_GAP
         ? trailEnd
         : cell;
     director.engine.inject(cellLine(from, cell));
@@ -323,9 +360,13 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
   window.addEventListener("pointerup", endTrail, { passive: true, signal });
   window.addEventListener("pointercancel", endTrail, { passive: true, signal });
   document.documentElement.addEventListener("pointerleave", endTrail, { passive: true, signal });
-  window.addEventListener("pointermove", (e) => {
-    document.body.style.cursor = director.canReplayAt(cellAt(e)) ? "pointer" : "";
-  }, { signal },);
+  window.addEventListener(
+    "pointermove",
+    (e) => {
+      document.body.style.cursor = director.canReplayAt(cellAt(e)) ? "pointer" : "";
+    },
+    { signal },
+  );
 
   // A button's border decays for a moment when the pointer moves onto it or it gets
   // keyboard focus. Which button is under the pointer comes from the Typesetter's hit
@@ -333,30 +374,60 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
   for (const type of ["pointermove", "pointerdown"] as const) {
     window.addEventListener(type, (e) => director.hover(cellAt(e)), { passive: true, signal });
   }
-  document.documentElement.addEventListener("pointerleave", () => director.hover(undefined), { passive: true, signal, });
-  document.addEventListener("focusin", (e) => {
-    if (e.target instanceof HTMLAnchorElement && e.target.matches(DRAWN_BUTTON)) director.focus(e.target.pathname);
-    if (e.target instanceof HTMLButtonElement && e.target.matches(DRAWN_TOGGLE)) {
-      director.focusToggle(e.target.dataset.toggle ?? "");
-    }
-  }, { signal },);
+  document.documentElement.addEventListener("pointerleave", () => director.hover(undefined), {
+    passive: true,
+    signal,
+  });
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      if (e.target instanceof HTMLAnchorElement && e.target.matches(DRAWN_BUTTON))
+        director.focus(e.target.pathname);
+      if (e.target instanceof HTMLButtonElement && e.target.matches(DRAWN_TOGGLE)) {
+        director.focusToggle(e.target.dataset.toggle ?? "");
+      }
+    },
+    { signal },
+  );
   // Buttons are links underneath, which Enter follows; Space presses them too, like a button.
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== " " || e.repeat || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(DRAWN_BUTTON)) return;
-    e.preventDefault();
-    e.target.click();
-  }, { signal },);
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (
+        e.key !== " " ||
+        e.repeat ||
+        e.defaultPrevented ||
+        e.altKey ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.shiftKey
+      )
+        return;
+      if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(DRAWN_BUTTON)) return;
+      e.preventDefault();
+      e.target.click();
+    },
+    { signal },
+  );
 
-  window.addEventListener("click", (e) => {
-    if (pressWasForIntro || director.phase === "intro") return;
-    if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return;
-    if (!window.getSelection()?.isCollapsed) return;
-    const at = cellAt(e);
-    const engine = director.engine;
-    if (engine.isPinned(at.x, at.y) || navItemAt(director.layout, at) || toggleAt(director.layout, at)) return;
-    engine.inject(spaceshipAt("glider", at));
-  }, { signal },);
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (pressWasForIntro || director.phase === "intro") return;
+      if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return;
+      if (!window.getSelection()?.isCollapsed) return;
+      const at = cellAt(e);
+      const engine = director.engine;
+      if (
+        engine.isPinned(at.x, at.y) ||
+        navItemAt(director.layout, at) ||
+        toggleAt(director.layout, at)
+      )
+        return;
+      engine.inject(spaceshipAt("glider", at));
+    },
+    { signal },
+  );
 
   rebuild();
   ticker = startTicker(() => {

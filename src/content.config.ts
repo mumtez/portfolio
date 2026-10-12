@@ -87,7 +87,10 @@ const projects = defineCollection({
           alt: z.string(),
           caption: z.string().optional(),
           /** The Frame's shape, as a CSS aspect ratio. Media keep their own shape inside it. */
-          aspect: z.string().regex(/^\d+ \/ \d+$/).default("3 / 2"),
+          aspect: z
+            .string()
+            .regex(/^\d+ \/ \d+$/)
+            .default("3 / 2"),
         }),
       )
       .default([]),

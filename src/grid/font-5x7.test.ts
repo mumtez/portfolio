@@ -7,7 +7,10 @@ const CONTENT = new URL("../content/", import.meta.url);
 
 /** Every heading and nav label the Grid draws in the 5×7 font, read from the content files. */
 function gridTexts(): string[] {
-  const sections = parse(readFileSync(new URL("sections.yaml", CONTENT), "utf8")) as { nav: string; heading: string; }[];
+  const sections = parse(readFileSync(new URL("sections.yaml", CONTENT), "utf8")) as {
+    nav: string;
+    heading: string;
+  }[];
   const projects = readdirSync(new URL("projects/", CONTENT))
     .map((file) => readFileSync(new URL(`projects/${file}`, CONTENT), "utf8"))
     .map((md) => parse(md.split(/^---$/m)[1]) as { title: string; deepDive?: boolean })

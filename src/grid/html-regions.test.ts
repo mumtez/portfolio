@@ -35,7 +35,9 @@ describe("the cells an HTML box covers", () => {
 
   it("is nothing when the box is scrolled out of the region", () => {
     const scrollBox = { x: 0, y: 30, width: 100, height: 50 };
-    expect(cellBoxCovering({ left: 0, top: 0, right: 80, bottom: 200 }, 8, scrollBox),).toBeUndefined();
+    expect(
+      cellBoxCovering({ left: 0, top: 0, right: 80, bottom: 200 }, 8, scrollBox),
+    ).toBeUndefined();
   });
 
   it("is nothing for an empty box", () => {
