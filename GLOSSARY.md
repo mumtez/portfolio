@@ -58,8 +58,12 @@ _Avoid_: Case study, project page
 Paragraph-length writing in a Section, such as a Deep Dive's story. It is real HTML laid over the live Grid, never drawn in Cells.
 _Avoid_: Copy, prose, description
 
+**Shape**:
+Where a piece of Body Text lies over the Grid, in Cells: one line of its text, or a Panel. A Transition dissolves the old Section's Shapes and condenses the next one's.
+_Avoid_: Region, outline, footprint
+
 **Button**:
-Something to press that is drawn in Cells: its label in Pinned Cells inside a pinned border. Hovering or focusing it briefly releases the border to decay under Life before it pins again. Underneath it is a real link or button, laid over its cells.
+Something to press, inside a pinned border of Cells: its label is drawn in Pinned Cells (a nav item, a toggle, a Cell label) or is Body Text (a Project Entry). Hovering or focusing it briefly releases the border to decay under Life before it pins again. Underneath it is a real link or button.
 _Avoid_: Tile, chip
 
 **Frame**:
@@ -69,6 +73,14 @@ _Avoid_: Embed, media box
 **Panel**:
 A block of Body Text set inside a pinned border of Cells, such as a Frame, a Placeholder or an Entry. The text inside stays HTML; only the border lives in the Grid.
 _Avoid_: Card, box, container
+
+**Button Panel**:
+A Panel that is also a Button: pressing it follows its link, and its border decays on hover or focus. A Project Entry and a Contact link are Button Panels.
+_Avoid_: Card link, clickable card
+
+**Cell label**:
+A short label in capitals drawn in Pinned Cells inside a Button Panel's border, standing in for its link's full text (EMAIL for the email address). It stays pinned while the border decays.
+_Avoid_: Badge, tag, caption
 
 **Entry**:
 One item in a list Section: a job on Experience, or a project on Projects.
