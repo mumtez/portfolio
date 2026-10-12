@@ -268,6 +268,20 @@ const BUTTON_PAD = 2;
 /** The current item's underline is this many rows below the top of its label. */
 const UNDERLINE_ROW = GLYPH_HEIGHT + 1;
 const BUTTON_HEIGHT = UNDERLINE_ROW + 1 + 2 * BUTTON_PAD;
+/** Rows of a capital in the 5×7 font: a Cell label is centred on these, not on the row below them. */
+export const CAPITAL_ROWS = 7;
+
+/**
+ * The size in Cells of a Button drawn round a Cell label (a Contact link's EMAIL), border
+ * included: the label's capitals with a clear cell and then the border round them. It
+ * has no underline row. The page sizes the link's HTML box to it.
+ */
+export function cellLabelButton(label: string): { width: number; height: number } {
+  return {
+    width: textMask(label).width + 2 * BUTTON_PAD,
+    height: CAPITAL_ROWS + 2 * BUTTON_PAD,
+  };
+}
 /** Clear rows between one line of buttons and the next. */
 const NAV_LINE_GAP = 2;
 const NAV_LINE_PITCH = BUTTON_HEIGHT + NAV_LINE_GAP;

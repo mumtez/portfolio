@@ -11,17 +11,13 @@ const baja = (page: Page) =>
 /** Whether the Cells on the link's border are pinned: its top-left corner and the middle of its top edge. */
 const borderPinned = (link: Locator) =>
   link.evaluate((el) => {
-    type Hooks = {
-      gridShapes: () => { cellPx: number };
-      gridCell: (x: number, y: number) => { pinned: boolean };
-    };
-    const { gridShapes, gridCell } = window as unknown as Hooks;
-    const { cellPx } = gridShapes();
+    const grid = window.gridTest!;
+    const { cellPx } = grid.shapes();
     const r = el.getBoundingClientRect();
     const x = Math.round(r.left / cellPx);
     const y = Math.round(r.top / cellPx);
     const middle = Math.round((r.left + r.right) / 2 / cellPx);
-    return gridCell(x, y).pinned && gridCell(middle, y).pinned;
+    return grid.cell(x, y).pinned && grid.cell(middle, y).pinned;
   });
 
 async function openProjects(page: Page): Promise<void> {

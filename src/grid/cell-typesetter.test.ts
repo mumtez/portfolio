@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import prototypeLayouts from "../../tests/fixtures/prototype-name-layouts.json";
 import {
   BODY_TEXT_CSS,
+  cellLabelButton,
   nameMask,
   navItemAt,
   textMask,
@@ -72,6 +73,11 @@ describe("Cell Typesetter", () => {
       const mask = textMask("H H");
       expect(mask.width).toBe(17);
       expect(toRows(mask)[3]).toBe("#####.......#####");
+    });
+
+    it("sizes a Cell label's Button to its capitals, a clear cell and the border round them", () => {
+      // EMAIL is 5 glyphs and 4 gaps: 29 cells across, 7 rows of capitals.
+      expect(cellLabelButton("EMAIL")).toEqual({ width: 33, height: 11 });
     });
   });
 

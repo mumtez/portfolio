@@ -21,12 +21,8 @@ interface PanelSeen {
 /** Every Panel wholly on screen in the Section's scroll box, as the Grid has it now. */
 const panelsSeen = (page: Page): Promise<PanelSeen[]> =>
   page.evaluate(() => {
-    type Hooks = {
-      gridShapes: () => { cellPx: number };
-      gridCell: (x: number, y: number) => { pinned: boolean; wall: boolean };
-    };
-    const { gridShapes, gridCell } = window as unknown as Hooks;
-    const { cellPx } = gridShapes();
+    const grid = window.gridTest!;
+    const { cellPx } = grid.shapes();
     const shown = document.querySelector("main")!.getBoundingClientRect();
     return [...document.querySelectorAll<HTMLElement>("main [data-panel]")].flatMap((el) => {
       const r = el.getBoundingClientRect();
@@ -44,9 +40,9 @@ const panelsSeen = (page: Page): Promise<PanelSeen[]> =>
             right - r.right / cellPx,
             bottom - r.bottom / cellPx,
           ],
-          corner: gridCell(x, y).pinned,
-          besideCorner: gridCell(x + 1, y).pinned,
-          middleIsWall: gridCell(Math.floor((x + right) / 2), Math.floor((y + bottom) / 2)).wall,
+          corner: grid.cell(x, y).pinned,
+          besideCorner: grid.cell(x + 1, y).pinned,
+          middleIsWall: grid.cell(Math.floor((x + right) / 2), Math.floor((y + bottom) / 2)).wall,
         },
       ];
     });

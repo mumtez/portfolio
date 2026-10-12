@@ -32,6 +32,7 @@ import type { Palette } from "./palette";
 import { cellLine } from "./pointer-trail";
 import { hasSection, sectionPath, transitionPathFor, type GridContent } from "./routes";
 import { maybeLaunch, spaceshipAt } from "./spaceships";
+import { exposeTestHooks } from "./test-hooks";
 import { startTicker, type Ticker } from "./ticker";
 
 /** Off-screen cells on every side, so patterns enter and leave naturally. Wider than any spaceship plus the dead ring. */
@@ -41,7 +42,7 @@ const INTRO_SEEN_KEY = "intro-seen";
 const TRAIL_MAX_GAP = 12;
 /** Clicks on these drop no glider: they're for the content, not the Grid. */
 const INTERACTIVE = "a, button, input, textarea, select, label, summary, [role='button']";
-/** How long the old Section's HTML takes to fade out in a Transition (as `Base.astro` sets it). */
+/** How long the old Section's HTML takes to fade out in a Transition (`Base.astro` fades it by `--leave-ms`). */
 const LEAVE_MS = 240;
 /** The real links laid over buttons drawn in cells (placed by `placeHtml`). */
 const DRAWN_BUTTON = "a.on-grid";
@@ -99,6 +100,7 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
   const root = document.documentElement.style;
   // For Body Text sized in cells: a Contact link's Button is the size of its Cell label.
   root.setProperty("--cell-px", px(1));
+  root.setProperty("--leave-ms", `${LEAVE_MS}ms`);
   root.setProperty("--below-title", px(title.y + title.height));
   // The Body Text ends where its region does: the bottom of the screen, or above the
   // toggles where they're in the bottom corner over its column.
@@ -130,6 +132,7 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
 function unplaceHtml(): void {
   const root = document.documentElement.style;
   root.removeProperty("--cell-px");
+  root.removeProperty("--leave-ms");
   root.removeProperty("--below-title");
   root.removeProperty("--below-body");
   for (const el of document.querySelectorAll<HTMLElement>(".on-grid")) {
@@ -457,16 +460,12 @@ export function startGrid({
     { signal },
   );
 
-  // What the Grid last measured, and what a Cell is now, for the browser tests to check
-  // against the page.
-  const measured = window as {
-    gridShapes?: () => { cellPx: number; shapes: Shape[] };
-    gridCell?: (x: number, y: number) => { pinned: boolean; wall: boolean };
-  };
-  measured.gridShapes = () => ({ cellPx, shapes });
-  measured.gridCell = (x, y) => ({
-    pinned: director.engine.isPinned(x, y),
-    wall: director.engine.kindAt(x, y) === CellKind.Wall,
+  const hideTestHooks = exposeTestHooks({
+    shapes: () => ({ cellPx, shapes }),
+    cell: (x, y) => ({
+      pinned: director.engine.isPinned(x, y),
+      wall: director.engine.kindAt(x, y) === CellKind.Wall,
+    }),
   });
 
   rebuild();
@@ -492,8 +491,7 @@ export function startGrid({
       ticker?.stop();
       clearTimeout(resizeTimer);
       cancelAnimationFrame(scrollFrame);
-      delete measured.gridShapes;
-      delete measured.gridCell;
+      hideTestHooks();
       unplaceHtml();
       document.body.style.cursor = "";
       document.documentElement.classList.remove("grid-on");

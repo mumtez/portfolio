@@ -14,14 +14,8 @@ import {
 // out, and the next Section's condense out of Cells before its HTML fades in, in about
 // 800ms.
 
-interface Measured {
-  cellPx: number;
-  shapes: { kind: string; box: { x: number; y: number; width: number; height: number } }[];
-}
-
 /** The shapes the Grid last measured from the page, and its cell size. */
-const measured = (page: Page): Promise<Measured> =>
-  page.evaluate(() => (window as unknown as { gridShapes: () => Measured }).gridShapes());
+const measured = (page: Page) => page.evaluate(() => window.gridTest!.shapes());
 
 /**
  * Click `label` in the nav and time it in the page: how long the old `<main>` stays

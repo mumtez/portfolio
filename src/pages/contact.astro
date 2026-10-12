@@ -5,7 +5,7 @@
  * which the Grid draws in Cells inside its border; the link's own text is hidden there
  * but still names it. In Plain View they're ordinary links, each after its label.
  */
-import { textMask } from "../grid/cell-typesetter";
+import { cellLabelButton } from "../grid/cell-typesetter";
 import Section from "../layouts/Section.astro";
 import { getProfile, getSection } from "../lib/content";
 
@@ -17,7 +17,7 @@ const { contact } = await getProfile();
   <ul class="contact">
     {contact.map(({ label, name, href, download }) => (
       <li>
-        <span class="label" aria-hidden="true">
+        <span class="label visually-hidden-on-grid" aria-hidden="true">
           {label}
         </span>
         <a
@@ -25,9 +25,9 @@ const { contact } = await getProfile();
           download={download || undefined}
           data-panel="button"
           data-cell-label={label}
-          style={`--label-cells: ${textMask(label).width}`}
+          style={`--button-cells: ${cellLabelButton(label).width}; --button-rows: ${cellLabelButton(label).height}`}
         >
-          <span class="name">{name}</span>
+          <span class="name visually-hidden-on-grid">{name}</span>
         </a>
       </li>
     ))}
@@ -64,7 +64,8 @@ const { contact } = await getProfile();
 
   /*
    * Grid on: each link is a Button Panel the size of its label in Cells, one clear cell
-   * and then the border round it (as the nav's Buttons are), set in a row that wraps.
+   * and then the border round it (as the nav's Buttons are; the size is the Typesetter's
+   * `cellLabelButton`), set in a row that wraps.
    * The label and the link's text are drawn in Cells, so their HTML is hidden.
    */
   :global(html.grid-on) .contact {
@@ -78,20 +79,10 @@ const { contact } = await getProfile();
   :global(html.grid-on) .contact li {
     margin: 0;
   }
-  :global(html.grid-on) .label,
-  :global(html.grid-on) .name {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
   :global(html.grid-on) .contact a {
     display: block;
-    width: calc((var(--label-cells) + 4) * var(--cell-px, 6px));
-    height: calc(11 * var(--cell-px, 6px));
+    width: calc(var(--button-cells) * var(--cell-px, 6px));
+    height: calc(var(--button-rows) * var(--cell-px, 6px));
     margin: 0;
     padding: 0;
     border-radius: 4px;

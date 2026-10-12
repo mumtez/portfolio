@@ -37,10 +37,6 @@ const { path, heading, title, description, deepDive = false } = Astro.props;
   .section :global(h2) {
     margin-top: 2em;
   }
-  /* A Panel's content sets tight inside its padding. */
-  .section :global([data-panel] > :first-child) {
-    margin-top: 0;
-  }
   .section :global(.meta) {
     margin-top: -0.75em;
     opacity: 0.8;

@@ -7,6 +7,7 @@
  * a missing favicon are the only errors ignored.
  */
 import { test as base, expect, type Page } from "@playwright/test";
+import type {} from "../../src/grid/test-hooks";
 
 export { expect };
 
@@ -27,7 +28,15 @@ export const SECTIONS = [
   "/contact/",
 ];
 
-export const test = base.extend<{ errors: string[] }>({
+export const test = base.extend<{ errors: string[]; gridTest: void }>({
+  // Every page asks the Grid for its test hooks (`window.gridTest`, see `src/grid/test-hooks.ts`).
+  gridTest: [
+    async ({ page }, use) => {
+      await page.addInitScript(() => (window.wantsGridTest = true));
+      await use();
+    },
+    { auto: true },
+  ],
   errors: [
     async ({ page }, use) => {
       const errors: string[] = [];

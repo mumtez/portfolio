@@ -240,8 +240,13 @@ const themeCss = `
     background: transparent;
     color: transparent;
   }
-  /* Home's name is drawn in cells, so its h1 is hidden like a top-level Section's. */
+  /*
+   * Out of sight but still read out: always (`.visually-hidden`), or only while the Grid
+   * draws it in Cells (`.visually-hidden-on-grid`). Home's name is drawn in cells, so its
+   * h1 is hidden like a top-level Section's.
+   */
   .visually-hidden,
+  html.grid-on .visually-hidden-on-grid,
   html.grid-on main.home h1 {
     position: absolute;
     width: 1px;
@@ -263,12 +268,13 @@ const themeCss = `
   }
   /*
    * A Section leaving in a Transition: its Body Text fades out over its lines dissolving
-   * into Life, before the next Section replaces it (`LEAVE_MS` in the Grid script).
+   * into Life, before the next Section replaces it: over `--leave-ms`, which the Grid
+   * script sets from the wait it gives the fade (`LEAVE_MS`).
    */
   html.grid-on main.leaving {
     opacity: 0;
     pointer-events: none;
-    transition: opacity 240ms ease-in;
+    transition: opacity var(--leave-ms) ease-in;
   }
   /*
    * A Section arriving in a Transition: its Body Text stays hidden while its lines

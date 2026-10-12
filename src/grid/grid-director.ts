@@ -209,7 +209,7 @@ export class GridDirector {
         ? [
             {
               key: panelKey(s.href),
-              box: s.clip ? intersection(s.box, s.clip) : s.box,
+              box: intersection(s.box, s.clip),
               border: panelCells([s]).border.filter(clear),
             },
           ]

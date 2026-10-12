@@ -4,7 +4,7 @@
  */
 import { boxesOverlap, spanOverlap, type Box } from "./box";
 import { cellBoxCovering } from "./html-regions";
-import type { Shape } from "./shapes";
+import { isPanelKind, type Shape } from "./shapes";
 
 /**
  * Every rendered line of text in `main` that shows within `within` (cells), as a line
@@ -55,7 +55,7 @@ function measurePanels(
   const shapes: Shape[] = [];
   for (const el of main.querySelectorAll<HTMLElement>("[data-panel]")) {
     const panel = el.dataset.panel;
-    if (panel !== "solid" && panel !== "dashed" && panel !== "button") continue;
+    if (!isPanelKind(panel)) continue;
     if (isHidden(el)) continue;
     const r = el.getBoundingClientRect();
     const x = Math.round(r.left / cellPx);

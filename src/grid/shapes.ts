@@ -5,11 +5,19 @@
  * condenses the next Section's out of it.
  */
 import { boxContains, edgeCells, type Box } from "./box";
-import { textMask } from "./cell-typesetter";
+import { CAPITAL_ROWS, textMask } from "./cell-typesetter";
 import type { Point } from "./life-engine";
 
-/** How a Panel's border is drawn: pinned, every other cell pinned, or a Button that decays on hover. */
-export type PanelKind = "solid" | "dashed" | "button";
+/**
+ * How a Panel's border is drawn: pinned, every other cell pinned, or a Button that decays
+ * on hover. The page marks a Panel with its kind (`data-panel`).
+ */
+export const PANEL_KINDS = ["solid", "dashed", "button"] as const;
+export type PanelKind = (typeof PANEL_KINDS)[number];
+
+export function isPanelKind(kind: string | undefined): kind is PanelKind {
+  return (PANEL_KINDS as readonly (string | undefined)[]).includes(kind);
+}
 
 /** One rendered line box of Body Text. */
 export interface LineShape {
@@ -23,10 +31,10 @@ export interface PanelShape {
   readonly panel: PanelKind;
   readonly box: Box;
   /**
-   * The part of the Panel that shows, when it's scrolled partly out of sight: only its
-   * border and interior Cells in here are drawn. The whole box when left out.
+   * Where the Panel can show (the Body Text's scroll box): only its border and interior
+   * Cells in here are drawn, so a Panel scrolled partly out of sight is cut off there.
    */
-  readonly clip?: Box;
+  readonly clip: Box;
   /**
    * A Button Panel's link, as its HTML has it: what tells it apart from the other Buttons,
    * so its border keeps decaying as the Panel scrolls.
@@ -79,9 +87,6 @@ export interface PanelCells {
   readonly interior: Point[];
 }
 
-/** Rows of a capital in the 5×7 font: a label is centred on these, not on the row below them. */
-const CAPITAL_ROWS = 7;
-
 /**
  * The Cells the Panels among `shapes` are drawn with: each border going round its box's
  * edge, every other cell of it for a dashed Panel, each label centred inside that edge,
@@ -93,7 +98,7 @@ export function panelCells(shapes: readonly Shape[]): PanelCells {
   const interior: Point[] = [];
   for (const s of shapes) {
     if (s.kind !== "panel") continue;
-    const shows = (p: Point) => !s.clip || boxContains(s.clip, p);
+    const shows = (p: Point) => boxContains(s.clip, p);
     edgeCells(s.box).forEach((p, i) => {
       if ((s.panel !== "dashed" || i % 2 === 0) && shows(p)) border.push(p);
     });

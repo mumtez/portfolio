@@ -24,12 +24,8 @@ const github = (page: Page) => link(page, "github.com/mumtez");
  */
 const cells = (button: Locator) =>
   button.evaluate((el) => {
-    type Hooks = {
-      gridShapes: () => { cellPx: number };
-      gridCell: (x: number, y: number) => { pinned: boolean };
-    };
-    const { gridShapes, gridCell } = window as unknown as Hooks;
-    const { cellPx } = gridShapes();
+    const grid = window.gridTest!;
+    const { cellPx } = grid.shapes();
     const r = el.getBoundingClientRect();
     const left = Math.round(r.left / cellPx);
     const top = Math.round(r.top / cellPx);
@@ -38,8 +34,8 @@ const cells = (button: Locator) =>
     const middle = Math.round((left + right) / 2);
     let label = 0;
     for (let y = top + 1; y < bottom - 1; y++)
-      for (let x = left + 1; x < right - 1; x++) if (gridCell(x, y).pinned) label++;
-    return { border: gridCell(left, top).pinned && gridCell(middle, top).pinned, label };
+      for (let x = left + 1; x < right - 1; x++) if (grid.cell(x, y).pinned) label++;
+    return { border: grid.cell(left, top).pinned && grid.cell(middle, top).pinned, label };
   });
 const borderPinned = async (button: Locator) => (await cells(button)).border;
 

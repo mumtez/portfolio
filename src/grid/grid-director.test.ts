@@ -797,7 +797,13 @@ describe("Grid Director", () => {
     const settledAt = (route: string) =>
       director({ route, introMemory: memory(true), random: mulberry32(11) });
     const BOX = { x: 60, y: 40, width: 30, height: 12 };
-    const panel = (kind: PanelKind, box = BOX): PanelShape => ({ kind: "panel", panel: kind, box });
+    /** A Panel all in sight: its clip is the viewport. */
+    const panel = (kind: PanelKind, box = BOX): PanelShape => ({
+      kind: "panel",
+      panel: kind,
+      box,
+      clip: { x: 0, y: 0, ...VIEWPORT },
+    });
     /** The Cells on the edge of `box`, as "x,y" keys, going round it. */
     const edge = ({ x, y, width, height }: Box): string[] => {
       const out: string[] = [];
