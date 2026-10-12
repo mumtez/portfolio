@@ -1,6 +1,6 @@
 # Game of Life Portfolio
 
-Andrew Aburustum's portfolio site, where the whole page is a Conway's Game of Life grid and the content (headings, navigation, buttons) is drawn in cells.
+Andrew Aburustum's portfolio site, where the whole page is a Conway's Game of Life grid and the name, navigation, buttons and panel borders are drawn in cells.
 
 ## Language
 
@@ -48,7 +48,7 @@ A named content state of the Grid with its own URL (e.g. `/projects/baja`). Navi
 _Avoid_: Page, screen, view
 
 **Transition**:
-The Grid evolving from one Section's Pinned Cells to the next's.
+The Grid evolving from one Section to the next: the old Section's Pinned Cells and the shapes of its Body Text dissolve into Life, and the next Section's condense out of it.
 
 **Deep Dive**:
 A Section that tells one project's story beyond the resume bullet (FTC RoboRebels, Baja fuel estimator, FTC Event Viewer).
@@ -65,6 +65,18 @@ _Avoid_: Tile, chip
 **Frame**:
 A region of a Section reserved for real media (photos, video), where no Cells live and the Grid steps around it. In the Life Engine its Cells are **walls**: always dead and counted as dead neighbours, so whatever flies in is absorbed.
 _Avoid_: Embed, media box
+
+**Panel**:
+A block of Body Text set inside a pinned border of Cells, such as a Frame, a Placeholder or an Entry. The text inside stays HTML; only the border lives in the Grid.
+_Avoid_: Card, box, container
+
+**Entry**:
+One item in a list Section: a job on Experience, or a project on Projects.
+_Avoid_: Item, row, listing
+
+**Placeholder**:
+A marked gap in a Section waiting for Andrew's own words or media.
+_Avoid_: Stub, TODO, lorem
 
 **Plain View**:
 The same content as semantic HTML with no running simulation, shown to screen readers, crawlers, reduced-motion visitors, and anyone who toggles the simulation off.
