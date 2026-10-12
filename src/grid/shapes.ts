@@ -45,6 +45,11 @@ export interface PanelShape {
    * EMAIL, say), in the 5×7 font's capitals. It stays pinned while a Button's border decays.
    */
   readonly label?: string;
+  /**
+   * Whether its interior is walled off, so no Cell lives there: only a Frame holding a
+   * photo or video, which covers it. Behind a Panel's text, Life carries on, drawn faint.
+   */
+  readonly walled?: boolean;
 }
 
 export type Shape = LineShape | PanelShape;
@@ -79,7 +84,7 @@ export function lineInk(shapes: readonly Shape[], draw: (cell: Point) => number)
 
 /**
  * A Panel's Cells: its border, pinned (every other cell for a dashed Panel), its label,
- * pinned, and the rest of its interior, walled off.
+ * pinned, and, for a walled Panel, the rest of its interior, walled off.
  */
 export interface PanelCells {
   readonly border: Point[];
@@ -90,7 +95,7 @@ export interface PanelCells {
 /**
  * The Cells the Panels among `shapes` are drawn with: each border going round its box's
  * edge, every other cell of it for a dashed Panel, each label centred inside that edge,
- * and the rest of each interior, all within the Panel's clip.
+ * and the rest of each walled Panel's interior, all within the Panel's clip.
  */
 export function panelCells(shapes: readonly Shape[]): PanelCells {
   const border: Point[] = [];
@@ -114,6 +119,7 @@ export function panelCells(shapes: readonly Shape[]): PanelCells {
         if (shows(p)) label.push(p);
       }
     }
+    if (!s.walled) continue;
     for (let cy = y + 1; cy < y + height - 1; cy++)
       for (let cx = x + 1; cx < x + width - 1; cx++)
         if (shows({ x: cx, y: cy }) && !labelled.has(`${cx},${cy}`))

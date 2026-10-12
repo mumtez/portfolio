@@ -42,7 +42,8 @@ export function measureShapes(main: Element, cellPx: number, within: Box): Shape
 /**
  * Every Panel in `main` (an element marked `data-panel` with its kind) that shows within
  * `within`, as a Panel shape, a Button Panel with its link's `href`, and any with a Cell
- * label (`data-cell-label`) with that label: its box snapped to the nearest cell edges, so its border
+ * label (`data-cell-label`) with that label, and any marked `data-walled` (a Frame
+ * holding media) walled: its box snapped to the nearest cell edges, so its border
  * Cells lie along its HTML box's edge, at most half a cell off (its padding hides that),
  * and clipped to what shows.
  */
@@ -76,6 +77,7 @@ function measurePanels(
       clip: within,
       ...(href ? { href } : {}),
       ...(label ? { label } : {}),
+      ...("walled" in el.dataset ? { walled: true } : {}),
     });
   }
   return shapes;

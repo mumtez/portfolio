@@ -71,7 +71,7 @@ A region of a Section reserved for real media (photos, video), where no Cells li
 _Avoid_: Embed, media box
 
 **Panel**:
-A block of Body Text set inside a pinned border of Cells, such as a Frame, a Placeholder or an Entry. The text inside stays HTML; only the border lives in the Grid.
+A block of Body Text set inside a pinned border of Cells, such as a Frame, a Placeholder or an Entry. The text inside stays HTML; only the border lives in the Grid, and Life carries on behind the text, drawn faint. Only a Frame holding media walls off its interior.
 _Avoid_: Card, box, container
 
 **Button Panel**:

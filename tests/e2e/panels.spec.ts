@@ -2,8 +2,9 @@ import type { Page } from "@playwright/test";
 import { expect, expectNoSidewaysScroll, expectSection, main, navLink, test } from "./fixtures";
 
 // Panels: blocks of Body Text inside a border. With the Grid on, each Panel's border is
-// Pinned Cells along its HTML box's edge (every other cell for a dashed Placeholder), its
-// interior walled off, following the text as it scrolls. In Plain View it's a thin line
+// Pinned Cells along its HTML box's edge (every other cell for a dashed Placeholder),
+// following the text as it scrolls, with Life carrying on behind its text (only a Frame
+// holding media walls off its interior). In Plain View it's a thin line
 // in the theme's pinned green, dashed for a Placeholder.
 
 /** How each Panel on screen lies in the Grid, checked in the page against its HTML box. */
@@ -16,6 +17,8 @@ interface PanelSeen {
   besideCorner: boolean;
   /** Whether the Cell in its middle is a wall. */
   middleIsWall: boolean;
+  /** Whether it's marked walled (a Frame holding media). */
+  walled: boolean;
 }
 
 /** Every Panel wholly on screen in the Section's scroll box, as the Grid has it now. */
@@ -43,12 +46,16 @@ const panelsSeen = (page: Page): Promise<PanelSeen[]> =>
           corner: grid.cell(x, y).pinned,
           besideCorner: grid.cell(x + 1, y).pinned,
           middleIsWall: grid.cell(Math.floor((x + right) / 2), Math.floor((y + bottom) / 2)).wall,
+          walled: "walled" in el.dataset,
         },
       ];
     });
   });
 
-/** Each Panel on screen has its border pinned along its HTML box and its interior walled. */
+/**
+ * Each Panel on screen has its border pinned along its HTML box, and its interior walled
+ * only if it's a Frame holding media.
+ */
 async function expectPanelsInGrid(page: Page, kinds: string[]): Promise<void> {
   await expect
     .poll(async () => {
@@ -59,7 +66,7 @@ async function expectPanelsInGrid(page: Page, kinds: string[]): Promise<void> {
           (p) =>
             p.corner &&
             p.besideCorner === (p.kind !== "dashed") &&
-            p.middleIsWall &&
+            p.middleIsWall === p.walled &&
             p.offsets.every((o) => Math.abs(o) <= 0.5),
         )
       );
@@ -70,13 +77,45 @@ async function expectPanelsInGrid(page: Page, kinds: string[]): Promise<void> {
 }
 
 test.describe("Panels in the Grid", () => {
-  test("each Experience Entry's border is pinned along its HTML box, its interior walled", async ({
+  test("each Experience Entry's border is pinned along its HTML box, Life behind its text", async ({
     page,
   }) => {
     await page.goto("/experience/");
     await expectSection(page, "/experience/", "Experience");
     await expectPanelsInGrid(page, ["solid"]);
     await expectNoSidewaysScroll(page);
+  });
+
+  test("Home's tagline is a Panel once the Intro is done, clear of the drawn name", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expectPanelsInGrid(page, ["solid"]);
+    const nameClear = await page.evaluate(() => {
+      const grid = window.gridTest!;
+      const { cellPx, shapes } = grid.shapes();
+      const tagline = shapes.find((s) => s.kind === "panel")!.box;
+      // Nothing pinned in the row just above the border: the name sits clear of it.
+      const above = tagline.y - 1;
+      const border = document.querySelector("main [data-panel]")!.getBoundingClientRect();
+      return (
+        Math.round(border.top / cellPx) === tagline.y &&
+        Array.from(
+          { length: tagline.width },
+          (_, i) => grid.cell(tagline.x + i, above).pinned,
+        ).every((pinned) => !pinned)
+      );
+    });
+    expect(nameClear).toBe(true);
+    await expectNoSidewaysScroll(page);
+  });
+
+  test("Home's tagline Panel condenses in a Transition back to Home", async ({ page }) => {
+    await page.goto("/about/");
+    await expectSection(page, "/about/", "About");
+    await navLink(page, "Home").click();
+    await expect(page).toHaveURL(/\/$/);
+    await expectPanelsInGrid(page, ["solid"]);
   });
 
   test("a Placeholder's border is dashed: every other cell pinned", async ({ page }) => {

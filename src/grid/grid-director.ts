@@ -11,8 +11,8 @@
  * in. (Paused is the Ticker's job, and Off is the Plain View with no Grid at all.)
  *
  * Panels (Entries, Frames, Placeholders) are shapes too: once settled, a Panel's border
- * is pinned (every other cell of it for a dashed Panel) and its interior is walls in the
- * Life Engine, so no Cell lives behind its text or media. In a Transition the next
+ * is pinned (every other cell of it for a dashed Panel), and Life carries on behind its
+ * text, drawn faint; only a Frame holding media walls off its interior in the Life Engine. In a Transition the next
  * Section's borders condense in with its lines and stay pinned when the lines are
  * released; on navigate the old Section's borders are released into Life with its other
  * pins. Shapes move as the Body Text scrolls, and the borders and walls follow, snapped

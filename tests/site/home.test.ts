@@ -21,6 +21,10 @@ describe("Home (built HTML, as seen with JS off)", () => {
     expect(tagline?.textContent?.trim()).toMatch(/Olin/);
   });
 
+  it("sets the tagline in a solid Panel", () => {
+    expect(doc.querySelector("h1 + p")?.getAttribute("data-panel")).toBe("solid");
+  });
+
   it("has a title and description", () => {
     expect(doc.querySelector("title")?.textContent).toMatch(/Andrew Aburustum/);
     expect(doc.querySelector('meta[name="description"]')?.getAttribute("content")).toBeTruthy();

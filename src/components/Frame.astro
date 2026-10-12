@@ -3,7 +3,8 @@
  * A Frame in a Deep Dive: a real photo or video when its file is in the Deep Dive's
  * media folder, or a placeholder naming the file it wants. Its slot is a Panel: solid
  * round its media, dashed while it's a Placeholder. With the Grid on, the Grid script
- * measures it and the Grid Director pins its border and walls off its interior.
+ * measures it and the Grid Director pins its border, and walls off its interior while
+ * it holds media.
  */
 import type { Project } from "../lib/content";
 import { FRAME_EXTENSIONS, frameMedia, mediaDir, type FrameMedia } from "../lib/frames";
@@ -24,7 +25,12 @@ const note = `Photo or video: add ${mediaDir(deepDive)}/${slot}.${first} (or ${o
 ---
 
 <figure class="frame" data-frame={slot}>
-  <div class="frame-slot" data-panel={media ? "solid" : "dashed"} style={`aspect-ratio: ${aspect}`}>
+  <div
+    class="frame-slot"
+    data-panel={media ? "solid" : "dashed"}
+    data-walled={media ? "" : undefined}
+    style={`aspect-ratio: ${aspect}`}
+  >
     {media?.kind === "image" && <img src={media.src} alt={alt} loading="lazy" decoding="async" />}
     {media?.kind === "video" && (
       <video src={media.src} aria-label={alt} controls preload="metadata" playsinline />

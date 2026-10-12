@@ -34,7 +34,8 @@ const { path, heading, title, description, deepDive = false } = Astro.props;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-  .section :global(h2) {
+  /* Not at the top of a Panel, where its padding is the gap. */
+  .section :global(h2:not(:first-child)) {
     margin-top: 2em;
   }
   .section :global(.meta) {

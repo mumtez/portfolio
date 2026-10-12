@@ -837,14 +837,17 @@ describe("Grid Director", () => {
       return true;
     };
 
-    it("pin a solid Panel's border along its box's edge and wall off its interior", () => {
+    /** A Frame holding media: its interior is walled, since the media covers it. */
+    const media = (box = BOX): PanelShape => ({ ...panel("solid", box), walled: true });
+
+    it("pin a solid Panel's border along its box's edge, keeping Life behind its text", () => {
       const d = settledAt("/experience/");
       d.setShapes([panel("solid")]);
       expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
-      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+      expect(noWalls(d, interiorOf(BOX))).toBe(true);
       for (let t = 0; t < 30; t++) d.tick();
       expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
-      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+      expect(noWalls(d, interiorOf(BOX))).toBe(true);
     });
 
     it("pin every other cell of a dashed Panel's border, going round it", () => {
@@ -852,15 +855,25 @@ describe("Grid Director", () => {
       d.setShapes([panel("dashed")]);
       const round = edge(BOX);
       expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(round.filter((_, i) => i % 2 === 0)));
-      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+      expect(noWalls(d, interiorOf(BOX))).toBe(true);
     });
 
-    it("keep their interior clear, like a Frame: no Cell lives there, whatever flies in", () => {
-      const d = settledAt("/projects/baja/");
+    it("let Cells live inside a text Panel", () => {
+      const d = settledAt("/experience/");
       d.setShapes([panel("solid")]);
+      const inside = interiorOf(BOX);
+      d.engine.inject([{ x: inside.x + 5, y: inside.y + 3 }]);
+      expect(d.engine.isAlive(inside.x + 5, inside.y + 3)).toBe(true);
+    });
+
+    it("wall off a media Frame's interior: no Cell lives there, whatever flies in", () => {
+      const d = settledAt("/projects/baja/");
+      d.setShapes([media()]);
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
       const inside = interiorOf(BOX);
       for (let t = 0; t < 40; t++) {
         d.tick();
+        expect(allWalls(d, inside)).toBe(true);
         for (let y = inside.y; y < inside.y + inside.height; y++)
           for (let x = inside.x; x < inside.x + inside.width; x++)
             expect(d.engine.isAlive(x, y)).toBe(false);
@@ -869,9 +882,9 @@ describe("Grid Director", () => {
 
     it("re-pin at their new position when they move, leaving none of the old border or walls", () => {
       const d = settledAt("/experience/");
-      d.setShapes([panel("solid")]);
+      d.setShapes([media()]);
       const moved = { ...BOX, y: BOX.y - 5 };
-      d.setShapes([panel("solid", moved)]);
+      d.setShapes([media(moved)]);
       expect(new Set(pinnedIn(d, BOX))).toEqual(
         new Set(edge(moved).filter((k) => boxContains(BOX, pointOf(k)))),
       );
@@ -884,7 +897,7 @@ describe("Grid Director", () => {
     it("draw only the part that shows when scrolled partly out of sight", () => {
       const d = settledAt("/experience/");
       const clip = { x: 0, y: BOX.y + 4, width: VIEWPORT.width, height: 40 };
-      d.setShapes([{ ...panel("solid"), clip }]);
+      d.setShapes([{ ...media(), clip }]);
       const shown = edge(BOX).filter((k) => boxContains(clip, pointOf(k)));
       expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(shown));
       // No border is drawn across the clip's edge.
@@ -924,7 +937,7 @@ describe("Grid Director", () => {
       const d = settledAt("/about/");
       d.navigate("/experience/");
       d.tick();
-      d.setShapes([panel("solid")]);
+      d.setShapes([media()]);
       const counts: number[] = [];
       let penultimate: string[] = [];
       while (d.phase === "transition") {
@@ -956,7 +969,7 @@ describe("Grid Director", () => {
 
     it("release their borders into Life and their walls on navigate", () => {
       const d = settledAt("/experience/");
-      d.setShapes([panel("solid"), panel("dashed", { ...BOX, y: BOX.y + 13, height: 6 })]);
+      d.setShapes([media(), panel("dashed", { ...BOX, y: BOX.y + 13, height: 6 })]);
       d.navigate("/about/");
       expect(pinnedIn(d, { ...BOX, height: 19 })).toEqual([]);
       for (const k of edge(BOX)) expect(d.engine.isAlive(...xy(k)), k).toBe(true);
@@ -969,7 +982,7 @@ describe("Grid Director", () => {
     it("let their lines of text dissolve on navigate too, once the walls behind them go", () => {
       const d = settledAt("/experience/");
       const line = { x: BOX.x + 3, y: BOX.y + 3, width: 24, height: 4 };
-      d.setShapes([panel("solid"), { kind: "line", box: line }]);
+      d.setShapes([media(), { kind: "line", box: line }]);
       d.navigate("/about/");
       let alive = 0;
       for (let y = line.y; y < line.y + line.height; y++)
