@@ -24,6 +24,7 @@ I captained FIRST Tech Challenge Team 14450 RoboRebels from 2022 to 2026. Over t
 
 ## Results
 
+- Competed at the FIRST World Championship in Houston in the 2025–2026 season
 - Won the international 2025 Mexico Premier Event as the 1st seed (6-0)
 - Two-time New Jersey State Championship finalist
 - Won 2 Innovate Awards and 2 Control Awards
