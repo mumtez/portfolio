@@ -1,5 +1,7 @@
 ---
 import Analytics from "../components/Analytics.astro";
+import PrototypePlainView from "../components/PrototypePlainView.astro";
+import PrototypePlainViewHead from "../components/PrototypePlainViewHead.astro";
 import SharingMeta from "../components/SharingMeta.astro";
 import SiteNav from "../components/SiteNav.astro";
 import { DARK, LIGHT, type Palette } from "../grid/palette";
@@ -38,6 +40,7 @@ const themeCss = `
     <meta name="color-scheme" content="light dark" />
     <script is:inline set:html={THEME_SCRIPT} />
     <Fragment set:html={`<style>${themeCss}</style>`} />
+    <PrototypePlainViewHead />
     <title>{title}</title>
     <meta name="description" content={description} />
     <SharingMeta title={title} description={description} path={path} />
@@ -57,6 +60,7 @@ const themeCss = `
       </div>
     </header>
     <slot />
+    <PrototypePlainView />
     <script type="application/json" id="grid-content" set:html={gridContent} />
   </body>
 </html>

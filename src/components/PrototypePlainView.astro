@@ -1,0 +1,860 @@
+---
+/**
+ * PROTOTYPE (branch prototype/plain-view-apple), not production. Three Apple-style Plain
+ * View variants on the real routes, picked with ?variant=A|B|C and the floating bar:
+ *   A  Classic apple.com: centred hero, Featured tiles, a tile grid, Contact tiles.
+ *   B  Pro dark: black-first full-bleed bands alternating sides, glowing green, list rows.
+ *   C  Apple + a still of Life: hero over a frozen Life pattern, carousels, Contact pills.
+ * Only active when html[data-variant] is set (see PrototypePlainViewHead) and the Grid is off.
+ */
+import { getProfile } from "../lib/content";
+
+const { contact } = await getProfile();
+const year = new Date().getFullYear();
+const footerLinks = contact.filter((c) => !c.href.startsWith("mailto:"));
+---
+
+<footer class="pv-footer">
+  <p>
+    Andrew Aburustum · {year}
+    {footerLinks.map((c) => (
+      <>
+        {" · "}
+        <a href={c.href} download={c.download || undefined}>
+          {({ GITHUB: "GitHub", LINKEDIN: "LinkedIn", RESUME: "Resume" } as Record<string, string>)[c.label] ?? c.label}
+        </a>
+      </>
+    ))}
+  </p>
+</footer>
+
+<div class="pv-switcher" role="toolbar" aria-label="Prototype variant">
+  <button type="button" data-step="-1" aria-label="Previous variant">‹</button>
+  <span class="pv-label"></span>
+  <button type="button" data-step="1" aria-label="Next variant">›</button>
+</div>
+
+<script>
+  import { soupCells } from "../grid/intro-seeds";
+  import { LifeEngine } from "../grid/life-engine";
+
+  const root = document.documentElement;
+  const NAMES: Record<string, string> = { A: "Classic apple.com", B: "Pro dark", C: "Apple + still of Life" };
+  const KEYS = ["A", "B", "C"];
+
+  if (root.dataset.variant) {
+    // Switcher: arrows and ←/→ cycle, keeping the choice in the URL and the session.
+    const label = document.querySelector<HTMLElement>(".pv-label")!;
+    const show = () => (label.textContent = `${root.dataset.variant} (${NAMES[root.dataset.variant!]})`);
+    const go = (step: number) => {
+      const i = (KEYS.indexOf(root.dataset.variant!) + step + KEYS.length) % KEYS.length;
+      const url = new URL(location.href);
+      url.searchParams.set("variant", KEYS[i]);
+      location.replace(url);
+    };
+    document.querySelectorAll<HTMLButtonElement>(".pv-switcher button").forEach((b) =>
+      b.addEventListener("click", () => go(Number(b.dataset.step))),
+    );
+    document.addEventListener("keydown", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("input, textarea, [contenteditable]")) return;
+      if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "ArrowRight") go(1);
+    });
+    show();
+
+    // Nav bar: the name on the left and a menu button for phones.
+    const header = document.querySelector("header")!;
+    const brand = document.createElement("a");
+    brand.className = "pv-brand";
+    brand.href = "/";
+    brand.textContent = "Andrew Aburustum";
+    const menu = document.createElement("button");
+    menu.className = "pv-menu";
+    menu.type = "button";
+    menu.setAttribute("aria-label", "Menu");
+    menu.setAttribute("aria-expanded", "false");
+    menu.innerHTML = "<span></span><span></span>";
+    menu.addEventListener("click", () => {
+      const open = header.classList.toggle("pv-open");
+      menu.setAttribute("aria-expanded", String(open));
+    });
+    header.prepend(brand);
+    header.append(menu);
+
+    // Gentle fade-up as things scroll into view; none under reduced motion.
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (entries) =>
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("pv-in");
+              io.unobserve(e.target);
+            }
+          }),
+        { rootMargin: "0px 0px -8% 0px" },
+      );
+      document
+        .querySelectorAll("main h1, main [data-panel], main figure, .pv-featured > *, .pv-hero-links")
+        .forEach((el) => {
+          el.classList.add("pv-reveal");
+          io.observe(el);
+        });
+    }
+
+    // C: a frozen Life pattern behind Home's hero (a snapshot, not running).
+    const still = document.querySelector<HTMLCanvasElement>(".pv-still");
+    if (root.dataset.variant === "C" && still) {
+      const cell = 8;
+      const w = Math.ceil(still.clientWidth / cell);
+      const h = Math.ceil(still.clientHeight / cell);
+      let seed = 42;
+      const random = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      const engine = new LifeEngine({ width: w, height: h, margin: 8 });
+      engine.inject(soupCells({ area: { x: -8, y: -8, width: w + 16, height: h + 16 }, density: 0.3, random }));
+      for (let i = 0; i < 60; i++) engine.step();
+      const dpr = devicePixelRatio || 1;
+      still.width = w * cell * dpr;
+      still.height = h * cell * dpr;
+      const ctx = still.getContext("2d")!;
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = getComputedStyle(root).getPropertyValue("--pv-accent");
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++)
+          if (engine.isAlive(x, y)) {
+            ctx.beginPath();
+            ctx.roundRect(x * cell + 1, y * cell + 1, cell - 2, cell - 2, 2);
+            ctx.fill();
+          }
+    }
+  }
+</script>
+
+<style is:global>
+  /* ---------- Off by default: the prototype's own elements stay hidden. ---------- */
+  .pv-footer,
+  .pv-switcher,
+  .pv-hero-links,
+  .pv-featured,
+  .pv-still {
+    display: none;
+  }
+
+  /* ---------- Apple neutrals, both themes (accent: hunter green, tuned per theme). ---------- */
+  :root[data-variant] {
+    --pv-bg: #000;
+    --pv-tile: #1d1d1f;
+    --pv-text: #f5f5f7;
+    --pv-muted: #a1a1a6;
+    --pv-line: #424245;
+    --pv-accent: #6cc47c;
+  }
+  @media (prefers-color-scheme: light) {
+    :root[data-variant]:not([data-theme="dark"]) {
+      --pv-bg: #fbfbfd;
+      --pv-tile: #f0f0f3;
+      --pv-text: #1d1d1f;
+      --pv-muted: #6e6e73;
+      --pv-line: #d2d2d7;
+      --pv-accent: #2f6b3a;
+    }
+  }
+  :root[data-variant][data-theme="light"] {
+    --pv-bg: #fbfbfd;
+    --pv-tile: #f0f0f3;
+    --pv-text: #1d1d1f;
+    --pv-muted: #6e6e73;
+    --pv-line: #d2d2d7;
+    --pv-accent: #2f6b3a;
+  }
+
+  /* B is the Pro dark look: always dark in this prototype. */
+  :root[data-variant="B"][data-variant] {
+    color-scheme: dark;
+    --pv-bg: #000;
+    --pv-tile: #1d1d1f;
+    --pv-text: #f5f5f7;
+    --pv-muted: #a1a1a6;
+    --pv-line: #333336;
+    --pv-accent: #6cc47c;
+  }
+
+  /* ---------- Shared by all variants (Plain View only). ---------- */
+  html[data-variant]:not(.grid-on) {
+    --bg: var(--pv-bg);
+    --text: var(--pv-text);
+    --accent: var(--pv-accent);
+    font-family:
+      -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  html[data-variant]:not(.grid-on) body {
+    font-size: 17px;
+    line-height: 1.47;
+    letter-spacing: -0.022em;
+  }
+  html[data-variant]:not(.grid-on) a {
+    color: var(--pv-accent);
+    text-decoration: none;
+  }
+  html[data-variant]:not(.grid-on) a:hover {
+    text-decoration: underline;
+  }
+
+  /* Nav bar: sticky, blurred, name left, Sections centre, switch right. */
+  html[data-variant]:not(.grid-on) header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    max-width: none;
+    height: 52px;
+    margin: 0;
+    padding: 0 max(22px, calc((100vw - 1000px) / 2));
+    background: color-mix(in srgb, var(--pv-bg) 72%, transparent);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid color-mix(in srgb, var(--pv-line) 60%, transparent);
+  }
+  html[data-variant]:not(.grid-on) .pv-brand {
+    color: var(--pv-text);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  html[data-variant]:not(.grid-on) header nav {
+    flex: 1;
+  }
+  html[data-variant]:not(.grid-on) header nav ul {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin: 0;
+    padding: 0;
+  }
+  html[data-variant]:not(.grid-on) header nav a {
+    color: var(--pv-text);
+    opacity: 0.8;
+    font-size: 13px;
+    font-weight: 400;
+    text-decoration: none;
+    border: 0;
+  }
+  html[data-variant]:not(.grid-on) header nav a[aria-current] {
+    opacity: 1;
+    font-weight: 600;
+    color: var(--pv-text);
+  }
+  html[data-variant]:not(.grid-on) header .toggles {
+    font-size: 12px;
+    color: var(--pv-muted);
+    white-space: nowrap;
+  }
+  html[data-variant]:not(.grid-on) .pv-menu {
+    display: none;
+  }
+  @media (max-width: 733px) {
+    html[data-variant]:not(.grid-on) header {
+      flex-wrap: wrap;
+      height: auto;
+      min-height: 48px;
+      padding: 0 16px;
+    }
+    html[data-variant]:not(.grid-on) .pv-brand {
+      flex: 1;
+      line-height: 48px;
+    }
+    html[data-variant]:not(.grid-on) header nav,
+    html[data-variant]:not(.grid-on) header .toggles {
+      display: none;
+      flex-basis: 100%;
+    }
+    html[data-variant]:not(.grid-on) header.pv-open nav,
+    html[data-variant]:not(.grid-on) header.pv-open .toggles:not([hidden]) {
+      display: block;
+    }
+    html[data-variant]:not(.grid-on) header.pv-open nav ul {
+      flex-direction: column;
+      gap: 0;
+      padding: 8px 0 12px;
+    }
+    html[data-variant]:not(.grid-on) header.pv-open nav a {
+      display: block;
+      padding: 10px 0;
+      font-size: 24px;
+      font-weight: 600;
+      opacity: 1;
+    }
+    html[data-variant]:not(.grid-on) header.pv-open .toggles {
+      padding: 0 0 16px;
+      font-size: 14px;
+    }
+    html[data-variant]:not(.grid-on) .pv-menu {
+      display: inline-grid;
+      gap: 6px;
+      width: 44px;
+      height: 44px;
+      place-content: center;
+      background: none;
+      border: 0;
+      cursor: pointer;
+    }
+    html[data-variant]:not(.grid-on) .pv-menu span {
+      display: block;
+      width: 18px;
+      height: 1.5px;
+      background: var(--pv-text);
+      transition: transform 0.25s;
+    }
+    html[data-variant]:not(.grid-on) header.pv-open .pv-menu span:first-child {
+      transform: translateY(3.75px) rotate(45deg);
+    }
+    html[data-variant]:not(.grid-on) header.pv-open .pv-menu span:last-child {
+      transform: translateY(-3.75px) rotate(-45deg);
+    }
+  }
+
+  /* Big headlines on every Section (Plain View only). */
+  html[data-variant]:not(.grid-on) main.section {
+    max-width: 1000px;
+    padding: 64px 22px 96px;
+  }
+  html[data-variant]:not(.grid-on) main.section > h1,
+  html[data-variant]:not(.grid-on) main.section > h1.visually-hidden {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0 0 40px;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    font-size: clamp(40px, 7vw, 80px);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    text-transform: none;
+  }
+  html[data-variant]:not(.grid-on) main.section > h1.visually-hidden::after {
+    content: ".";
+    color: var(--pv-accent);
+  }
+  html[data-variant]:not(.grid-on) main.section > h1 + * {
+    margin-top: 0;
+  }
+  html[data-variant]:not(.grid-on) main h2 {
+    font-size: 28px;
+    line-height: 1.14;
+    font-weight: 700;
+    letter-spacing: 0.007em;
+    margin: 0 0 8px;
+  }
+  html[data-variant]:not(.grid-on) .meta {
+    color: var(--pv-muted);
+  }
+
+  /* Panels become tiles; Placeholders keep a dashed outline. */
+  html[data-variant]:not(.grid-on) [data-panel] {
+    border: 0;
+    border-radius: 28px;
+    background: var(--pv-tile);
+    padding: 36px 40px;
+    margin: 0 0 20px;
+  }
+  html[data-variant]:not(.grid-on) [data-panel="dashed"] {
+    background: transparent;
+    outline: 1.5px dashed var(--pv-muted);
+    outline-offset: -1.5px;
+  }
+  html[data-variant]:not(.grid-on) a.entry {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.3s;
+  }
+  html[data-variant]:not(.grid-on) a.entry:hover {
+    transform: scale(1.01);
+    text-decoration: none;
+  }
+  html[data-variant]:not(.grid-on) a.entry h2 {
+    color: var(--pv-text);
+  }
+  html[data-variant]:not(.grid-on) .more,
+  html[data-variant]:not(.grid-on) .pv-more {
+    color: var(--pv-accent);
+    font-weight: 400;
+  }
+  html[data-variant]:not(.grid-on) .more::after,
+  html[data-variant]:not(.grid-on) .pv-more::after {
+    content: " ›";
+  }
+  @media (max-width: 733px) {
+    html[data-variant]:not(.grid-on) [data-panel] {
+      padding: 28px 24px;
+      border-radius: 22px;
+    }
+  }
+
+  /* Deep Dive: a narrow reading column, media breaking out wider. */
+  html[data-variant]:not(.grid-on) .body-text {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  html[data-variant]:not(.grid-on) main.section > .meta {
+    max-width: 680px;
+    margin: -24px auto 48px;
+    font-size: 21px;
+  }
+  html[data-variant]:not(.grid-on) main.section:has(.body-text) > h1 {
+    max-width: 680px;
+    margin-inline: auto;
+  }
+  html[data-variant]:not(.grid-on) .body-text figure {
+    width: min(1000px, calc(100vw - 44px));
+    margin: 48px 0 48px 50%;
+    transform: translateX(-50%);
+  }
+  html[data-variant]:not(.grid-on) .body-text figure img,
+  html[data-variant]:not(.grid-on) .body-text figure video {
+    border-radius: 22px;
+  }
+  html[data-variant]:not(.grid-on) .body-text figure > [data-panel] {
+    padding: 0;
+    background: transparent;
+  }
+  html[data-variant]:not(.grid-on) .body-text figcaption {
+    color: var(--pv-muted);
+    font-size: 14px;
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  /* Home hero and Featured row. */
+  html[data-variant]:not(.grid-on) main.home {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: none;
+    min-height: min(78svh, 820px);
+    padding: 64px 22px;
+    text-align: center;
+    overflow: hidden;
+  }
+  html[data-variant]:not(.grid-on) main.home h1 {
+    position: relative;
+    margin: 0;
+    font-size: clamp(48px, 11vw, 112px);
+    line-height: 1.02;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-transform: none;
+  }
+  html[data-variant]:not(.grid-on) main.home p[data-panel] {
+    position: relative;
+    max-width: 40rem;
+    margin: 20px auto 0;
+    padding: 0;
+    background: none;
+    font-size: clamp(19px, 2.4vw, 24px);
+    line-height: 1.35;
+    color: var(--pv-muted);
+  }
+  html[data-variant]:not(.grid-on) .pv-hero-links {
+    position: relative;
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    margin-top: 28px;
+    font-size: 19px;
+  }
+  html[data-variant]:not(.grid-on) .pv-featured {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 22px 96px;
+  }
+  html[data-variant]:not(.grid-on) .pv-feature {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 28px;
+    background: var(--pv-tile);
+    color: inherit;
+    text-decoration: none;
+  }
+  html[data-variant]:not(.grid-on) .pv-feature:hover {
+    text-decoration: none;
+  }
+  html[data-variant]:not(.grid-on) .pv-feature .pv-media {
+    aspect-ratio: 16 / 10;
+    background:
+      radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--pv-accent) 35%, transparent), transparent 60%),
+      color-mix(in srgb, var(--pv-tile) 80%, var(--pv-text));
+    background-size: cover;
+    background-position: top center;
+  }
+  html[data-variant]:not(.grid-on) .pv-feature .pv-copy {
+    padding: 24px 28px 28px;
+  }
+  html[data-variant]:not(.grid-on) .pv-feature h2 {
+    font-size: 24px;
+  }
+  html[data-variant]:not(.grid-on) .pv-feature .meta {
+    font-size: 15px;
+    margin: 0 0 12px;
+  }
+  @media (max-width: 733px) {
+    html[data-variant]:not(.grid-on) .pv-featured {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Contact (shared base). */
+  html[data-variant]:not(.grid-on) .contact a[data-panel] {
+    border: 0;
+  }
+
+  /* Footer. */
+  html[data-variant]:not(.grid-on) .pv-footer {
+    display: block;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px 22px 96px;
+    border-top: 1px solid var(--pv-line);
+    font-size: 12px;
+    color: var(--pv-muted);
+  }
+  html[data-variant]:not(.grid-on) .pv-footer a {
+    color: var(--pv-muted);
+  }
+
+  /* Scroll fade-ins. */
+  html[data-variant]:not(.grid-on) .pv-reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.7s ease,
+      transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  html[data-variant]:not(.grid-on) .pv-reveal.pv-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* The prototype switcher (not part of any design). */
+  html[data-variant] .pv-switcher {
+    position: fixed;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: 50%;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transform: translateX(-50%);
+    padding: 4px;
+    border-radius: 999px;
+    background: #ff3b30;
+    color: #fff;
+    font:
+      600 13px/1 system-ui,
+      sans-serif;
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  }
+  html[data-variant] .pv-switcher button {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.18);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  html[data-variant] .pv-switcher .pv-label {
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+
+  /* ================= A: Classic apple.com ================= */
+  html[data-variant="A"]:not(.grid-on) .pv-hero-links,
+  html[data-variant="C"]:not(.grid-on) .pv-hero-links {
+    display: flex;
+  }
+  html[data-variant="A"]:not(.grid-on) .pv-featured {
+    display: grid;
+  }
+  /* Projects: Deep Dives full-width, the rest two to a row. */
+  html[data-variant="A"]:not(.grid-on) main.section:has(a.entry) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  html[data-variant="A"]:not(.grid-on) main.section:has(a.entry) > h1,
+  html[data-variant="A"]:not(.grid-on) main.section:has(a.entry) > article:has(a.entry) {
+    grid-column: 1 / -1;
+  }
+  html[data-variant="A"]:not(.grid-on) main.section:has(a.entry) > article,
+  html[data-variant="A"]:not(.grid-on) main.section:has(a.entry) > article > [data-panel] {
+    margin: 0;
+  }
+  html[data-variant="A"]:not(.grid-on) a.entry {
+    padding: 48px;
+  }
+  html[data-variant="A"]:not(.grid-on) a.entry h2 {
+    font-size: 40px;
+  }
+  /* Contact: a 2×2 grid of tiles. */
+  html[data-variant="A"]:not(.grid-on) .contact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  html[data-variant="A"]:not(.grid-on) .contact li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 32px;
+    border-radius: 28px;
+    background: var(--pv-tile);
+  }
+  html[data-variant="A"]:not(.grid-on) .contact .label {
+    position: static;
+    font-size: 28px;
+    font-weight: 700;
+    text-transform: capitalize;
+    color: var(--pv-text);
+    width: auto;
+  }
+  html[data-variant="A"]:not(.grid-on) .contact a::after {
+    content: " ›";
+  }
+  html[data-variant="A"]:not(.grid-on) .contact a::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  @media (max-width: 733px) {
+    html[data-variant="A"]:not(.grid-on) main.section:has(a.entry),
+    html[data-variant="A"]:not(.grid-on) .contact {
+      grid-template-columns: 1fr;
+    }
+    html[data-variant="A"]:not(.grid-on) a.entry {
+      padding: 32px 24px;
+    }
+    html[data-variant="A"]:not(.grid-on) a.entry h2 {
+      font-size: 28px;
+    }
+  }
+
+  /* ================= B: Pro dark, full-bleed bands ================= */
+  html[data-variant="B"]:not(.grid-on) main.home h1 {
+    background: linear-gradient(180deg, var(--pv-text) 30%, var(--pv-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 24px color-mix(in srgb, var(--pv-accent) 35%, transparent));
+  }
+  html[data-variant="B"]:not(.grid-on) main.home::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -40%;
+    width: 120%;
+    height: 70%;
+    transform: translateX(-50%);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--pv-accent) 30%, transparent), transparent);
+    pointer-events: none;
+  }
+  html[data-variant="B"]:not(.grid-on) .pv-hero-links {
+    display: flex;
+  }
+  html[data-variant="B"]:not(.grid-on) .pv-more,
+  html[data-variant="B"]:not(.grid-on) .more,
+  html[data-variant="B"]:not(.grid-on) .contact a {
+    text-shadow: 0 0 14px color-mix(in srgb, var(--pv-accent) 55%, transparent);
+  }
+  /* Featured: stacked full-width bands, image and copy alternating sides. */
+  html[data-variant="B"]:not(.grid-on) .pv-featured {
+    display: block;
+    max-width: none;
+    padding: 0 0 64px;
+  }
+  html[data-variant="B"]:not(.grid-on) .pv-feature {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    align-items: center;
+    border-radius: 0;
+    background: none;
+    border-top: 1px solid var(--pv-line);
+    padding: 64px max(22px, calc((100vw - 1100px) / 2));
+    gap: 48px;
+  }
+  html[data-variant="B"]:not(.grid-on) .pv-feature:nth-child(even) .pv-media {
+    order: 2;
+  }
+  html[data-variant="B"]:not(.grid-on) .pv-feature .pv-media {
+    border-radius: 22px;
+    box-shadow: 0 0 60px color-mix(in srgb, var(--pv-accent) 18%, transparent);
+  }
+  html[data-variant="B"]:not(.grid-on) .pv-feature h2 {
+    font-size: clamp(32px, 4vw, 48px);
+  }
+  /* Panels: bands separated by hairlines, not tiles. */
+  html[data-variant="B"]:not(.grid-on) [data-panel] {
+    background: none;
+    border-radius: 0;
+    border-top: 1px solid var(--pv-line);
+    padding: 48px 0;
+    margin: 0;
+  }
+  html[data-variant="B"]:not(.grid-on) [data-panel="dashed"] {
+    outline: 0;
+    border-top: 1px dashed var(--pv-muted);
+  }
+  html[data-variant="B"]:not(.grid-on) a.entry {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 48px;
+  }
+  html[data-variant="B"]:not(.grid-on) a.entry h2 {
+    grid-column: 1;
+    font-size: clamp(32px, 4vw, 56px);
+    background: linear-gradient(90deg, var(--pv-text), var(--pv-accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  html[data-variant="B"]:not(.grid-on) a.entry > :not(h2) {
+    grid-column: 2;
+  }
+  html[data-variant="B"]:not(.grid-on) a.entry .meta {
+    grid-row: 1;
+    align-self: end;
+  }
+  html[data-variant="B"]:not(.grid-on) main.home p[data-panel] {
+    border: 0;
+  }
+  /* Contact: big list rows with an arrow at the right. */
+  html[data-variant="B"]:not(.grid-on) .contact li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 28px 0;
+    border-top: 1px solid var(--pv-line);
+    font-size: 21px;
+  }
+  html[data-variant="B"]:not(.grid-on) .contact .label {
+    font-size: 40px;
+    font-weight: 700;
+    text-transform: capitalize;
+    color: var(--pv-text);
+  }
+  html[data-variant="B"]:not(.grid-on) .contact a::after {
+    content: "  ›";
+  }
+  @media (max-width: 733px) {
+    html[data-variant="B"]:not(.grid-on) .pv-feature,
+    html[data-variant="B"]:not(.grid-on) a.entry {
+      grid-template-columns: 1fr;
+    }
+    html[data-variant="B"]:not(.grid-on) .pv-feature:nth-child(even) .pv-media {
+      order: 0;
+    }
+    html[data-variant="B"]:not(.grid-on) a.entry > * {
+      grid-column: 1 !important;
+      grid-row: auto !important;
+    }
+    html[data-variant="B"]:not(.grid-on) .contact li {
+      flex-direction: column;
+      gap: 4px;
+    }
+    html[data-variant="B"]:not(.grid-on) .contact .label {
+      font-size: 28px;
+    }
+  }
+
+  /* ================= C: Apple + a still of Life, carousels ================= */
+  html[data-variant="C"]:not(.grid-on) .pv-still {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.22;
+    mask-image: radial-gradient(ellipse at center, transparent 18%, #000 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, transparent 18%, #000 75%);
+  }
+  /* Featured and Projects: sideways-scrolling carousels that snap. */
+  html[data-variant="C"]:not(.grid-on) .pv-featured,
+  html[data-variant="C"]:not(.grid-on) main.section:has(a.entry) {
+    display: flex;
+    gap: 20px;
+    max-width: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: max(22px, calc((100vw - 1000px) / 2));
+    padding-inline: max(22px, calc((100vw - 1000px) / 2));
+    scrollbar-width: none;
+  }
+  html[data-variant="C"]:not(.grid-on) main.section:has(a.entry) {
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+  html[data-variant="C"]:not(.grid-on) main.section:has(a.entry) > h1 {
+    position: absolute !important;
+    left: max(22px, calc((100vw - 1000px) / 2));
+    top: 116px;
+  }
+  html[data-variant="C"]:not(.grid-on) main.section:has(a.entry) {
+    padding-top: 200px;
+  }
+  html[data-variant="C"]:not(.grid-on) .pv-feature,
+  html[data-variant="C"]:not(.grid-on) main.section:has(a.entry) > article {
+    flex: 0 0 min(400px, 82vw);
+    scroll-snap-align: start;
+    margin: 0;
+  }
+  html[data-variant="C"]:not(.grid-on) main.section:has(a.entry) > article > [data-panel] {
+    height: 100%;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  /* Contact: centred pill buttons. */
+  html[data-variant="C"]:not(.grid-on) .contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    padding: 24px 0;
+  }
+  html[data-variant="C"]:not(.grid-on) .contact li {
+    display: block;
+  }
+  html[data-variant="C"]:not(.grid-on) .contact .label {
+    display: none;
+  }
+  html[data-variant="C"]:not(.grid-on) .contact a {
+    display: inline-block;
+    padding: 16px 28px;
+    border-radius: 999px;
+    background: var(--pv-accent);
+    color: var(--pv-bg);
+    font-size: 17px;
+    font-weight: 600;
+  }
+  html[data-variant="C"]:not(.grid-on) .contact a:hover {
+    text-decoration: none;
+    filter: brightness(1.1);
+  }
+</style>

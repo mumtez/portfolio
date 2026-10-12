@@ -1,0 +1,33 @@
+---
+/**
+ * PROTOTYPE (branch prototype/plain-view-apple), not production: three Apple-style
+ * Plain View variants, switched with ?variant=A|B|C (remembered for the browser session;
+ * ?variant=none leaves the prototype). Throw away once a variant wins.
+ */
+---
+
+<script is:inline>
+  (function () {
+    var root = document.documentElement;
+    var asked = new URLSearchParams(location.search).get("variant");
+    var v = null;
+    try {
+      if (asked) {
+        if (asked.toLowerCase() === "none") sessionStorage.removeItem("proto-variant");
+        else sessionStorage.setItem("proto-variant", asked.toUpperCase());
+      }
+      v = sessionStorage.getItem("proto-variant");
+    } catch (e) {
+      v = asked && asked.toUpperCase();
+    }
+    if (v !== "A" && v !== "B" && v !== "C") return;
+    root.dataset.variant = v;
+    try {
+      // Judge Plain View: Life starts off once per session (the switch can turn it back on).
+      if (!sessionStorage.getItem("proto-life")) {
+        localStorage.setItem("simulation", "off");
+        sessionStorage.setItem("proto-life", "1");
+      }
+    } catch (e) {}
+  })();
+</script>

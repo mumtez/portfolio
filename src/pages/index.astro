@@ -1,16 +1,47 @@
 ---
 import Base from "../layouts/Base.astro";
-import { getProfile, getSection } from "../lib/content";
+import { readdirSync } from "node:fs";
+import { deepDivePath, getDeepDives, getProfile, getSection } from "../lib/content";
+import { frameMedia, mediaDir } from "../lib/frames";
 
 const home = await getSection("home");
 const profile = await getProfile();
+
+// PROTOTYPE (prototype/plain-view-apple): the Deep Dives for the Featured row, each with
+// its first Frame's photo if there is one.
+const featured = (await getDeepDives()).map((p) => {
+  let files: string[] = [];
+  try {
+    files = readdirSync(mediaDir(p.id));
+  } catch {}
+  const slot = p.data.frames?.[0]?.slot;
+  const media = slot ? frameMedia(p.id, slot, files) : undefined;
+  return { href: deepDivePath(p), title: p.data.title, tools: p.data.tools, image: media?.kind === "image" ? media.src : undefined };
+});
 ---
 
 <Base title={home.title} description={home.description} path={home.path}>
   <main class="home">
+    <canvas class="pv-still" aria-hidden="true"></canvas>
     <h1>{home.heading}</h1>
     <p data-panel="solid">{profile.tagline}</p>
+    <p class="pv-hero-links">
+      <a class="pv-more" href="/projects/">See projects</a>
+      <a class="pv-more" href="/contact/">Get in touch</a>
+    </p>
   </main>
+  <section class="pv-featured" aria-label="Featured projects">
+    {featured.map((f) => (
+      <a class="pv-feature" href={f.href}>
+        <div class="pv-media" style={f.image ? `background-image: url(${f.image})` : undefined}></div>
+        <div class="pv-copy">
+          <h2>{f.title}</h2>
+          <p class="meta">{f.tools}</p>
+          <span class="pv-more">Read the story</span>
+        </div>
+      </a>
+    ))}
+  </section>
 </Base>
 
 <style>
