@@ -80,3 +80,12 @@ export function placeFrames(html: string, slots: readonly string[]): BodyPart[] 
   for (const slot of slots) if (!placed.has(slot)) parts.push({ frame: slot });
   return parts;
 }
+
+/**
+ * Split a stretch of a Deep Dive's rendered Body Text (between its Frames) into the
+ * blocks each set in its own Panel: the text before the first subheading, then one per
+ * subheading (`<h2>`), each starting with its heading. Blank stretches are left out.
+ */
+export function panelBlocks(html: string): string[] {
+  return html.split(/(?=<h2[\s>])/).filter((block) => block.trim() !== "");
+}

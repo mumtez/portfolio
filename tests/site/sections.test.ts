@@ -243,6 +243,22 @@ describe("Deep Dive Body Text", () => {
   );
 });
 
+describe("Deep Dive Panels", () => {
+  it.each(["roborebels", "baja", "ftc-event-viewer"])(
+    "%s sets its Body Text in solid Panels, one per subheading, each heading inside its border",
+    (id) => {
+      const body = builtPage(`/projects/${id}/`).querySelector("main .body-text")!;
+      for (const block of body.querySelectorAll(":scope > *:not(figure)"))
+        expect(block.getAttribute("data-panel"), block.outerHTML.slice(0, 60)).toBe("solid");
+      for (const h2 of body.querySelectorAll("h2")) {
+        expect(h2.parentElement!.getAttribute("data-panel")).toBe("solid");
+        expect(h2.parentElement!.firstElementChild).toBe(h2);
+      }
+      expect(body.querySelectorAll(":scope > [data-panel]").length).toBeGreaterThan(0);
+    },
+  );
+});
+
 describe("Deep Dive Frames", () => {
   it.each(["roborebels", "baja", "ftc-event-viewer"])(
     "%s has Frame slots inside its Body Text",
@@ -286,10 +302,11 @@ describe("Deep Dive Frames", () => {
   it("places a Frame where its marker is in the Markdown", () => {
     const body = builtPage("/projects/roborebels/").querySelector(".body-text");
     const order = [...(body?.children ?? [])].map(
-      (el) => el.getAttribute("data-frame") ?? el.tagName.toLowerCase(),
+      (el) => el.getAttribute("data-frame") ?? text(el.querySelector(":scope > h2")),
     );
-    expect(order.indexOf("robot")).toBeLessThan(order.indexOf("h2"));
-    expect(order.indexOf("match")).toBeGreaterThan(order.indexOf("h2"));
+    expect(order.indexOf("robot")).toBeLessThan(order.indexOf("Results"));
+    expect(order.indexOf("match")).toBeGreaterThan(order.indexOf("Results"));
+    expect(order.indexOf("match")).toBeLessThan(order.indexOf("Mentoring"));
   });
 });
 

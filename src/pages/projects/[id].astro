@@ -1,5 +1,8 @@
 ---
-/** A Deep Dive: one project's story, with its Markdown file body as Body Text and its Frames. */
+/**
+ * A Deep Dive: one project's story, with its Markdown file body as Body Text, set in a solid
+ * Panel per subheading, and its Frames between them.
+ */
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GetStaticPaths } from "astro";
@@ -7,7 +10,7 @@ import Frame from "../../components/Frame.astro";
 import Placeholder from "../../components/Placeholder.astro";
 import Section from "../../layouts/Section.astro";
 import { deepDivePath, getDeepDives, type Project } from "../../lib/content";
-import { mediaDir, placeFrames } from "../../lib/frames";
+import { mediaDir, panelBlocks, placeFrames } from "../../lib/frames";
 
 export const getStaticPaths = (async () => {
   return (await getDeepDives()).map((project) => ({
@@ -56,7 +59,7 @@ const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
   <div class="body-text">
     {parts.map((part) =>
       "html" in part ? (
-        <Fragment set:html={part.html} />
+        panelBlocks(part.html).map((block) => <section data-panel="solid" set:html={block} />)
       ) : (
         <Frame deepDive={project.id} files={files} {...frameFor(part.frame)} />
       ),

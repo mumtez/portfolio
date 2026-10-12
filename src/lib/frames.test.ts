@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frameMedia, placeFrames } from "./frames";
+import { frameMedia, panelBlocks, placeFrames } from "./frames";
 
 describe("a Frame's media", () => {
   it("is a photo when a picture file named after the slot is there", () => {
@@ -63,5 +63,30 @@ describe("placing Frames in the Body Text", () => {
 
   it("refuses a Frame placed twice", () => {
     expect(() => placeFrames("<!-- frame: a --><!-- frame: a -->", ["a"])).toThrow(/twice/);
+  });
+});
+
+describe("the Panels a piece of Body Text is set in", () => {
+  it("are the text before the first subheading, then one per subheading", () => {
+    const html =
+      '<p>One.</p>\n<h2 id="results">Results</h2>\n<ul><li>Won.</li></ul>\n<h2>More</h2><p>Two.</p>';
+    expect(panelBlocks(html)).toEqual([
+      "<p>One.</p>\n",
+      '<h2 id="results">Results</h2>\n<ul><li>Won.</li></ul>\n',
+      "<h2>More</h2><p>Two.</p>",
+    ]);
+  });
+
+  it("leave out blank stretches, such as the gap between a Frame and a subheading", () => {
+    expect(panelBlocks("\n  \n<h2>Results</h2><p>Two.</p>")).toEqual([
+      "<h2>Results</h2><p>Two.</p>",
+    ]);
+    expect(panelBlocks("\n")).toEqual([]);
+  });
+
+  it("split only at subheadings, not at deeper headings", () => {
+    expect(panelBlocks("<p>One.</p><h3>Detail</h3><p>Two.</p>")).toEqual([
+      "<p>One.</p><h3>Detail</h3><p>Two.</p>",
+    ]);
   });
 });
