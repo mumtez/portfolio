@@ -102,6 +102,8 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
   const px = (cells: number) => `${cells * cellPx}px`;
   const { title } = layout;
   const root = document.documentElement.style;
+  // For Body Text sized in cells: a Contact link's Button is the size of its Cell label.
+  root.setProperty("--cell-px", px(1));
   root.setProperty("--below-title", px(title.y + title.height));
   // The toggles keep no strip of the screen: the content scrolls the full height, and
   // ends this far up so its last line clears them.
@@ -132,6 +134,7 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
 /** Undo `placeHtml`, leaving the page as its Plain View. */
 function unplaceHtml(): void {
   const root = document.documentElement.style;
+  root.removeProperty("--cell-px");
   root.removeProperty("--below-title");
   root.removeProperty("--toggles-clearance");
   for (const el of document.querySelectorAll<HTMLElement>(".on-grid")) {

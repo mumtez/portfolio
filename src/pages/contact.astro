@@ -1,28 +1,103 @@
 ---
+/**
+ * Contact: one real link per way to reach Andrew, named in full (the email address, say).
+ * In the Grid each link is a Button Panel sized to its short label (EMAIL, GITHUB...),
+ * which the Grid draws in Cells inside its border; the link's own text is hidden there
+ * but still names it. In Plain View they're ordinary links, each after its label.
+ */
+import { textMask } from "../grid/cell-typesetter";
 import Section from "../layouts/Section.astro";
 import { getProfile, getSection } from "../lib/content";
 
 const section = await getSection("contact");
 const { contact } = await getProfile();
-const handle = (url: string) => url.replace(/^https:\/\/(www\.)?/, "");
 ---
 
 <Section {...section}>
-  <ul>
-    <li>
-      Email: <a href={`mailto:${contact.email}`}>{contact.email}</a>
-    </li>
-    <li>
-      GitHub: <a href={contact.github}>{handle(contact.github)}</a>
-    </li>
-    <li>
-      LinkedIn: <a href={contact.linkedin}>{handle(contact.linkedin)}</a>
-    </li>
-    <li>
-      Resume:{" "}
-      <a href={contact.resume} download>
-        Download my resume (PDF)
-      </a>
-    </li>
+  <ul class="contact">
+    {contact.map(({ label, name, href, download }) => (
+      <li>
+        <span class="label" aria-hidden="true">
+          {label}
+        </span>
+        <a
+          href={href}
+          download={download || undefined}
+          data-panel="button"
+          data-cell-label={label}
+          style={`--label-cells: ${textMask(label).width}`}
+        >
+          <span class="name">{name}</span>
+        </a>
+      </li>
+    ))}
   </ul>
 </Section>
+
+<style>
+  .contact {
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Plain View: ordinary links, each after its label, the labels lined up in a column. */
+  :global(html:not(.grid-on)) .contact li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1em;
+    align-items: baseline;
+    margin: 0.5em 0;
+  }
+  :global(html:not(.grid-on)) .label {
+    flex: 0 0 5.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
+  :global(html:not(.grid-on)) .contact a {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /*
+   * Grid on: each link is a Button Panel the size of its label in Cells, one clear cell
+   * and then the border round it (as the nav's Buttons are), set in a row that wraps.
+   * The label and the link's text are drawn in Cells, so their HTML is hidden.
+   */
+  :global(html.grid-on) .contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(3 * var(--cell-px, 6px)) calc(4 * var(--cell-px, 6px));
+    margin: 1.5em 0;
+    /* Room for the first row's focus ring inside the scroll box. */
+    padding-top: 6px;
+  }
+  :global(html.grid-on) .contact li {
+    margin: 0;
+  }
+  :global(html.grid-on) .label,
+  :global(html.grid-on) .name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  :global(html.grid-on) .contact a {
+    display: block;
+    width: calc((var(--label-cells) + 4) * var(--cell-px, 6px));
+    height: calc(11 * var(--cell-px, 6px));
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+  }
+  :global(html.grid-on) .contact a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>

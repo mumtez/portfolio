@@ -16,9 +16,10 @@
  * Section's borders condense in with its lines and stay pinned when the lines are
  * released; on navigate the old Section's borders are released into Life with its other
  * pins. Shapes move as the Body Text scrolls, and the borders and walls follow, snapped
- * to cells. A Button Panel (a Project Entry, say) is a Button too: hovering its measured
- * box or focusing its link (`focusPanel`) decays its border like a nav Button's, told
- * apart by its link so the decay carries on as it scrolls.
+ * to cells. A Button Panel (a Project Entry, a Contact link) is a Button too: hovering
+ * its measured box or focusing its link (`focusPanel`) decays its border like a nav
+ * Button's, told apart by its link so the decay carries on as it scrolls. A Panel's
+ * label (a Contact link's EMAIL) is pinned with its border, but stays while it decays.
  */
 import {
   boxContains,
@@ -113,8 +114,8 @@ export class GridDirector {
   /** The button under the pointer, so moving within it doesn't start its border over. */
   private hovered: string | undefined;
   /**
-   * The Panels of the Section whose HTML is in the page: their border Cells, pinned once
-   * settled, and their interiors' Cells, walled off once settled.
+   * The Panels of the Section whose HTML is in the page: their border and label Cells,
+   * pinned once settled, and their interiors' other Cells, walled off once settled.
    */
   private borders: readonly Point[] = [];
   private walls: readonly Point[] = [];
@@ -187,10 +188,10 @@ export class GridDirector {
    * nav and toggles, which the text can scroll beneath. Buttons stay drawn whole.
    */
   private placePanels(): { border: readonly Point[] } {
-    const { border, interior } = panelCells(this.shapes);
+    const { border, label, interior } = panelCells(this.shapes);
     const boxes = [...this._layout.nav, ...this._layout.toggles].map((b) => b.box);
     const clear = (p: Point) => !boxes.some((box) => boxContains(box, p));
-    this.borders = border.filter(clear);
+    this.borders = [...border, ...label].filter(clear);
     this.walls = interior.filter(clear);
     this.buttonPanels = this.shapes.flatMap((s) =>
       s.kind === "panel" && s.panel === "button" && s.href !== undefined

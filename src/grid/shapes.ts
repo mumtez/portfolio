@@ -4,7 +4,7 @@
  * Director stays headless. A Transition dissolves the old Section's shapes into Life and
  * condenses the next Section's out of it.
  */
-import type { Box } from "./cell-typesetter";
+import { textMask, type Box } from "./cell-typesetter";
 import type { Point } from "./life-engine";
 
 /** How a Panel's border is drawn: pinned, every other cell pinned, or a Button that decays on hover. */
@@ -31,6 +31,11 @@ export interface PanelShape {
    * so its border keeps decaying as the Panel scrolls.
    */
   readonly href?: string;
+  /**
+   * A short label drawn in Pinned Cells, centred inside the border (a Contact link's
+   * EMAIL, say), in the 5×7 font's capitals. It stays pinned while a Button's border decays.
+   */
+  readonly label?: string;
 }
 
 export type Shape = LineShape | PanelShape;
@@ -54,19 +59,27 @@ export function lineInk({ x, y, width, height }: Box, random: () => number): Poi
   return cells;
 }
 
-/** A Panel's Cells: its border, pinned (every other cell for a dashed Panel), and its interior, walled off. */
+/**
+ * A Panel's Cells: its border, pinned (every other cell for a dashed Panel), its label,
+ * pinned, and the rest of its interior, walled off.
+ */
 export interface PanelCells {
   readonly border: Point[];
+  readonly label: Point[];
   readonly interior: Point[];
 }
 
+/** Rows of a capital in the 5×7 font: a label is centred on these, not on the row below them. */
+const CAPITAL_ROWS = 7;
+
 /**
  * The Cells the Panels among `shapes` are drawn with: each border going round its box's
- * edge, every other cell of it for a dashed Panel, and each interior inside that edge,
- * all within the Panel's clip.
+ * edge, every other cell of it for a dashed Panel, each label centred inside that edge,
+ * and the rest of each interior, all within the Panel's clip.
  */
 export function panelCells(shapes: readonly Shape[]): PanelCells {
   const border: Point[] = [];
+  const label: Point[] = [];
   const interior: Point[] = [];
   for (const s of shapes) {
     if (s.kind !== "panel") continue;
@@ -75,11 +88,23 @@ export function panelCells(shapes: readonly Shape[]): PanelCells {
       if ((s.panel !== "dashed" || i % 2 === 0) && shows(p)) border.push(p);
     });
     const { x, y, width, height } = s.box;
+    const labelled = new Set<string>();
+    if (s.label) {
+      const mask = textMask(s.label);
+      const lx = x + Math.floor((width - mask.width) / 2);
+      const ly = y + Math.floor((height - CAPITAL_ROWS) / 2);
+      for (const c of mask.cells) {
+        const p = { x: lx + c.x, y: ly + c.y };
+        labelled.add(`${p.x},${p.y}`);
+        if (shows(p)) label.push(p);
+      }
+    }
     for (let cy = y + 1; cy < y + height - 1; cy++)
       for (let cx = x + 1; cx < x + width - 1; cx++)
-        if (shows({ x: cx, y: cy })) interior.push({ x: cx, y: cy });
+        if (shows({ x: cx, y: cy }) && !labelled.has(`${cx},${cy}`))
+          interior.push({ x: cx, y: cy });
   }
-  return { border, interior };
+  return { border, label, interior };
 }
 
 /** The Cells on the edge of `box`, each once, in order going round it from its top-left corner. */

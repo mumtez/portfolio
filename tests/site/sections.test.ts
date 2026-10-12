@@ -176,6 +176,47 @@ describe("Section content", () => {
       ]),
     );
   });
+
+  it("Contact's links are Button Panels, each with a short Cell label and its full name", () => {
+    const main = builtPage("/contact/").querySelector("main");
+    const buttons = [...(main?.querySelectorAll("a") ?? [])].map((a) => ({
+      href: a.getAttribute("href"),
+      panel: a.getAttribute("data-panel"),
+      label: a.getAttribute("data-cell-label"),
+      name: text(a),
+      download: a.hasAttribute("download"),
+    }));
+    expect(buttons).toEqual([
+      {
+        href: "mailto:aaburustum@olin.edu",
+        panel: "button",
+        label: "EMAIL",
+        name: "aaburustum@olin.edu",
+        download: false,
+      },
+      {
+        href: "https://github.com/mumtez",
+        panel: "button",
+        label: "GITHUB",
+        name: "github.com/mumtez",
+        download: false,
+      },
+      {
+        href: "https://www.linkedin.com/in/andrew-aburustum",
+        panel: "button",
+        label: "LINKEDIN",
+        name: "linkedin.com/in/andrew-aburustum",
+        download: false,
+      },
+      {
+        href: "/andrew-aburustum-resume.pdf",
+        panel: "button",
+        label: "RESUME",
+        name: "Download my resume (PDF)",
+        download: true,
+      },
+    ]);
+  });
 });
 
 describe("Deep Dive Body Text", () => {

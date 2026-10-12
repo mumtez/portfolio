@@ -11,7 +11,7 @@ import {
 import { INTRO_SEEDS } from "./intro-seeds";
 import { CellKind } from "./life-engine";
 import type { PanelKind, PanelShape, Shape } from "./shapes";
-import { mulberry32, TEST_CONTENT } from "./test-support";
+import { mulberry32, rowsIn, TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
 
@@ -1018,6 +1018,67 @@ describe("Grid Director", () => {
         expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
         for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
         expect(new Set(pinnedIn(d, OTHER))).toEqual(new Set(edge(OTHER)));
+      });
+
+      describe("with a Cell label (a Contact link)", () => {
+        // EMAIL in the 5×7 font is 29 cells wide: one clear cell and the border round it.
+        const LABELLED = { x: 60, y: 40, width: 33, height: 11 };
+        // E, M, A, I and L, one clear cell apart.
+        const EMAIL = [
+          ["#####", "#...#", "..#..", ".###.", "#...."],
+          ["#....", "#...#", ".#.#.", "..#..", "#...."],
+          ["#....", "##.##", "#...#", "..#..", "#...."],
+          ["####.", "#.#.#", "#...#", "..#..", "#...."],
+          ["#....", "#...#", "#####", "..#..", "#...."],
+          ["#....", "#...#", "#...#", "..#..", "#...."],
+          ["#####", "#...#", "#...#", ".###.", "#####"],
+        ].map((glyphs) => glyphs.join("."));
+        const email = (box = LABELLED): PanelShape => ({
+          ...button("mailto:a@b.c", box),
+          label: "EMAIL",
+        });
+        const labelArea = (box: Box) => ({ x: box.x + 2, y: box.y + 2, width: 29, height: 7 });
+        /** The Pinned Cells inside the border, as rows of `#` and `.`. */
+        const labelIn = (d: GridDirector, box: Box) =>
+          rowsIn(pinnedIn(d, interiorOf(box)).map(pointOf), interiorOf(box));
+
+        it("draw the label in Pinned Cells, centred in its border", () => {
+          const d = settledAt("/contact/");
+          d.setShapes([email()]);
+          expect(new Set(pinnedIn(d, LABELLED))).toEqual(
+            new Set([...edge(LABELLED), ...pinnedIn(d, labelArea(LABELLED))]),
+          );
+          expect(labelIn(d, LABELLED)).toEqual(EMAIL);
+          for (let t = 0; t < 30; t++) d.tick();
+          expect(labelIn(d, LABELLED)).toEqual(EMAIL);
+        });
+
+        it("keep the label pinned while the border decays on hover and focus", () => {
+          const d = settledAt("/contact/");
+          d.setShapes([email()]);
+          d.hover(inside(LABELLED));
+          expect(new Set(pinnedIn(d, LABELLED))).toEqual(new Set(pinnedIn(d, labelArea(LABELLED))));
+          expect(labelIn(d, LABELLED)).toEqual(EMAIL);
+          for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+          d.focusPanel("mailto:a@b.c");
+          expect(labelIn(d, LABELLED)).toEqual(EMAIL);
+          expect(pinnedIn(d, LABELLED).some((k) => edge(LABELLED).includes(k))).toBe(false);
+        });
+
+        it("condense the label in a Transition and leave it pinned once settled", () => {
+          const d = settledAt("/");
+          d.navigate("/contact/");
+          d.setShapes([email()]);
+          while (d.phase === "transition") d.tick();
+          expect(labelIn(d, LABELLED)).toEqual(EMAIL);
+        });
+
+        it("centre the label in a border snapped a cell wider", () => {
+          const d = settledAt("/contact/");
+          const wider = { ...LABELLED, width: LABELLED.width + 1 };
+          d.setShapes([email(wider)]);
+          expect(labelIn(d, wider)).toEqual(EMAIL);
+        });
       });
 
       it("leave solid Panels alone, whatever the pointer does", () => {

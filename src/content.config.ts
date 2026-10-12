@@ -48,13 +48,22 @@ const profile = defineCollection({
     languages: z.array(z.string()),
     skills: z.array(z.object({ area: z.string(), items: z.string() })),
     activities: z.array(z.object({ name: z.string(), role: z.string(), dates: z.string() })),
-    contact: z.object({
-      email: z.email(),
-      github: z.url(),
-      linkedin: z.url(),
-      /** The resume PDF's path on the site, a file in `public/`. */
-      resume: z.string().regex(/^\/[a-z0-9-]+\.pdf$/),
-    }),
+    /** The Contact links, in order. */
+    contact: z.array(
+      z.object({
+        /**
+         * The short label the Grid draws in Cells on the link's Button: capitals and
+         * digits (the 5×7 font's), at most 8 so it fits the column on a phone.
+         */
+        label: z.string().regex(/^[A-Z0-9]{1,8}$/),
+        /** The link's text: its full accessible name (the email address, say). */
+        name: z.string(),
+        /** A `mailto:` or `https:` URL, or a file in `public/` (the resume PDF). */
+        href: z.string().regex(/^(mailto:\S+@\S+|https:\/\/\S+|\/[a-z0-9-]+\.pdf)$/),
+        /** Download it rather than open it (the resume). */
+        download: z.boolean().default(false),
+      }),
+    ),
   }),
 });
 
