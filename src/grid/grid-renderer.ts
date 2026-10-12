@@ -7,7 +7,7 @@
  * the Body Text are drawn faint and leave no ghosts there, so the HTML over them stays
  * readable. Walls (Frames) are left empty: real media cover them.
  */
-import { boxContains, type Box } from "./cell-typesetter";
+import { boxContains, type Box } from "./box";
 import { CellKind } from "./life-engine";
 import { BODY_TEXT_CELL_ALPHA, type Palette } from "./palette";
 

@@ -5,7 +5,8 @@
  * (`seeds.js`, ADR 0003). They are data, never regenerated here: each seed only
  * fits its exact name layout, so changing a name glyph means re-running the search.
  */
-import { boxContains, type Box, type NameLayout } from "./cell-typesetter";
+import { boxContains, type Box } from "./box";
+import type { NameLayout } from "./cell-typesetter";
 import type { Point } from "./life-engine";
 import pools from "./intro-seeds.json";
 

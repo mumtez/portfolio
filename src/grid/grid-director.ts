@@ -21,12 +21,11 @@
  * Button's, told apart by its link so the decay carries on as it scrolls. A Panel's
  * label (a Contact link's EMAIL) is pinned with its border, but stays while it decays.
  */
+import { boxContains, intersection, type Box } from "./box";
 import {
-  boxContains,
   navItemAt,
   toggleAt,
   typesetSection,
-  type Box,
   type SectionLayout,
   type ToggleSpec,
   type ViewportCells,
@@ -458,18 +457,6 @@ export class GridDirector {
       height: viewport.height + 2 * margin,
     };
   }
-}
-
-/** The part of `a` inside `b` (empty when they don't meet). */
-function intersection(a: Box, b: Box): Box {
-  const x = Math.max(a.x, b.x);
-  const y = Math.max(a.y, b.y);
-  return {
-    x,
-    y,
-    width: Math.max(0, Math.min(a.x + a.width, b.x + b.width) - x),
-    height: Math.max(0, Math.min(a.y + a.height, b.y + b.height) - y),
-  };
 }
 
 /** A shuffled copy of `items` (Fisher–Yates), so the next Section condenses in scattered cells. */

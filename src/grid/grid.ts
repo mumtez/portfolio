@@ -18,14 +18,9 @@
  * and leaves the Plain View.
  */
 import { countPageView } from "../lib/analytics";
+import type { Box } from "./box";
 import { cellSize } from "./cell-size";
-import {
-  navItemAt,
-  toggleAt,
-  type Box,
-  type SectionLayout,
-  type ToggleSpec,
-} from "./cell-typesetter";
+import { navItemAt, toggleAt, type SectionLayout, type ToggleSpec } from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
 import { cellBoxCovering } from "./html-regions";
@@ -105,12 +100,12 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
   // For Body Text sized in cells: a Contact link's Button is the size of its Cell label.
   root.setProperty("--cell-px", px(1));
   root.setProperty("--below-title", px(title.y + title.height));
-  // The toggles keep no strip of the screen: the content scrolls the full height, and
-  // ends this far up so its last line clears them.
-  const togglesTop = Math.min(...layout.toggles.map((t) => t.box.y));
+  // The Body Text ends where its region does: the bottom of the screen, or above the
+  // toggles where they're in the bottom corner over its column.
+  const { body } = layout;
   root.setProperty(
-    "--toggles-clearance",
-    Number.isFinite(togglesTop) ? `${window.innerHeight - togglesTop * cellPx}px` : "0px",
+    "--below-body",
+    `${Math.max(0, window.innerHeight - (body.y + body.height) * cellPx)}px`,
   );
   const place = (el: HTMLElement, box: Box) => {
     el.classList.add("on-grid");
@@ -136,7 +131,7 @@ function unplaceHtml(): void {
   const root = document.documentElement.style;
   root.removeProperty("--cell-px");
   root.removeProperty("--below-title");
-  root.removeProperty("--toggles-clearance");
+  root.removeProperty("--below-body");
   for (const el of document.querySelectorAll<HTMLElement>(".on-grid")) {
     el.classList.remove("on-grid");
     for (const prop of ["left", "top", "width", "height"]) el.style.removeProperty(prop);

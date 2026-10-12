@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxContains, type Box } from "./cell-typesetter";
+import { boxContains, type Box } from "./box";
 import {
   BORDER_UNPIN_TICKS,
   GridDirector,

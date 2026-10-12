@@ -2,7 +2,7 @@
  * HTML regions: where the page's real HTML (Body Text, Frames' media) lies over the
  * Grid, in cells. Pure; the Grid script measures the elements and passes their boxes in.
  */
-import type { Box } from "./cell-typesetter";
+import type { Box } from "./box";
 
 /** An element's box in CSS pixels, as `getBoundingClientRect` gives it. */
 export interface PixelRect {

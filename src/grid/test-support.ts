@@ -1,7 +1,7 @@
 /**
  * Helpers shared by the Grid's unit tests.
  */
-import type { Box } from "./cell-typesetter";
+import type { Box } from "./box";
 import type { LifeEngine, Point } from "./life-engine";
 import type { GridContent } from "./routes";
 
@@ -34,11 +34,6 @@ export function rowsIn(cells: readonly Point[], box: Box): string[] {
   );
   for (const c of inside) rows[c.y - y0][c.x - x0] = "#";
   return rows.map((r) => r.join(""));
-}
-
-/** True when two boxes share any cell. */
-export function boxesOverlap(a: Box, b: Box): boolean {
-  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 export function boxInside(inner: Box, outer: { width: number; height: number }): boolean {

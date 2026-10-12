@@ -2,7 +2,7 @@
  * Measuring the page: the Section's Body Text as shapes in cells, from the DOM's own
  * line boxes. Needs real layout, so the browser tests cover it.
  */
-import type { Box } from "./cell-typesetter";
+import { boxesOverlap, spanOverlap, type Box } from "./box";
 import { cellBoxCovering } from "./html-regions";
 import type { Shape } from "./shapes";
 
@@ -66,7 +66,7 @@ function measurePanels(
       width: Math.round(r.right / cellPx) - x,
       height: Math.round(r.bottom / cellPx) - y,
     };
-    if (box.width < 2 || box.height < 2 || !overlapping(box, within)) continue;
+    if (box.width < 2 || box.height < 2 || !boxesOverlap(box, within)) continue;
     const href = panel === "button" ? el.getAttribute("href") : null;
     const label = el.dataset.cellLabel;
     shapes.push({
@@ -81,10 +81,6 @@ function measurePanels(
   return shapes;
 }
 
-function overlapping(a: Box, b: Box): boolean {
-  return overlap(a.x, a.width, b.x, b.width) > 0 && overlap(a.y, a.height, b.y, b.height) > 0;
-}
-
 /** Join fragments on the same line (overlapping rows, at most a cell apart) into one box each. */
 function joinLines(fragments: readonly Box[]): Box[] {
   const sorted = [...fragments].sort((a, b) => a.y - b.y || a.x - b.x);
@@ -92,7 +88,7 @@ function joinLines(fragments: readonly Box[]): Box[] {
   for (const f of sorted) {
     const i = lines.findIndex(
       (l) =>
-        overlap(l.y, l.height, f.y, f.height) * 2 >= Math.min(l.height, f.height) &&
+        spanOverlap(l.y, l.height, f.y, f.height) * 2 >= Math.min(l.height, f.height) &&
         f.x <= l.x + l.width + 1 &&
         l.x <= f.x + f.width + 1,
     );
@@ -111,8 +107,4 @@ function joinLines(fragments: readonly Box[]): Box[] {
     };
   }
   return lines;
-}
-
-function overlap(a: number, aLength: number, b: number, bLength: number): number {
-  return Math.max(0, Math.min(a + aLength, b + bLength) - Math.max(a, b));
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { nameMask, type Box, type NameLayout } from "./cell-typesetter";
+import type { Box } from "./box";
+import { nameMask, type NameLayout } from "./cell-typesetter";
 import { INTRO_SEEDS, introCells, SOUP_CLEARANCE } from "./intro-seeds";
 import { LifeEngine } from "./life-engine";
 

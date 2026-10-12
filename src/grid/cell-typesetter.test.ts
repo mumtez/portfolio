@@ -3,17 +3,16 @@ import { describe, expect, it } from "vitest";
 import prototypeLayouts from "../../tests/fixtures/prototype-name-layouts.json";
 import {
   BODY_TEXT_CSS,
-  boxContains,
   nameMask,
   navItemAt,
   textMask,
   toggleAt,
   typesetSection,
-  type Box,
   type CellMask,
 } from "./cell-typesetter";
 import type { Point } from "./life-engine";
-import { boxesOverlap, boxInside, rowsIn, TEST_CONTENT } from "./test-support";
+import { boxContains, boxesOverlap, type Box } from "./box";
+import { boxInside, rowsIn, TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
 
@@ -310,7 +309,7 @@ describe("Cell Typesetter", () => {
       [169, 78],
       [260, 120],
     ])(
-      "keeps them in the bottom-right corner of a %i×%i viewport, clear of the nav and title",
+      "keeps them in the bottom-right corner of a %i×%i viewport, whose nav leaves no room at the top, clear of the nav and title",
       (width, height) => {
         const viewport = { width, height };
         for (const path of ["/", "/projects/baja/"]) {
@@ -327,6 +326,49 @@ describe("Cell Typesetter", () => {
         }
       },
     );
+
+    it.each([
+      // iPhone 390×844 at 3×: 13/3px cells. A 375px and a 320px phone.
+      [90, 195, 13 / 3],
+      [94, 167, 4],
+      [92, 163, 3.5],
+    ])(
+      "on a %i×%i phone sits them in the top-right corner beside the nav column, above the Body Text",
+      (width, height, cellPx) => {
+        const viewport = { width, height, cellPx };
+        for (const path of ["/", "/about/", "/projects/baja/"]) {
+          const layout = typesetSection(viewport, TEST_CONTENT, path, TOGGLES);
+          const [theme, life] = layout.toggles;
+          for (const t of layout.toggles) {
+            expect(t.box.y).toBe(layout.nav[0].box.y);
+            for (const item of layout.nav) expect(boxesOverlap(t.box, item.box)).toBe(false);
+            expect(t.box.y + t.box.height).toBeLessThanOrEqual(layout.body.y);
+          }
+          expect(theme.box.x + theme.box.width).toBeLessThanOrEqual(life.box.x);
+          expect(life.box.x + life.box.width).toBeGreaterThan(width - 6);
+          // Nothing to keep clear at the bottom: the Body Text runs to the bottom edge.
+          expect(layout.body.y + layout.body.height).toBe(height);
+        }
+      },
+    );
+
+    it("ends the Body Text above them when they're at the bottom, in its columns", () => {
+      // A phone on its side, 844×390: the nav wraps into two wide rows.
+      const viewport = { width: 141, height: 65, cellPx: 6 };
+      const layout = typesetSection(viewport, TEST_CONTENT, "/about/", TOGGLES);
+      const top = Math.min(...layout.toggles.map((t) => t.box.y));
+      expect(top).toBeGreaterThan(layout.nav.at(-1)!.box.y);
+      expect(layout.body.y + layout.body.height).toBe(top);
+      for (const t of layout.toggles) expect(boxesOverlap(t.box, layout.body)).toBe(false);
+    });
+
+    it("leaves the Body Text the full height when they're at the bottom beside its column", () => {
+      // A 1440×900 desktop: the toggles are right of the 44rem column.
+      const viewport = { width: 240, height: 150, cellPx: 6 };
+      const layout = typesetSection(viewport, TEST_CONTENT, "/about/", TOGGLES);
+      for (const t of layout.toggles) expect(t.box.y).toBeGreaterThan(viewport.height / 2);
+      expect(layout.body.y + layout.body.height).toBe(viewport.height);
+    });
 
     it("maps a cell to the toggle whose hit region holds it", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/", TOGGLES);
@@ -414,6 +456,8 @@ describe("Cell Typesetter", () => {
         readFileSync(new URL(`../layouts/${file}`, import.meta.url), "utf8");
       const { gapRem, columnRem, gutterPx, lineHeight } = BODY_TEXT_CSS;
       expect(css("Base.astro")).toContain(`top: calc(var(--below-title, 45vh) + ${gapRem}rem)`);
+      // Its bottom: the region's, which the Grid script sets (above the toggles, or 0).
+      expect(css("Base.astro")).toContain(`bottom: var(--below-body, 0px);`);
       expect(css("Section.astro")).toContain(
         `padding: 0 max(${gutterPx}px, calc((100% - ${columnRem}rem) / 2)) 64px`,
       );

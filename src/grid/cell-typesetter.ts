@@ -1,6 +1,7 @@
 /**
  * Cell Typesetter: turns content into Pinned Cell masks. Pure, headless.
  */
+import { boxContains, boxesOverlap, edgeCells, spanOverlap, type Box } from "./box";
 import { FONT_5X7 } from "./font-5x7";
 import type { Point } from "./life-engine";
 import { currentness, type GridContent } from "./routes";
@@ -194,17 +195,6 @@ export function nameMask(layout: NameLayout): CellMask {
   ]);
 }
 
-export interface Box {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
-export function boxContains(box: Box, { x, y }: Point): boolean {
-  return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
-}
-
 export interface ViewportCells {
   readonly width: number;
   readonly height: number;
@@ -261,10 +251,11 @@ export interface SectionLayout {
   readonly nav: readonly NavItem[];
   /**
    * Where the Section's Body Text (its HTML content) lies over the Grid: the centred
-   * text column below the title, down to the bottom of the viewport. Pins nothing.
+   * text column below the title, down to the bottom of the viewport, or to the toggles
+   * when they're in the bottom corner over the column. Pins nothing.
    */
   readonly body: Box;
-  /** The toggles, side by side in the bottom-right corner. */
+  /** The toggles, side by side in the top-right corner, or the bottom-right one if the nav leaves no room. */
   readonly toggles: readonly ToggleItem[];
 }
 
@@ -316,7 +307,7 @@ export function typesetSection(
   };
 
   const nav = typesetNav(viewport, content, path, place);
-  const toggles = typesetToggles(viewport, toggleSpecs, place);
+  const toggles = typesetToggles(viewport, toggleSpecs, nav, place);
   const navBottom = Math.max(NAV_TOP, ...nav.map((i) => i.box.y + i.box.height));
 
   if (path === "/") {
@@ -327,13 +318,13 @@ export function typesetSection(
     const y = Math.max(top, Math.floor(viewport.height * NAME_BASELINE) - mask.height);
     place(mask, x, y);
     const title = { x, y, width: mask.width, height: mask.height };
-    return { pinned, title, nameLayout, nav, toggles, body: bodyRegion(viewport, title) };
+    return { pinned, title, nameLayout, nav, toggles, body: bodyRegion(viewport, title, toggles) };
   }
 
   // No other Section draws a heading: the underlined nav Button says where you are, and
   // the Body Text starts directly below the nav. Its `h1` stays in the HTML.
   const title = { x: 0, y: navBottom, width: viewport.width, height: 0 };
-  return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
+  return { pinned, title, nav, toggles, body: bodyRegion(viewport, title, toggles) };
 }
 
 /** The nav item whose hit region holds `at`, if any. */
@@ -381,6 +372,8 @@ function typesetNav(
 
 /** Cells between the toggles, and from the last one to the viewport's right and bottom edges. */
 const TOGGLE_GAP = 4;
+/** Clear cells kept at least between the toggles and a nav Button beside them. */
+const TOGGLE_NAV_GAP = 2;
 
 /** The toggle icons, 7 cells tall like the 5×7 font's capitals, so they underline like nav labels. */
 const TOGGLE_ICONS: Readonly<Record<ToggleIcon, CellMask>> = {
@@ -397,16 +390,33 @@ const TOGGLE_ICONS: Readonly<Record<ToggleIcon, CellMask>> = {
   ]),
 };
 
+/**
+ * The toggles, side by side in the top-right corner beside the nav's first line (on a
+ * phone, beside the nav column's first Button), where they're above the Body Text and
+ * never cover it. Where the nav leaves no room there (a wide row of it), they go in the
+ * bottom-right corner instead, and the Body Text region ends above them if they share
+ * its columns (see `bodyRegion`).
+ */
 function typesetToggles(
   viewport: ViewportCells,
   specs: readonly ToggleSpec[],
+  nav: readonly NavItem[],
   place: (mask: CellMask, x: number, y: number) => void,
 ): ToggleItem[] {
   const masks = specs.map((s) => TOGGLE_ICONS[s.icon]);
   const width =
     masks.reduce((sum, m) => sum + m.width + 2 * BUTTON_PAD, 0) + TOGGLE_GAP * (masks.length - 1);
-  let x = viewport.width - SIDE - width + BUTTON_PAD;
-  const y = viewport.height - SIDE - BUTTON_HEIGHT + BUTTON_PAD;
+  const left = viewport.width - SIDE - width;
+  // Where they'd go at the top, with the gap they keep from the nav at their left.
+  const top: Box = {
+    x: left - TOGGLE_NAV_GAP,
+    y: NAV_TOP,
+    width: width + TOGGLE_NAV_GAP,
+    height: BUTTON_HEIGHT,
+  };
+  const fitsAtTop = !nav.some((item) => boxesOverlap(item.box, top));
+  let x = left + BUTTON_PAD;
+  const y = (fitsAtTop ? NAV_TOP : viewport.height - SIDE - BUTTON_HEIGHT) + BUTTON_PAD;
   return specs.map((spec, i) => {
     const item = { ...spec, ...drawButton(masks[i], x, y, spec.pressed, place) };
     x += masks[i].width + 2 * BUTTON_PAD + TOGGLE_GAP;
@@ -438,15 +448,6 @@ function drawButton(
 /** The toggle whose hit region holds `at`, if any. */
 export function toggleAt(layout: SectionLayout, at: Point): ToggleItem | undefined {
   return layout.toggles.find((t) => boxContains(t.box, at));
-}
-
-/** The cells on the edge of `box`, each once. */
-function edgeCells({ x, y, width, height }: Box): Point[] {
-  const cells: Point[] = [];
-  for (let cx = x; cx < x + width; cx++) cells.push({ x: cx, y }, { x: cx, y: y + height - 1 });
-  for (let cy = y + 1; cy < y + height - 1; cy++)
-    cells.push({ x, y: cy }, { x: x + width - 1, y: cy });
-  return cells;
 }
 
 /**
@@ -484,10 +485,16 @@ const BODY_GAP_PX = BODY_TEXT_CSS.gapRem * REM_PX;
 const BODY_COLUMN_PX = BODY_TEXT_CSS.columnRem * REM_PX;
 const BODY_GUTTER_PX = BODY_TEXT_CSS.gutterPx;
 
-function bodyRegion(viewport: ViewportCells, title: Box): Box {
+function bodyRegion(viewport: ViewportCells, title: Box, toggles: readonly ToggleItem[]): Box {
   const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
   const gutter = Math.max(BODY_GUTTER_PX, (viewport.width * cellPx - BODY_COLUMN_PX) / 2);
   const x = Math.min(Math.ceil(gutter / cellPx), Math.floor(viewport.width / 2));
   const y = Math.min(title.y + title.height + Math.ceil(BODY_GAP_PX / cellPx), viewport.height);
-  return { x, y, width: viewport.width - 2 * x, height: viewport.height - y };
+  const width = viewport.width - 2 * x;
+  // Toggles below the title in the column's width would cover the text scrolling under them.
+  const below = toggles
+    .filter((t) => t.box.y >= y && spanOverlap(t.box.x, t.box.width, x, width) > 0)
+    .map((t) => t.box.y);
+  const bottom = Math.min(viewport.height, ...below);
+  return { x, y, width, height: Math.max(0, bottom - y) };
 }

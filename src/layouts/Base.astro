@@ -209,7 +209,8 @@ const themeCss = `
    * Grid on: Home's name and the nav are drawn in Pinned Cells. The real nav links sit
    * transparently over their cells (placed by the Grid script), and the Section's
    * content scrolls in its own box below the nav (on Home, below the name), over the
-   * live Grid.
+   * live Grid, down to the bottom of the screen, or to the toggles where they're in the
+   * bottom corner over its column.
    */
   html.grid-on #grid {
     display: block;
@@ -254,17 +255,11 @@ const themeCss = `
     position: fixed;
     top: calc(var(--below-title, 45vh) + 1.25rem);
     right: 0;
-    bottom: 0;
+    bottom: var(--below-body, 0px);
     left: 0;
     z-index: 1;
     overflow-y: auto;
     text-shadow: 0 0 6px var(--bg);
-  }
-  /* Room after the content, so its end scrolls clear of the toggles in the corner. */
-  html.grid-on main::after {
-    content: "";
-    display: block;
-    height: var(--toggles-clearance, 0px);
   }
   /*
    * A Section leaving in a Transition: its Body Text fades out over its lines dissolving
