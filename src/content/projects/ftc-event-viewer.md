@@ -16,7 +16,7 @@ frames:
     aspect: 16 / 10
 ---
 
-At an FTC event you're always sizing up the other teams: who to watch in qualification matches, and who to pick or hope to be picked by in alliance selection. OPR (offensive power rating) is the quickest single number for that. It estimates how many points a team adds to its alliance's score, worked out from its match results. FTCScout has every team's OPR, but only one team at a time, so I built a page that takes an event and lists all its teams sorted by it.
+At an FTC event you want to know who the strongest teams are: who to watch in qualification matches, and who to pick or hope to be picked by in alliance selection. OPR (offensive power rating) is the quickest single number for that. It estimates how many points a team adds to its alliance's score, worked out from its match results. But there was no way to take an event and sort its teams by OPR to see who was best, so I built one.
 
 <!-- frame: teams -->
 
