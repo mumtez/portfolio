@@ -92,6 +92,14 @@ const themeCss = `
   #grid {
     display: none;
   }
+  /* Plain View: a faint frozen Life still behind the page (opacity set where it's drawn). */
+  html.life-still:not(.grid-on) #grid {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
 
   /*
    * Panels: blocks of Body Text inside a border. With the Grid on, the border is drawn in

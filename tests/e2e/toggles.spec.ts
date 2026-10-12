@@ -35,7 +35,16 @@ test("the simulation toggle switches to the Plain View and back", async ({ page 
   await toggle(page, "simulation").click();
   await expectGrid(page, false);
   await expect(toggle(page, "simulation")).toHaveAttribute("aria-pressed", "false");
-  await expect(page.locator("canvas#grid")).toBeHidden();
+  // The canvas stays as a faint, frozen Life still behind the page, out of the way.
+  const canvas = page.locator("canvas#grid");
+  await expect(page.locator("html")).toHaveClass(/\blife-still\b/);
+  await expect(canvas).toBeVisible();
+  await expect(canvas).toHaveCSS("pointer-events", "none");
+  await expect(canvas).toHaveCSS("z-index", "-1");
+  const frame = () => canvas.evaluate((c: HTMLCanvasElement) => c.toDataURL());
+  const before = await frame();
+  await page.waitForTimeout(500);
+  expect(await frame()).toBe(before);
   // The nav links are ordinary links again, no longer laid transparently over cells.
   for (const label of ["Home", "About", "Experience", "Projects", "Contact"]) {
     const link = navLink(page, label);

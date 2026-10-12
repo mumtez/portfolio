@@ -5,7 +5,8 @@
  * The theme follows the system's colour scheme until the visitor picks one (the inline
  * head script has already set it before first paint). The simulation runs unless the
  * system asks for reduced motion, until the visitor switches it; off is the Plain View
- * with no Grid. Both choices are remembered through a `safeStore`.
+ * with no Grid, over a faint frozen Life still. Both choices are remembered through a
+ * `safeStore`.
  */
 import {
   resolveSimulation,
@@ -16,6 +17,7 @@ import {
 } from "../lib/preferences";
 import type { ToggleSpec } from "./cell-typesetter";
 import { startGrid, type Grid } from "./grid";
+import { showLifeStill, type LifeStill } from "./life-still";
 import { PALETTES, type Theme } from "./palette";
 import type { GridContent } from "./routes";
 
@@ -41,6 +43,7 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
   let theme: Theme = resolveTheme(stored, { systemLight: systemLight.matches });
   let simulation = resolveSimulation(store.get(SIMULATION_KEY), { reducedMotion });
   let grid: Grid | undefined;
+  let still: LifeStill | undefined;
 
   /**
    * The toggles as the Grid draws them, as small icons: a moon for the dark theme and a
@@ -56,6 +59,7 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
     themeButton?.setAttribute("aria-pressed", String(theme === "dark"));
     simulationButton?.setAttribute("aria-pressed", String(simulation));
     grid?.setPalette(PALETTES[theme]);
+    still?.setPalette(PALETTES[theme]);
     grid?.setToggles(specs());
   }
 
@@ -67,6 +71,8 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
 
   function runSimulation(): void {
     if (simulation && !grid) {
+      still?.stop();
+      still = undefined;
       grid = startGrid({
         canvas,
         content,
@@ -78,6 +84,7 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
       grid.stop();
       grid = undefined;
     }
+    if (!simulation && !still) still = showLifeStill(canvas, PALETTES[theme]);
   }
 
   themeButton?.addEventListener("click", () => {
