@@ -281,7 +281,7 @@ export class GridDirector {
     const seed: IntroSeed = pool.seeds[Math.floor(this.random() * pool.seeds.length)];
     const area = this.resetEngine();
     // Soup as dense as the seed itself, so the seed's box doesn't show as an edge.
-    this._engine.inject(introCells(seed, title, { area, density: seedDensity(seed), random: this.random }));
+    this._engine.inject(introCells(seed, title, { area, density: seedDensity(seed), random: this.random }),);
     this.pinnedNow = [];
     this.unpinnedBorders.clear();
     this.ticksUntilName = pool.depth;
@@ -324,7 +324,7 @@ export class GridDirector {
     const { viewport, margin } = this.options;
     this._engine = new LifeEngine({ width: viewport.width, height: viewport.height, margin });
     this._engine.setWalls(this.walls);
-    return { x: -margin, y: -margin, width: viewport.width + 2 * margin, height: viewport.height + 2 * margin };
+    return { x: -margin, y: -margin, width: viewport.width + 2 * margin, height: viewport.height + 2 * margin, };
   }
 }
 

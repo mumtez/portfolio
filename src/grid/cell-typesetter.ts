@@ -20,17 +20,17 @@ export interface CellMask {
  * strict Life (ADR 0003), so changing a glyph or a gap invalidates every seed.
  */
 const NAME_GLYPHS: Readonly<Record<string, readonly string[]>> = {
-  A: [".#####.", "##...##", "##...##", "##...##", "#######", "##...##", "##...##", "##...##", "##...##"],
-  N: ["##...##", "###..##", "####.##", "#######", "##.####", "##..###", "##...##", "##...##", "##...##"],
-  D: ["######.", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "######."],
-  R: ["######.", "##...##", "##...##", "##...##", "######.", "##.##..", "##..##.", "##...##", "##...##"],
-  E: ["#######", "##.....", "##.....", "##.....", "######.", "##.....", "##.....", "##.....", "#######"],
-  W: ["##...##", "##...##", "##...##", "##...##", "##.#.##", "##.#.##", "#######", "###.###", "##...##"],
-  B: ["######.", "##...##", "##...##", "##...##", "######.", "##...##", "##...##", "##...##", "######."],
-  U: ["##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", ".#####."],
-  S: [".######", "##.....", "##.....", "##.....", ".#####.", ".....##", ".....##", ".....##", "######."],
+  A: [".#####.", "##...##", "##...##", "##...##", "#######", "##...##", "##...##", "##...##", "##...##",],
+  N: ["##...##", "###..##", "####.##", "#######", "##.####", "##..###", "##...##", "##...##", "##...##",],
+  D: ["######.", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "######.",],
+  R: ["######.", "##...##", "##...##", "##...##", "######.", "##.##..", "##..##.", "##...##", "##...##",],
+  E: ["#######", "##.....", "##.....", "##.....", "######.", "##.....", "##.....", "##.....", "#######",],
+  W: ["##...##", "##...##", "##...##", "##...##", "##.#.##", "##.#.##", "#######", "###.###", "##...##",],
+  B: ["######.", "##...##", "##...##", "##...##", "######.", "##...##", "##...##", "##...##", "######.",],
+  U: ["##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", ".#####.",],
+  S: [".######", "##.....", "##.....", "##.....", ".#####.", ".....##", ".....##", ".....##", "######.",],
   T: ["######", "..##..", "..##..", "..##..", "..##..", "..##..", "..##..", "..##..", "..##.."],
-  M: ["##...##", "###.###", "#######", "##.#.##", "##.#.##", "##...##", "##...##", "##...##", "##...##"],
+  M: ["##...##", "###.###", "#######", "##.#.##", "##.#.##", "##...##", "##...##", "##...##", "##...##",],
 };
 const NAME_HEIGHT = 9;
 const NAME_LETTER_GAP = 2;
@@ -87,7 +87,7 @@ export function nameMask(layout: NameLayout): CellMask {
   const width = last[0].length;
   const pad = Math.floor((width - first[0].length) / 2);
   const centred = first.map((r) => ".".repeat(pad) + r.padEnd(width - pad, "."));
-  return maskFromRows([...centred, ...Array<string>(NAME_LINE_GAP).fill(".".repeat(width)), ...last]);
+  return maskFromRows([...centred, ...Array<string>(NAME_LINE_GAP).fill(".".repeat(width)), ...last,]);
 }
 
 export interface Box {
@@ -234,7 +234,7 @@ export function typesetSection(
   const lines = wrap(section.heading, viewport.width - 2 * SIDE).map(textMask);
   const width = Math.max(...lines.map((l) => l.width));
   const x0 = Math.floor((viewport.width - width) / 2);
-  lines.forEach((line, i) => place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH));
+  lines.forEach((line, i) => place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH),);
   const height = (lines.length - 1) * HEADING_LINE_PITCH + GLYPH_HEIGHT;
   const title = { x: x0, y: top, width, height };
   return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
@@ -251,7 +251,7 @@ function typesetNav(
   path: string,
   place: (mask: CellMask, x: number, y: number) => void,
 ): NavItem[] {
-  const entries = content.sections.flatMap((s) => (s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : []));
+  const entries = content.sections.flatMap((s) => s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : [],);
   const maxWidth = viewport.width - 2 * SIDE;
   const column = navIsColumn(viewport, entries.length);
   const lines: (typeof entries)[] = [];
@@ -308,7 +308,7 @@ function drawButton(
   underlined: boolean,
   place: (mask: CellMask, x: number, y: number) => void,
 ): { box: Box; border: Point[] } {
-  const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: label.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT };
+  const box = { x: x - BUTTON_PAD, y: y - BUTTON_PAD, width: label.width + 2 * BUTTON_PAD, height: BUTTON_HEIGHT, };
   const border = edgeCells(box);
   place(label, x, y);
   if (underlined) place(underline(label.width), x, y + UNDERLINE_ROW);
@@ -336,7 +336,7 @@ function edgeCells({ x, y, width, height }: Box): Point[] {
  * so every Section has the same nav and a Transition leaves it pinned.
  */
 function navIsColumn(viewport: ViewportCells, items: number): boolean {
-  return nameLayoutFor(viewport) === "stacked" && navRowTop(items) + TITLE_GAP + STACKED_NAME.height <= viewport.height;
+  return (nameLayoutFor(viewport) === "stacked" && navRowTop(items) + TITLE_GAP + STACKED_NAME.height <= viewport.height);
 }
 
 function underline(width: number): CellMask {
@@ -360,7 +360,7 @@ function wrap(text: string, maxWidth: number): string[] {
  * centred column at most `columnRem` wide with at least `gutterPx` either side, in 16px
  * type at `lineHeight`.
  */
-export const BODY_TEXT_CSS = { gapRem: 1.25, columnRem: 44, gutterPx: 16, lineHeight: 1.55 } as const;
+export const BODY_TEXT_CSS = { gapRem: 1.25, columnRem: 44, gutterPx: 16, lineHeight: 1.55, } as const;
 const REM_PX = 16;
 const DEFAULT_CELL_PX = 8;
 const BODY_GAP_PX = BODY_TEXT_CSS.gapRem * REM_PX;
@@ -388,7 +388,7 @@ function bodyRegion(viewport: ViewportCells, title: Box): Box {
  * the right. The Grid Director pins them during a Transition, then releases them into
  * Life as the HTML fades in over them.
  */
-export function bodyTextCondensate(body: Box, viewport: ViewportCells, random: () => number): Point[] {
+export function bodyTextCondensate(body: Box, viewport: ViewportCells, random: () => number,): Point[] {
   const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
   const pitch = Math.max(2, Math.round(BODY_LINE_PX / cellPx));
   const ink = Math.ceil(pitch * CONDENSATE_INK_ROWS);

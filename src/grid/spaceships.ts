@@ -47,7 +47,7 @@ export function spaceship(kind: SpaceshipKind, heading: Point): CellMask {
 }
 
 /** A spaceship of `kind`, flying in a random heading, with its box centred on `centre`. */
-export function spaceshipAt(kind: SpaceshipKind, centre: Point, random: () => number = Math.random): Point[] {
+export function spaceshipAt(kind: SpaceshipKind, centre: Point, random: () => number = Math.random,): Point[] {
   const headings = HEADINGS[kind];
   const ship = spaceship(kind, headings[Math.floor(random() * headings.length)]);
   const ox = centre.x - Math.floor(ship.width / 2);
@@ -68,7 +68,7 @@ export interface GridBounds {
  * A random spaceship placed in the margin just off one edge, flying into the viewport.
  * The margin must be wider than a spaceship plus the dead outer ring.
  */
-export function launchFromEdge({ width, height }: GridBounds, random: () => number = Math.random): Point[] {
+export function launchFromEdge({ width, height }: GridBounds, random: () => number = Math.random,): Point[] {
   const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)];
   const inward = pick([
     { x: 1, y: 0 },

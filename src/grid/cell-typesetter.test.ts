@@ -89,7 +89,7 @@ describe("Cell Typesetter", () => {
     it.each(TEST_CONTENT.sections.map((s) => s.path))("lists the top-level Sections in order on %s", (path) => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, path);
       expect(layout.nav.map((item) => [item.path, item.label])).toEqual(NAV);
-    });
+    },);
 
     it("draws each label in Pinned Cells inside its border", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/");
@@ -140,8 +140,8 @@ describe("Cell Typesetter", () => {
       const viewport = { width, height: 100 };
       const { nav } = typesetSection(viewport, TEST_CONTENT, "/contact/");
       for (const item of nav) expect(boxInside(item.box, viewport), item.label).toBe(true);
-      nav.forEach((a, i) => nav.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)));
-    });
+      nav.forEach((a, i) => nav.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)),);
+    },);
 
     it("fits on one line when the viewport is wide, and wraps when it isn't", () => {
       const rowsUsed = (width: number) =>
@@ -160,22 +160,22 @@ describe("Cell Typesetter", () => {
         expect([...ys].sort((a, b) => a - b)).toEqual(ys);
         expect(new Set(ys).size).toBe(nav.length);
         for (const item of nav) expect(boxInside(item.box, PHONE), item.label).toBe(true);
-        nav.forEach((a, i) => nav.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)));
+        nav.forEach((a, i) => nav.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)),);
       });
 
       it("centres each item and draws its label inside its hit region", () => {
         const layout = typesetSection(PHONE, TEST_CONTENT, "/about/");
         for (const item of layout.nav) {
-          expect(Math.abs(item.box.x + item.box.width / 2 - PHONE.width / 2), item.label).toBeLessThanOrEqual(1);
+          expect(Math.abs(item.box.x + item.box.width / 2 - PHONE.width / 2), item.label,).toBeLessThanOrEqual(1);
           const label = trimmed(textMask(item.label));
-          expect(rowsIn(layout.pinned, inside(item.box, 1)).slice(0, label.length), item.label).toEqual(label);
+          expect(rowsIn(layout.pinned, inside(item.box, 1)).slice(0, label.length), item.label,).toEqual(label);
         }
       });
 
       it("maps a tap on each row to that row's item", () => {
         const layout = typesetSection(PHONE, TEST_CONTENT, "/");
         for (const item of layout.nav) {
-          const middle = { x: item.box.x + Math.floor(item.box.width / 2), y: item.box.y + Math.floor(item.box.height / 2) };
+          const middle = { x: item.box.x + Math.floor(item.box.width / 2), y: item.box.y + Math.floor(item.box.height / 2), };
           expect(navItemAt(layout, middle)?.path).toBe(item.path);
         }
         // Beside a short label, in the column's row, is not a link.
@@ -200,7 +200,7 @@ describe("Cell Typesetter", () => {
     it("maps a cell to the nav item whose hit region holds it", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/");
       const projects = layout.nav[3];
-      expect(navItemAt(layout, { x: projects.box.x + 2, y: projects.box.y + 2 })?.path).toBe("/projects/");
+      expect(navItemAt(layout, { x: projects.box.x + 2, y: projects.box.y + 2 })?.path).toBe("/projects/",);
       expect(navItemAt(layout, { x: 0, y: VIEWPORT.height - 1 })).toBeUndefined();
     });
   });
@@ -224,7 +224,7 @@ describe("Cell Typesetter", () => {
       for (const toggle of layout.toggles) {
         for (const cell of toggle.border) {
           expect(pinned.has(key(cell))).toBe(true);
-          expect(boxContains(toggle.box, cell) && !boxContains(inside(toggle.box, 1), cell)).toBe(true);
+          expect(boxContains(toggle.box, cell) && !boxContains(inside(toggle.box, 1), cell)).toBe(true,);
         }
       }
     });
@@ -232,7 +232,7 @@ describe("Cell Typesetter", () => {
     it("underlines a toggle that is pressed", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", TOGGLES);
       const life = layout.toggles[1];
-      expect(rowsIn(layout.pinned, inside(life.box, 1)).at(-1)).toBe("#".repeat(textMask("Life").width));
+      expect(rowsIn(layout.pinned, inside(life.box, 1)).at(-1)).toBe("#".repeat(textMask("Life").width),);
     });
 
     it.each([
@@ -253,7 +253,7 @@ describe("Cell Typesetter", () => {
         expect(life.box.x + life.box.width).toBeGreaterThan(width - 6);
         expect(life.box.y + life.box.height).toBeGreaterThan(height - 6);
       }
-    });
+    },);
 
     it("maps a cell to the toggle whose hit region holds it", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/", TOGGLES);
@@ -316,7 +316,7 @@ describe("Cell Typesetter", () => {
     });
 
     it("keeps the one-line name while it fits with 3 cells clear at each side (141 cells)", () => {
-      expect(typesetSection({ width: 141, height: 100 }, TEST_CONTENT, "/").nameLayout).toBe("one-line");
+      expect(typesetSection({ width: 141, height: 100 }, TEST_CONTENT, "/").nameLayout).toBe("one-line",);
     });
 
     it.each([140, 100, 90, 84])("stacks the name when the one-line name doesn't fit (%i cells wide)", (width) => {
@@ -328,7 +328,7 @@ describe("Cell Typesetter", () => {
       expect(Math.abs(home.title.x + home.title.width / 2 - width / 2)).toBeLessThanOrEqual(1);
       expect(rowsIn(home.pinned, home.title)).toEqual(trimmed(nameMask("stacked")));
       for (const item of home.nav) expect(home.title.y).toBeGreaterThan(item.box.y + item.box.height);
-    });
+    },);
 
     it("has no name layout on other Sections", () => {
       expect(typesetSection(VIEWPORT, TEST_CONTENT, "/about/").nameLayout).toBeUndefined();
@@ -340,7 +340,7 @@ describe("Cell Typesetter", () => {
       const css = (file: string) => readFileSync(new URL(`../layouts/${file}`, import.meta.url), "utf8");
       const { gapRem, columnRem, gutterPx, lineHeight } = BODY_TEXT_CSS;
       expect(css("Base.astro")).toContain(`top: calc(var(--below-title, 45vh) + ${gapRem}rem)`);
-      expect(css("Section.astro")).toContain(`padding: 0 max(${gutterPx}px, calc((100% - ${columnRem}rem) / 2)) 64px`);
+      expect(css("Section.astro")).toContain(`padding: 0 max(${gutterPx}px, calc((100% - ${columnRem}rem) / 2)) 64px`,);
       expect(css("Section.astro")).toContain(`line-height: ${lineHeight};`);
     });
 
@@ -351,18 +351,18 @@ describe("Cell Typesetter", () => {
       expect(body.y + body.height).toBe(VIEWPORT.height);
       expect(boxInside(body, VIEWPORT)).toBe(true);
       for (const cell of layout.pinned) expect(boxContains(body, cell)).toBe(false);
-    });
+    },);
 
     it("is a centred column about 44rem (704px) wide on a wide screen", () => {
       // 8px cells: 704px is 88 cells.
-      const { body } = typesetSection({ width: 240, height: 110, cellPx: 8 }, TEST_CONTENT, "/about/");
+      const { body } = typesetSection({ width: 240, height: 110, cellPx: 8 }, TEST_CONTENT, "/about/",);
       expect(body.width).toBe(88);
       expect(body.x).toBe(76);
     });
 
     it("spans the screen less a 16px gutter on each side on a phone", () => {
       // A 390px phone at 2px cells: 195 cells, gutters of 8 cells.
-      const { body } = typesetSection({ width: 195, height: 422, cellPx: 2 }, TEST_CONTENT, "/projects/baja/");
+      const { body } = typesetSection({ width: 195, height: 422, cellPx: 2 }, TEST_CONTENT, "/projects/baja/",);
       expect(body.x).toBe(8);
       expect(body.width).toBe(179);
     });
@@ -414,7 +414,7 @@ describe("Cell Typesetter", () => {
     });
 
     it("is empty for an empty region", () => {
-      expect(bodyTextCondensate({ x: 0, y: 10, width: 50, height: 0 }, viewport, mulberry32(1))).toEqual([]);
+      expect(bodyTextCondensate({ x: 0, y: 10, width: 50, height: 0 }, viewport, mulberry32(1)),).toEqual([]);
     });
   });
 });

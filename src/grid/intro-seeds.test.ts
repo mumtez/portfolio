@@ -35,11 +35,11 @@ const grow = (box: Box, by: number): Box => ({
 function setup(layout: NameLayout) {
   const mask = nameMask(layout);
   const room = INTRO_SEEDS[layout].depth + SOUP_CLEARANCE + 20;
-  const engine = new LifeEngine({ width: mask.width + 2 * room, height: mask.height + 2 * room, margin: 4 });
+  const engine = new LifeEngine({ width: mask.width + 2 * room, height: mask.height + 2 * room, margin: 4, });
   const name: Box = { x: room, y: room, width: mask.width, height: mask.height };
-  const everywhere = grow({ x: 0, y: 0, width: engine.width, height: engine.height }, engine.margin);
+  const everywhere = grow({ x: 0, y: 0, width: engine.width, height: engine.height }, engine.margin,);
   // How the Grid should look once the seed has run: the name and nothing else.
-  const onlyName = new LifeEngine({ width: engine.width, height: engine.height, margin: engine.margin });
+  const onlyName = new LifeEngine({ width: engine.width, height: engine.height, margin: engine.margin, });
   onlyName.inject(mask.cells.map((c) => ({ x: c.x + name.x, y: c.y + name.y })));
   return { engine, name, everywhere, expected: (box: Box) => rowsIn(onlyName, box) };
 }
@@ -65,9 +65,9 @@ describe("Intro Seed pools", () => {
         });
 
         it(`seed ${i + 1} still becomes exactly the name with soup ${SOUP_CLEARANCE} cells outside its box`, () => {
-          for (const [density, s] of [[0.38, 1], [0.5, 2], [1, 3]] as const) {
+          for (const [density, s] of [[0.38, 1], [0.5, 2], [1, 3],] as const) {
             const { engine, name, everywhere, expected } = setup(layout);
-            engine.inject(introCells(seed, name, { area: everywhere, density, random: rng(s * 100 + i) }));
+            engine.inject(introCells(seed, name, { area: everywhere, density, random: rng(s * 100 + i) }),);
             for (let t = 0; t < depth; t++) engine.step();
             // The name with nothing touching it; the soup is still churning further out.
             const nameAndBorder = grow(name, 1);
@@ -82,9 +82,9 @@ describe("Intro Seed pools", () => {
     const { name, everywhere } = setup("one-line");
     const seed = INTRO_SEEDS["one-line"].seeds[0];
     const cells = new Set(
-      introCells(seed, name, { area: everywhere, density: 1, random: Math.random }).map((p) => `${p.x},${p.y}`),
+      introCells(seed, name, { area: everywhere, density: 1, random: Math.random }).map((p) => `${p.x},${p.y}`,),
     );
-    const seedBox: Box = { x: name.x + seed.dx, y: name.y + seed.dy, width: seed.rows[0].length, height: seed.rows.length };
+    const seedBox: Box = { x: name.x + seed.dx, y: name.y + seed.dy, width: seed.rows[0].length, height: seed.rows.length, };
     const ring = (by: number) => {
       const outer = grow(seedBox, by);
       const out: string[] = [];

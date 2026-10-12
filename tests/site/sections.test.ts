@@ -54,8 +54,8 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
   });
 
   it("marks Projects as current on a Deep Dive, as the Grid underlines it", () => {
-    const parents = [...doc.querySelectorAll('nav a[aria-current="true"]')].map((a) => a.getAttribute("href"));
-    expect(parents).toEqual(url.startsWith("/projects/") && url !== "/projects/" ? ["/projects/"] : []);
+    const parents = [...doc.querySelectorAll('nav a[aria-current="true"]')].map((a) => a.getAttribute("href"),);
+    expect(parents).toEqual(url.startsWith("/projects/") && url !== "/projects/" ? ["/projects/"] : [],);
   });
 
   it("gives screen readers a labelled nav, and a name for every link and button", () => {
@@ -90,11 +90,11 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
 
   it("embeds the Grid's cell content: every Section, with this one's heading as its h1", () => {
     const json = doc.querySelector("script#grid-content")?.textContent ?? "";
-    const content = JSON.parse(json) as { sections: { path: string; heading: string; nav?: string }[] };
+    const content = JSON.parse(json) as { sections: { path: string; heading: string; nav?: string }[]; };
     expect(content.sections.map((s) => s.path).sort()).toEqual([...SECTIONS].sort());
-    const navLinks = [...doc.querySelectorAll("nav > ul > li > a")].map((a) => [a.getAttribute("href"), text(a)]);
+    const navLinks = [...doc.querySelectorAll("nav > ul > li > a")].map((a) => [a.getAttribute("href"), text(a),]);
     expect(content.sections.filter((s) => s.nav).map((s) => [s.path, s.nav])).toEqual(navLinks);
-    expect(content.sections.find((s) => s.path === url)?.heading).toBe(text(doc.querySelector("h1")));
+    expect(content.sections.find((s) => s.path === url)?.heading).toBe(text(doc.querySelector("h1")),);
   });
 });
 
@@ -102,7 +102,7 @@ describe("Section content", () => {
   it("About covers Olin, a bio, languages and activities", () => {
     const main = builtPage("/about/").querySelector("main");
     const headings = [...(main?.querySelectorAll("h2") ?? [])].map(text);
-    expect(headings).toEqual(expect.arrayContaining(["Education", "About me", "Languages", "Activities"]));
+    expect(headings).toEqual(expect.arrayContaining(["Education", "About me", "Languages", "Activities"]),);
     expect(text(main)).toMatch(/Olin College of Engineering/);
     expect(text(main)).toMatch(/Electrical and Computer Engineering/);
     const items = [...(main?.querySelectorAll("li") ?? [])].map(text).join(" | ");
@@ -114,7 +114,7 @@ describe("Section content", () => {
   it("Experience covers Memorial Sloan Kettering and Olin IT, with bullet lists", () => {
     const main = builtPage("/experience/").querySelector("main");
     const headings = [...(main?.querySelectorAll("h2") ?? [])].map(text);
-    expect(headings).toEqual(["Memorial Sloan Kettering Cancer Center", "Olin College IT Department"]);
+    expect(headings).toEqual(["Memorial Sloan Kettering Cancer Center", "Olin College IT Department",]);
     expect(main?.querySelectorAll("ul li").length).toBeGreaterThanOrEqual(3);
   });
 
@@ -131,7 +131,7 @@ describe("Section content", () => {
     ]);
     const links = [...(main?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
     expect(links).toEqual(
-      expect.arrayContaining(["/projects/roborebels/", "/projects/baja/", "/projects/ftc-event-viewer/"]),
+      expect.arrayContaining(["/projects/roborebels/", "/projects/baja/", "/projects/ftc-event-viewer/",]),
     );
   });
 
@@ -150,7 +150,7 @@ describe("Section content", () => {
 
 describe("Deep Dive Body Text", () => {
   it.each(["roborebels", "baja", "ftc-event-viewer"])("%s renders its Markdown file's body", (id) => {
-    const markdown = readFileSync(new URL(`../../src/content/projects/${id}.md`, import.meta.url), "utf8");
+    const markdown = readFileSync(new URL(`../../src/content/projects/${id}.md`, import.meta.url), "utf8",);
     const body = markdown.replace(/^---[\s\S]*?\n---\n/, "");
     const firstParagraph = body
       .split(/\n\s*\n/)
@@ -160,15 +160,15 @@ describe("Deep Dive Body Text", () => {
     // Markdown renders straight quotes as curly ones.
     const straighten = (s: string) => s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
     const plain = firstParagraph!.replace(/[*_`]/g, "").replace(/\s+/g, " ");
-    expect(straighten(text(builtPage(`/projects/${id}/`).querySelector("main")))).toContain(plain);
-  });
+    expect(straighten(text(builtPage(`/projects/${id}/`).querySelector("main")))).toContain(plain,);
+  },);
 });
 
 describe("Deep Dive Frames", () => {
   it.each(["roborebels", "baja", "ftc-event-viewer"])("%s has Frame slots inside its Body Text", (id) => {
-    const frames = builtPage(`/projects/${id}/`).querySelectorAll("main .body-text figure.frame .frame-slot");
+    const frames = builtPage(`/projects/${id}/`).querySelectorAll("main .body-text figure.frame .frame-slot",);
     expect(frames.length).toBeGreaterThan(0);
-  });
+  },);
 
   it.each(["roborebels", "baja", "ftc-event-viewer"])("%s shows, for each missing photo or video, the file it wants", (id) => {
     for (const frame of builtPage(`/projects/${id}/`).querySelectorAll("figure.frame")) {
@@ -178,14 +178,14 @@ describe("Deep Dive Frames", () => {
         expect(media.getAttribute("src")).toMatch(new RegExp(`^/media/${id}/${slot}\\.`));
         expect(media.getAttribute("alt") ?? media.getAttribute("aria-label")).toBeTruthy();
       } else {
-        expect(text(frame.querySelector(".placeholder"))).toContain(`public/media/${id}/${slot}.jpg`);
+        expect(text(frame.querySelector(".placeholder"))).toContain(`public/media/${id}/${slot}.jpg`,);
       }
     }
-  });
+  },);
 
   it("places a Frame where its marker is in the Markdown", () => {
     const body = builtPage("/projects/roborebels/").querySelector(".body-text");
-    const order = [...(body?.children ?? [])].map((el) => el.getAttribute("data-frame") ?? el.tagName.toLowerCase());
+    const order = [...(body?.children ?? [])].map((el) => el.getAttribute("data-frame") ?? el.tagName.toLowerCase(),);
     expect(order.indexOf("robot")).toBeLessThan(order.indexOf("h2"));
     expect(order.indexOf("match")).toBeGreaterThan(order.indexOf("h2"));
   });
@@ -215,11 +215,11 @@ describe("Privacy", () => {
       const page = squash(html);
       for (const term of privateTerms) expect(page.includes(term), `${path} contains a private term`).toBe(false);
     }
-  });
+  },);
 });
 
 describe("Placeholders", () => {
-  const list = readFileSync(new URL("../../PLACEHOLDERS.md", import.meta.url), "utf8").replace(/\s+/g, " ");
+  const list = readFileSync(new URL("../../PLACEHOLDERS.md", import.meta.url), "utf8").replace(/\s+/g, " ",);
   const placeholders = allBuiltHtml().flatMap(({ path, html }) =>
     [...parseHTML(html).document.querySelectorAll(".placeholder")].map((el) => ({ path, el })),
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { boxContains } from "./cell-typesetter";
-import { BORDER_UNPIN_TICKS, GridDirector, TICK_MS, type GridDirectorOptions, type IntroMemory } from "./grid-director";
+import { BORDER_UNPIN_TICKS, GridDirector, TICK_MS, type GridDirectorOptions, type IntroMemory, } from "./grid-director";
 import { INTRO_SEEDS } from "./intro-seeds";
 import { CellKind } from "./life-engine";
 import { TEST_CONTENT } from "./test-support";
@@ -251,7 +251,7 @@ describe("Grid Director", () => {
       expect(d.phase).toBe("settled");
       expect(d.route).toBe(path);
       expect(nameIsPinned(d)).toBe(true);
-    });
+    },);
 
     it("reads a path without its trailing slash as the same Section", () => {
       expect(director({ route: "/projects/baja" }).route).toBe("/projects/baja/");
@@ -270,7 +270,7 @@ describe("Grid Director", () => {
       expect(ticks * TICK_MS).toBeLessThanOrEqual(600);
       expect(d.phase).toBe("settled");
       expect(d.route).toBe("/projects/");
-      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/projects/").layout.pinned.map((p) => `${p.x},${p.y}`)));
+      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/projects/").layout.pinned.map((p) => `${p.x},${p.y}`)),);
     });
 
     it("releases the old heading into Free Cells, so real Life tears it apart", () => {
@@ -341,7 +341,7 @@ describe("Grid Director", () => {
       const ticks = ticksToSettle(d);
       expect(ticks * TICK_MS).toBeLessThanOrEqual(600);
       expect(d.route).toBe("/contact/");
-      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)));
+      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),);
     });
 
     it("goes back to Home without replaying the Intro", () => {
@@ -367,7 +367,7 @@ describe("Grid Director", () => {
   describe("buttons", () => {
     /** Settled on About with no soup, so only the Section's own cells and their Fringe live. */
     const quiet = (options: Partial<GridDirectorOptions> = {}) => {
-      const d = director({ route: "/about/", introMemory: memory(true), random: () => 0.99, ...options });
+      const d = director({ route: "/about/", introMemory: memory(true), random: () => 0.99, ...options, });
       for (let t = 0; t < 10; t++) d.tick();
       return d;
     };
@@ -409,7 +409,7 @@ describe("Grid Director", () => {
       // Just before it pins again, most of the border has died: the decay shows.
       const { border } = contact(d);
       expect(borderPinned(d)).toBe(0);
-      expect(border.filter((p) => d.engine.isAlive(p.x, p.y)).length).toBeLessThan(border.length / 2);
+      expect(border.filter((p) => d.engine.isAlive(p.x, p.y)).length).toBeLessThan(border.length / 2,);
       d.tick();
       expect(borderPinned(d)).toBe(contact(d).border.length);
       expect(pinnedKeys(d)).toEqual(layoutKeys(d));
@@ -435,7 +435,7 @@ describe("Grid Director", () => {
       const d = quiet();
       d.hover(onContact(d));
       for (const item of d.layout.nav.filter((i) => i.path !== "/contact/")) {
-        expect(item.border.every((p) => d.engine.isPinned(p.x, p.y)), item.label).toBe(true);
+        expect(item.border.every((p) => d.engine.isPinned(p.x, p.y)), item.label,).toBe(true);
       }
     });
 
@@ -611,7 +611,7 @@ describe("Grid Director", () => {
       expect(condensed.some((k) => {
         const [x, y] = k.split(",").map(Number);
         return !d.engine.isAlive(x, y);
-      })).toBe(true);
+      }),).toBe(true);
     });
 
     it("still settles within the Transition's budget of about 600ms", () => {
@@ -629,7 +629,7 @@ describe("Grid Director", () => {
       expect(d.bodyTextReleased).toBe(false);
       ticksToSettle(d);
       expect(d.bodyTextReleased).toBe(true);
-      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)));
+      expect(pinnedKeys(d)).toEqual(new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),);
     });
   });
 

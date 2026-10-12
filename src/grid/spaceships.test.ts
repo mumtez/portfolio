@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LifeEngine, type Point } from "./life-engine";
-import { HEADINGS, launchFromEdge, maybeLaunch, spaceship, spaceshipAt, type SpaceshipKind } from "./spaceships";
+import { HEADINGS, launchFromEdge, maybeLaunch, spaceship, spaceshipAt, type SpaceshipKind, } from "./spaceships";
 import { allLive, inViewport, mulberry32, soup } from "./test-support";
 
 function centroid(points: Point[]): Point {
@@ -83,7 +83,7 @@ describe("maybeLaunch", () => {
 
   it.each(runs)("keeps a $width×$height Grid visibly active after 5 minutes (seed $seed)", ({ width, height, seed }) => {
     expect(lateNovelBirths(width, height, seed, true)).toBeGreaterThan(100);
-  });
+  },);
 
   it("is what keeps it active: without launches the same soup has settled", () => {
     expect(lateNovelBirths(150, 85, 1, false)).toBe(0);

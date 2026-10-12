@@ -15,7 +15,7 @@
  */
 import { countPageView } from "../lib/analytics";
 import { cellSize } from "./cell-size";
-import { navItemAt, toggleAt, type Box, type SectionLayout, type ToggleSpec } from "./cell-typesetter";
+import { navItemAt, toggleAt, type Box, type SectionLayout, type ToggleSpec, } from "./cell-typesetter";
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
 import { cellBoxCovering } from "./html-regions";
@@ -88,10 +88,10 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
   const root = document.documentElement.style;
   root.setProperty("--below-title", px(title.y + title.height));
   const togglesTop = Math.min(...layout.toggles.map((t) => t.box.y));
-  root.setProperty("--above-toggles", Number.isFinite(togglesTop) ? `${window.innerHeight - togglesTop * cellPx}px` : "0px");
+  root.setProperty("--above-toggles", Number.isFinite(togglesTop) ? `${window.innerHeight - togglesTop * cellPx}px` : "0px",);
   const place = (el: HTMLElement, box: Box) => {
     el.classList.add("on-grid");
-    Object.assign(el.style, { left: px(box.x), top: px(box.y), width: px(box.width), height: px(box.height) });
+    Object.assign(el.style, { left: px(box.x), top: px(box.y), width: px(box.width), height: px(box.height), });
   };
   for (const a of document.querySelectorAll<HTMLAnchorElement>("header nav > ul > li > a")) {
     const item = layout.nav.find((i) => i.path === sectionPath(a.pathname));
@@ -115,7 +115,7 @@ function unplaceHtml(): void {
 }
 
 /** Start the Grid over the page's Plain View. */
-export function startGrid({ canvas, content, palette, reducedMotion, toggles: initialToggles }: GridOptions): Grid {
+export function startGrid({ canvas, content, palette, reducedMotion, toggles: initialToggles, }: GridOptions): Grid {
   let toggles = initialToggles;
   const renderer = new GridRenderer(canvas, palette);
   let director: GridDirector;
@@ -201,7 +201,7 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(rebuild, 150);
-  }, { signal });
+  }, { signal },);
 
   /**
    * Run a Transition to the Section at `path` and swap its Plain View in. `push` adds a
@@ -247,8 +247,8 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
     e.preventDefault();
     // Push the Section's own URL (`/about` → `/about/`), keeping any `#` target.
     goTo(path, path + new URL(a.href).hash);
-  }, { signal });
-  window.addEventListener("popstate", () => goTo(sectionPath(window.location.pathname)), { signal });
+  }, { signal },);
+  window.addEventListener("popstate", () => goTo(sectionPath(window.location.pathname)), { signal, });
   // Fetch a Section's page as soon as its link is pointed at or focused.
   for (const type of ["pointerover", "focusin"] as const) {
     document.addEventListener(
@@ -279,7 +279,7 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
     director.input(cellAt(e));
     pressWasForIntro = before === "intro" || director.phase === "intro";
     if (pressWasForIntro) redraw();
-  }, { signal });
+  }, { signal },);
   for (const type of ["keydown", "wheel", "scroll"] as const) {
     window.addEventListener(
       type,
@@ -325,7 +325,7 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
   document.documentElement.addEventListener("pointerleave", endTrail, { passive: true, signal });
   window.addEventListener("pointermove", (e) => {
     document.body.style.cursor = director.canReplayAt(cellAt(e)) ? "pointer" : "";
-  }, { signal });
+  }, { signal },);
 
   // A button's border decays for a moment when the pointer moves onto it or it gets
   // keyboard focus. Which button is under the pointer comes from the Typesetter's hit
@@ -333,20 +333,20 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
   for (const type of ["pointermove", "pointerdown"] as const) {
     window.addEventListener(type, (e) => director.hover(cellAt(e)), { passive: true, signal });
   }
-  document.documentElement.addEventListener("pointerleave", () => director.hover(undefined), { passive: true, signal });
+  document.documentElement.addEventListener("pointerleave", () => director.hover(undefined), { passive: true, signal, });
   document.addEventListener("focusin", (e) => {
     if (e.target instanceof HTMLAnchorElement && e.target.matches(DRAWN_BUTTON)) director.focus(e.target.pathname);
     if (e.target instanceof HTMLButtonElement && e.target.matches(DRAWN_TOGGLE)) {
       director.focusToggle(e.target.dataset.toggle ?? "");
     }
-  }, { signal });
+  }, { signal },);
   // Buttons are links underneath, which Enter follows; Space presses them too, like a button.
   document.addEventListener("keydown", (e) => {
     if (e.key !== " " || e.repeat || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(DRAWN_BUTTON)) return;
     e.preventDefault();
     e.target.click();
-  }, { signal });
+  }, { signal },);
 
   window.addEventListener("click", (e) => {
     if (pressWasForIntro || director.phase === "intro") return;
@@ -356,7 +356,7 @@ export function startGrid({ canvas, content, palette, reducedMotion, toggles: in
     const engine = director.engine;
     if (engine.isPinned(at.x, at.y) || navItemAt(director.layout, at) || toggleAt(director.layout, at)) return;
     engine.inject(spaceshipAt("glider", at));
-  }, { signal });
+  }, { signal },);
 
   rebuild();
   ticker = startTicker(() => {

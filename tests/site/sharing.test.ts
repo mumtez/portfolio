@@ -69,7 +69,7 @@ describe.each(SECTIONS)("Section %s link preview", (url) => {
 
 describe("Resume", () => {
   const main = builtPage("/contact/").querySelector("main");
-  const link = [...(main?.querySelectorAll("a") ?? [])].find((a) => /\.pdf$/.test(a.getAttribute("href") ?? ""));
+  const link = [...(main?.querySelectorAll("a") ?? [])].find((a) => /\.pdf$/.test(a.getAttribute("href") ?? ""),);
 
   it("Contact links a resume PDF to download", () => {
     expect(link?.textContent).toMatch(/resume/i);

@@ -9,7 +9,7 @@ export function cellLine(from: Point, to: Point): Point[] {
   const out: Point[] = [];
   for (let k = 0; k <= steps; k++) {
     const f = steps === 0 ? 0 : k / steps;
-    out.push({ x: Math.round(from.x + (to.x - from.x) * f), y: Math.round(from.y + (to.y - from.y) * f) });
+    out.push({ x: Math.round(from.x + (to.x - from.x) * f), y: Math.round(from.y + (to.y - from.y) * f), });
   }
   return out;
 }

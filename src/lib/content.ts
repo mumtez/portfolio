@@ -42,7 +42,7 @@ export function deepDivePath(project: Project): string {
  * same entries the Plain View renders. Embedded in each page for the Grid script.
  */
 export async function getGridContent(): Promise<GridContent> {
-  const sections: GridSection[] = (await getSections()).map(({ path, nav, heading }) => ({ path, nav, heading }));
-  const deepDives = (await getDeepDives()).map((project) => ({ path: deepDivePath(project), heading: project.data.title }));
+  const sections: GridSection[] = (await getSections()).map(({ path, nav, heading }) => ({ path, nav, heading, }));
+  const deepDives = (await getDeepDives()).map((project) => ({ path: deepDivePath(project), heading: project.data.title, }));
   return { sections: [...sections, ...deepDives] };
 }

@@ -22,7 +22,7 @@ export interface Ticker {
 }
 
 /** Call `tick` at most once every `intervalMs` while the tab is visible. */
-export function startTicker(tick: () => void, intervalMs: number, host: TickerHost = window): Ticker {
+export function startTicker(tick: () => void, intervalMs: number, host: TickerHost = window,): Ticker {
   let frameId: number | undefined;
   let last = -Infinity;
   let restarting = false;

@@ -30,7 +30,7 @@ describe.each(SECTIONS)("the toggles on %s (built HTML)", (url) => {
     const drawn = button!.getAttribute("data-label") ?? "";
     expect(drawn).not.toBe("");
     expect(accessibleName.toLowerCase()).toContain(drawn.toLowerCase());
-  });
+  },);
 
   it("keeps them together in a labelled group, hidden until the script can make them work", () => {
     const group = toggle("theme")!.closest("[role='group']");
@@ -40,12 +40,12 @@ describe.each(SECTIONS)("the toggles on %s (built HTML)", (url) => {
   });
 
   it("sets the theme in the head before first paint", () => {
-    const scripts = [...doc.head.querySelectorAll("script:not([src]):not([type])")].map((s) => s.textContent?.trim());
+    const scripts = [...doc.head.querySelectorAll("script:not([src]):not([type])")].map((s) => s.textContent?.trim(),);
     expect(scripts).toContain(THEME_SCRIPT.trim());
   });
 
   it("offers both colour schemes", () => {
-    expect(doc.querySelector('meta[name="color-scheme"]')?.getAttribute("content")).toBe("light dark");
+    expect(doc.querySelector('meta[name="color-scheme"]')?.getAttribute("content")).toBe("light dark",);
   });
 
   it("styles both themes: following the system, and as chosen", () => {

@@ -12,13 +12,13 @@ export const THEME_KEY = "theme";
 export const SIMULATION_KEY = "simulation";
 
 /** The theme: a stored choice, or else the system's colour scheme. */
-export function resolveTheme(stored: string | null, { systemLight }: { systemLight: boolean }): Theme {
+export function resolveTheme(stored: string | null, { systemLight }: { systemLight: boolean },): Theme {
   if (stored === "light" || stored === "dark") return stored;
   return systemLight ? "light" : "dark";
 }
 
 /** Whether the simulation runs: a stored choice, or else on unless the system asks for reduced motion. */
-export function resolveSimulation(stored: string | null, { reducedMotion }: { reducedMotion: boolean }): boolean {
+export function resolveSimulation(stored: string | null, { reducedMotion }: { reducedMotion: boolean },): boolean {
   if (stored === "on" || stored === "off") return stored === "on";
   return !reducedMotion;
 }

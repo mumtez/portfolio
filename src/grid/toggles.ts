@@ -29,7 +29,7 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
   const systemLight = window.matchMedia("(prefers-color-scheme: light)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const themeButton = document.querySelector<HTMLButtonElement>('button[data-toggle="theme"]');
-  const simulationButton = document.querySelector<HTMLButtonElement>('button[data-toggle="simulation"]');
+  const simulationButton = document.querySelector<HTMLButtonElement>('button[data-toggle="simulation"]',);
   /** The toggles' wrapper, hidden in the built HTML since they do nothing without this script. */
   const group = themeButton?.closest<HTMLElement>("[hidden]");
 
@@ -62,7 +62,7 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
 
   function runSimulation(): void {
     if (simulation && !grid) {
-      grid = startGrid({ canvas, content, palette: PALETTES[theme], reducedMotion, toggles: specs() });
+      grid = startGrid({ canvas, content, palette: PALETTES[theme], reducedMotion, toggles: specs(), });
     } else if (!simulation && grid) {
       grid.stop();
       grid = undefined;
