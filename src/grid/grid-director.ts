@@ -16,7 +16,9 @@
  * Section's borders condense in with its lines and stay pinned when the lines are
  * released; on navigate the old Section's borders are released into Life with its other
  * pins. Shapes move as the Body Text scrolls, and the borders and walls follow, snapped
- * to cells.
+ * to cells. A Button Panel (a Project Entry, say) is a Button too: hovering its measured
+ * box or focusing its link (`focusPanel`) decays its border like a nav Button's, told
+ * apart by its link so the decay carries on as it scrolls.
  */
 import {
   boxContains,
@@ -69,8 +71,19 @@ export interface GridDirectorOptions {
 }
 
 const key = (p: Point) => `${p.x},${p.y}`;
-/** Buttons are told apart by key: a nav item's path, or `toggle:` and a toggle's id. */
+/**
+ * Buttons are told apart by key: a nav item's path, `toggle:` and a toggle's id, or
+ * `panel:` and a Button Panel's link.
+ */
 const toggleKey = (id: string) => `toggle:${id}`;
+const panelKey = (href: string) => `panel:${href}`;
+
+/** A Button Panel as it shows now: its hit region (the part of its box in sight) and its border Cells. */
+interface ButtonPanel {
+  readonly key: string;
+  readonly box: Box;
+  readonly border: readonly Point[];
+}
 
 export class GridDirector {
   private _layout!: SectionLayout;
@@ -105,6 +118,8 @@ export class GridDirector {
    */
   private borders: readonly Point[] = [];
   private walls: readonly Point[] = [];
+  /** The Panels among them that are Buttons, which decay on hover and focus like the nav's. */
+  private buttonPanels: readonly ButtonPanel[] = [];
   private readonly random: () => number;
 
   constructor(private readonly options: GridDirectorOptions) {
@@ -177,6 +192,17 @@ export class GridDirector {
     const clear = (p: Point) => !boxes.some((box) => boxContains(box, p));
     this.borders = border.filter(clear);
     this.walls = interior.filter(clear);
+    this.buttonPanels = this.shapes.flatMap((s) =>
+      s.kind === "panel" && s.panel === "button" && s.href !== undefined
+        ? [
+            {
+              key: panelKey(s.href),
+              box: s.clip ? intersection(s.box, s.clip) : s.box,
+              border: panelCells([s]).border.filter(clear),
+            },
+          ]
+        : [],
+    );
     return { border: this.borders };
   }
 
@@ -204,7 +230,10 @@ export class GridDirector {
   hover(at: Point | undefined): void {
     const toggle = at && toggleAt(this._layout, at);
     const button =
-      at && (navItemAt(this._layout, at)?.path ?? (toggle ? toggleKey(toggle.id) : undefined));
+      at &&
+      (navItemAt(this._layout, at)?.path ??
+        (toggle ? toggleKey(toggle.id) : undefined) ??
+        this.buttonPanels.find((b) => boxContains(b.box, at))?.key);
     if (button && button !== this.hovered) this.unpinBorder(button);
     this.hovered = button;
   }
@@ -212,6 +241,11 @@ export class GridDirector {
   /** The button for the Section at `path` has keyboard focus: its border decays as on hover. */
   focus(path: string): void {
     this.unpinBorder(sectionPath(path));
+  }
+
+  /** The Button Panel whose link is `href` (as its HTML has it) has keyboard focus: its border decays as on hover. */
+  focusPanel(href: string): void {
+    this.unpinBorder(panelKey(href));
   }
 
   /** The toggle `id` has keyboard focus: its border decays as on hover. */
@@ -331,11 +365,12 @@ export class GridDirector {
     this.setPinned(this.pinnedNow);
   }
 
-  /** Every button on screen, nav items and toggles, by key. */
+  /** Every button on screen, nav items, toggles and Button Panels, by key. */
   private buttons(): { key: string; border: readonly Point[] }[] {
     return [
       ...this._layout.nav.map((i) => ({ key: i.path, border: i.border })),
       ...this._layout.toggles.map((t) => ({ key: toggleKey(t.id), border: t.border })),
+      ...this.buttonPanels,
     ];
   }
 
@@ -422,6 +457,18 @@ export class GridDirector {
       height: viewport.height + 2 * margin,
     };
   }
+}
+
+/** The part of `a` inside `b` (empty when they don't meet). */
+function intersection(a: Box, b: Box): Box {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  return {
+    x,
+    y,
+    width: Math.max(0, Math.min(a.x + a.width, b.x + b.width) - x),
+    height: Math.max(0, Math.min(a.y + a.height, b.y + b.height) - y),
+  };
 }
 
 /** A shuffled copy of `items` (Fisher–Yates), so the next Section condenses in scattered cells. */

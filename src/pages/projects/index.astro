@@ -1,4 +1,10 @@
 ---
+/**
+ * Projects: one Entry per project. An Entry with a Deep Dive is a Button Panel, one real
+ * link wrapping the whole Entry, named by its title and "Read the story", with its tools
+ * and points as the link's description. Its own external link (if any) is on the Deep
+ * Dive instead, since links can't nest. An Entry without a Deep Dive is a solid Panel.
+ */
 import Section from "../../layouts/Section.astro";
 import { deepDivePath, getProjects, getSection } from "../../lib/content";
 
@@ -9,23 +15,78 @@ const projects = await getProjects();
 <Section {...section}>
   {projects.map((project) => {
     const { title, tools, points, link, deepDive } = project.data;
-    return (
-      <article>
-        <h2>{title}</h2>
-        <p class="meta">{tools}</p>
-        <ul>
+    const id = (part: string) => `project-${project.id}-${part}`;
+    const body = (
+      <>
+        <h2 id={id("title")}>{title}</h2>
+        <p class="meta" id={id("tools")}>
+          {tools}
+        </p>
+        <ul id={id("points")}>
           {points.map((point) => (
             <li>{point}</li>
           ))}
         </ul>
-        {(deepDive || link) && (
+      </>
+    );
+    return deepDive ? (
+      <article>
+        <a
+          class="entry"
+          data-panel="button"
+          href={deepDivePath(project)}
+          aria-labelledby={`${id("title")} ${id("more")}`}
+          aria-describedby={`${id("tools")} ${id("points")}`}
+        >
+          {body}
+          <p class="more" id={id("more")}>
+            Read the story
+          </p>
+        </a>
+      </article>
+    ) : (
+      <article data-panel="solid">
+        {body}
+        {link && (
           <p>
-            {deepDive && <a href={deepDivePath(project)}>Read the {title} story</a>}
-            {deepDive && link && " · "}
-            {link && <a href={link.href}>{link.label}</a>}
+            <a href={link.href}>{link.label}</a>
           </p>
         )}
       </article>
     );
   })}
 </Section>
+
+<style>
+  /* A Button Panel: the whole Entry is the link, set for reading rather than as link text. */
+  .entry {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+  .entry h2 {
+    color: var(--accent);
+  }
+  .more {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .more::after {
+    content: " →";
+    content: " →" / "";
+  }
+  .entry:hover .more,
+  .entry:focus-visible .more {
+    text-decoration: underline;
+  }
+  .entry:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  :global(html:not(.grid-on)) .entry {
+    transition: background-color 120ms ease-out;
+  }
+  :global(html:not(.grid-on)) .entry:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+</style>

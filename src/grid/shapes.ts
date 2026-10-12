@@ -26,6 +26,11 @@ export interface PanelShape {
    * border and interior Cells in here are drawn. The whole box when left out.
    */
   readonly clip?: Box;
+  /**
+   * A Button Panel's link, as its HTML has it: what tells it apart from the other Buttons,
+   * so its border keeps decaying as the Panel scrolls.
+   */
+  readonly href?: string;
 }
 
 export type Shape = LineShape | PanelShape;

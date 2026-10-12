@@ -12,7 +12,8 @@
  * its lines are released (ADR 0004) and the Panels' borders stay pinned round it, their
  * interiors walled off, following the text as it scrolls. Each nav item is
  * a button drawn in cells, whose border decays for a moment on hover or focus, and so are
- * the theme and simulation toggles in the corner. Soup is kept alive by spaceships flying
+ * the theme and simulation toggles in the corner and the Button Panels (a Project Entry):
+ * real links in the Body Text, hit-tested on their measured box. Soup is kept alive by spaceships flying
  * in from the edges, and stirred by the pointer. Switching the simulation off stops it all
  * and leaves the Plain View.
  */
@@ -49,6 +50,8 @@ const INTERACTIVE = "a, button, input, textarea, select, label, summary, [role='
 const LEAVE_MS = 240;
 /** The real links laid over buttons drawn in cells (placed by `placeHtml`). */
 const DRAWN_BUTTON = "a.on-grid";
+/** The real links that are Button Panels: Body Text inside a border drawn as a Button. */
+const BUTTON_PANEL = "a[data-panel='button']";
 /** The real toggle buttons laid over the toggles drawn in cells, each with `data-toggle` set to its id. */
 const DRAWN_TOGGLE = "button[data-toggle]";
 
@@ -384,7 +387,7 @@ export function startGrid({
 
   // A button's border decays for a moment when the pointer moves onto it or it gets
   // keyboard focus. Which button is under the pointer comes from the Typesetter's hit
-  // regions, which the real links are laid exactly over.
+  // regions, which the real links are laid exactly over, or a Button Panel's measured box.
   for (const type of ["pointermove", "pointerdown"] as const) {
     window.addEventListener(type, (e) => director.hover(cellAt(e)), { passive: true, signal });
   }
@@ -397,6 +400,15 @@ export function startGrid({
     (e) => {
       if (e.target instanceof HTMLAnchorElement && e.target.matches(DRAWN_BUTTON))
         director.focus(e.target.pathname);
+      if (e.target instanceof HTMLAnchorElement && e.target.matches(BUTTON_PANEL)) {
+        // Focus scrolls it into sight after this event: measure it there first.
+        const href = e.target.getAttribute("href") ?? "";
+        requestAnimationFrame(() => {
+          if (signal.aborted) return;
+          draw();
+          director.focusPanel(href);
+        });
+      }
       if (e.target instanceof HTMLButtonElement && e.target.matches(DRAWN_TOGGLE)) {
         director.focusToggle(e.target.dataset.toggle ?? "");
       }
@@ -417,7 +429,11 @@ export function startGrid({
         e.shiftKey
       )
         return;
-      if (!(e.target instanceof HTMLAnchorElement) || !e.target.matches(DRAWN_BUTTON)) return;
+      if (
+        !(e.target instanceof HTMLAnchorElement) ||
+        !e.target.matches(`${DRAWN_BUTTON}, ${BUTTON_PANEL}`)
+      )
+        return;
       e.preventDefault();
       e.target.click();
     },

@@ -13,7 +13,7 @@ test("Home to Projects to a Deep Dive and back runs Transitions", async ({ page 
 
   await expectTransition(page, async () => {
     await main(page)
-      .getByRole("link", { name: /Read the Baja .* story/ })
+      .getByRole("link", { name: "Baja fuel-level estimator Read the story" })
       .click();
     await expectSection(page, "/projects/baja/", "Baja fuel-level estimator");
   });

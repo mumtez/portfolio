@@ -71,7 +71,13 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
       const labelledBy = el.getAttribute("aria-labelledby");
       const name =
         el.getAttribute("aria-label") ??
-        (labelledBy ? text(doc.getElementById(labelledBy)) : null) ??
+        (labelledBy
+          ? labelledBy
+              .split(/\s+/)
+              .map((id) => text(doc.getElementById(id)))
+              .join(" ")
+              .trim()
+          : null) ??
         (text(el) || el.getAttribute("title") || "");
       expect(name, el.outerHTML).not.toBe("");
       expect(el.getAttribute("aria-hidden"), el.outerHTML).not.toBe("true");
@@ -251,6 +257,56 @@ describe("Panels", () => {
     const entries = builtPage("/experience/").querySelectorAll("main article");
     expect(entries.length).toBeGreaterThanOrEqual(2);
     for (const entry of entries) expect(entry.getAttribute("data-panel")).toBe("solid");
+  });
+
+  describe("Project Entries", () => {
+    const page = builtPage("/projects/");
+    const entries = [...page.querySelectorAll("main article")];
+    const byId = (id: string) => page.getElementById(id);
+    const named = (el: Element, attr: string) =>
+      (el.getAttribute(attr) ?? "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((id) => text(byId(id)))
+        .join(" ");
+
+    it.each([
+      ["FTC RoboRebels", "/projects/roborebels/"],
+      ["Baja fuel-level estimator", "/projects/baja/"],
+      ["FTC Event Viewer", "/projects/ftc-event-viewer/"],
+    ])("%s is one Button Panel link to its Deep Dive, named for it", (title, href) => {
+      const entry = entries.find((e) => text(e.querySelector("h2")) === title)!;
+      const links = entry.querySelectorAll("a");
+      expect(links).toHaveLength(1);
+      const [link] = links;
+      expect(link.getAttribute("href")).toBe(href);
+      expect(link.getAttribute("data-panel")).toBe("button");
+      // The whole Entry is inside the link.
+      expect(link.querySelector("h2")).not.toBeNull();
+      expect(link.querySelector("ul")).not.toBeNull();
+      expect(named(link, "aria-labelledby")).toBe(`${title} Read the story`);
+      // The tools and points are its description, so they're still heard.
+      expect(named(link, "aria-describedby")).toContain(text(entry.querySelector("ul li")));
+    });
+
+    it("an Entry with no Deep Dive is a solid Panel, its own link (if any) inside it", () => {
+      const others = entries.filter((e) => !e.querySelector("[data-panel='button']"));
+      expect(others.map((e) => text(e.querySelector("h2")))).toEqual([
+        "AI & Machine Learning",
+        "Homelab",
+        "Console & GPU Repair",
+      ]);
+      for (const entry of others) expect(entry.getAttribute("data-panel")).toBe("solid");
+      expect(others[0].querySelector("a")?.getAttribute("href")).toBe(
+        "https://github.com/mumtez/AIfeb14",
+      );
+    });
+
+    it("leaves the FTC Event Viewer's own site to its Deep Dive, which links it", () => {
+      const viewer = builtPage("/projects/ftc-event-viewer/").querySelector("main");
+      const hrefs = [...(viewer?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
+      expect(hrefs).toContain("https://ftc.aburustum.com");
+    });
   });
 
   it.each(SECTIONS)(

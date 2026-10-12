@@ -965,8 +965,75 @@ describe("Grid Director", () => {
       expect(pinnedIn(d, BOX).filter((k) => !boxContains(frame, pointOf(k)))).toEqual([]);
       expect(new Set(pinnedIn(d, frame))).toEqual(new Set(edge(frame)));
     });
+
+    describe("Button Panels (a Project Entry, a Contact link)", () => {
+      const OTHER = { ...BOX, x: BOX.x + 40 };
+      const button = (href: string, box = BOX): PanelShape => ({ ...panel("button", box), href });
+      const projects = () => {
+        const d = settledAt("/projects/");
+        d.setShapes([button("/projects/baja/"), button("/projects/roborebels/", OTHER)]);
+        return d;
+      };
+      const inside = (box: Box) => ({ x: box.x + 5, y: box.y + 5 });
+
+      it("release the border of the one under the pointer, leaving the others pinned", () => {
+        const d = projects();
+        expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+        d.hover(inside(BOX));
+        expect(pinnedIn(d, BOX)).toEqual([]);
+        for (const k of edge(BOX)) expect(d.engine.isAlive(...xy(k)), k).toBe(true);
+        expect(new Set(pinnedIn(d, OTHER))).toEqual(new Set(edge(OTHER)));
+        expect(nav(d).every((p) => d.engine.isPinned(p.x, p.y))).toBe(true);
+      });
+
+      it("pin it again a few ticks later, even if it scrolled meanwhile", () => {
+        const d = projects();
+        d.hover(inside(BOX));
+        d.tick();
+        const moved = { ...BOX, y: BOX.y - 3 };
+        d.setShapes([button("/projects/baja/", moved), button("/projects/roborebels/", OTHER)]);
+        expect(pinnedIn(d, moved)).toEqual([]);
+        for (let t = 2; t < BORDER_UNPIN_TICKS; t++) {
+          d.tick();
+          expect(pinnedIn(d, moved)).toEqual([]);
+        }
+        d.tick();
+        expect(new Set(pinnedIn(d, moved))).toEqual(new Set(edge(moved)));
+      });
+
+      it("hit-test on the part of the box in sight", () => {
+        const d = settledAt("/projects/");
+        const clip = { x: 0, y: BOX.y + 4, width: VIEWPORT.width, height: 40 };
+        d.setShapes([{ ...button("/projects/baja/"), clip }]);
+        d.hover({ x: BOX.x + 5, y: BOX.y + 1 });
+        expect(pinnedIn(d, BOX).length).toBeGreaterThan(0);
+        d.hover({ x: BOX.x + 5, y: clip.y + 1 });
+        expect(pinnedIn(d, BOX)).toEqual([]);
+      });
+
+      it("release the border of the one with keyboard focus, by its link", () => {
+        const d = projects();
+        d.focusPanel("/projects/roborebels/");
+        expect(pinnedIn(d, OTHER)).toEqual([]);
+        expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+        for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+        expect(new Set(pinnedIn(d, OTHER))).toEqual(new Set(edge(OTHER)));
+      });
+
+      it("leave solid Panels alone, whatever the pointer does", () => {
+        const d = settledAt("/experience/");
+        d.setShapes([panel("solid")]);
+        d.hover(inside(BOX));
+        expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+      });
+    });
   });
 });
+
+/** Every nav Button's border Cells. */
+function nav(d: GridDirector): { x: number; y: number }[] {
+  return d.layout.nav.flatMap((i) => i.border);
+}
 
 /** An "x,y" key as a point, and as arguments. */
 function pointOf(k: string): { x: number; y: number } {
