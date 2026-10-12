@@ -4,6 +4,7 @@ order: 1
 tools: Linear slides, arms, flywheel auto-targeting
 summary: Team captain of FIRST Tech Challenge Team 14450 RoboRebels, 2022–2026.
 points:
+  - Competed at the FIRST World Championship in Houston in the 2025–2026 season
   - Led the team to win the international 2025 Mexico Premier Event as the 1st seed (6-0)
   - Designed, built and programmed 3 robots with linear slide, arm and flywheel auto-targeting systems
   - Two-time NJ State Championship finalist; won 2 Innovate and 2 Control Awards
