@@ -288,11 +288,14 @@ describe("Grid Director", () => {
       );
     });
 
-    it("releases the old heading into Free Cells, so real Life tears it apart", () => {
-      const d = settledAt("/about/");
+    it("releases Home's name into Free Cells, so real Life tears it apart", () => {
+      const d = settledAt("/");
       const next = settledAt("/projects/").layout;
       const stays = new Set(next.pinned.map((p) => `${p.x},${p.y}`));
-      const released = d.layout.pinned.filter((p) => !stays.has(`${p.x},${p.y}`));
+      // Name cells where the next Body Text condenses may stay pinned; the rest go free.
+      const released = d.layout.pinned.filter(
+        (p) => !stays.has(`${p.x},${p.y}`) && !boxContains(next.body, p),
+      );
       expect(released.length).toBeGreaterThan(0);
 
       d.navigate("/projects/");
@@ -302,11 +305,11 @@ describe("Grid Director", () => {
       }
     });
 
-    it("pins the next heading in as the Transition runs, not before", () => {
+    it("pins Home's name in as the Transition runs, not before", () => {
       const d = settledAt("/about/");
       const before = pinnedKeys(d);
-      const heading = settledAt("/projects/").layout.title;
-      // Cells the two headings share stay pinned throughout; count only the arriving ones.
+      const heading = settledAt("/").layout.title;
+      // Cells already pinned (the nav) stay pinned throughout; count only the arriving ones.
       const headingPinned = () =>
         [...pinnedKeys(d)].filter((k) => {
           const [x, y] = k.split(",").map(Number);
@@ -318,7 +321,7 @@ describe("Grid Director", () => {
           return inHeading && !before.has(k);
         }).length;
 
-      d.navigate("/projects/");
+      d.navigate("/");
       expect(headingPinned()).toBe(0);
       d.tick();
       expect(headingPinned()).toBeGreaterThan(0);

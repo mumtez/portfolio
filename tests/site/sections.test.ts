@@ -31,26 +31,29 @@ function readPrivateTerms(): string[] {
 
 describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) => {
   const doc = builtPage(url);
+  const deepDive = url.startsWith("/projects/") && url !== "/projects/";
 
   it("has exactly one h1", () => {
     expect(doc.querySelectorAll("h1")).toHaveLength(1);
     expect(text(doc.querySelector("h1"))).not.toBe("");
   });
 
-  it("has a nav linking every Section", () => {
-    const nav = doc.querySelector("nav");
-    const hrefs = [...(nav?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
-    expect(hrefs.sort()).toEqual([...SECTIONS].sort());
+  it("has a nav of exactly the five top-level Sections, in order (Deep Dives are reached from Projects)", () => {
+    const hrefs = [...doc.querySelectorAll("nav a")].map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual(["/", "/about/", "/experience/", "/projects/", "/contact/"]);
   });
 
-  it("lists the top-level Sections in nav order", () => {
-    const top = [...doc.querySelectorAll("nav > ul > li > a")].map((a) => a.getAttribute("href"));
-    expect(top).toEqual(["/", "/about/", "/experience/", "/projects/", "/contact/"]);
-  });
+  if (url !== "/") {
+    it(`keeps its h1 for screen readers, ${deepDive ? "visible at the top of its Body Text" : "visually hidden (the underlined nav Button says where you are)"}`, () => {
+      const h1 = doc.querySelector("main h1");
+      expect(h1?.classList.contains("visually-hidden")).toBe(!deepDive);
+      expect(h1?.parentElement?.firstElementChild).toBe(h1);
+    });
+  }
 
-  it("marks its own nav link as the current page", () => {
+  it("marks its own nav link as the current page (a Deep Dive has none)", () => {
     const current = doc.querySelectorAll('nav a[aria-current="page"]');
-    expect([...current].map((a) => a.getAttribute("href"))).toEqual([url]);
+    expect([...current].map((a) => a.getAttribute("href"))).toEqual(deepDive ? [] : [url]);
   });
 
   it("marks Projects as current on a Deep Dive, as the Grid underlines it", () => {

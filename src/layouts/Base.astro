@@ -128,10 +128,10 @@ const themeCss = `
   }
 
   /*
-   * Grid on: headings and the nav are drawn in Pinned Cells. The real nav links sit
-   * transparently over their cells (placed by the Grid script), each h1 stays in the
-   * accessibility tree but out of sight, and the Section's content scrolls in its own
-   * box below the pinned title, over the live Grid.
+   * Grid on: Home's name and the nav are drawn in Pinned Cells. The real nav links sit
+   * transparently over their cells (placed by the Grid script), and the Section's
+   * content scrolls in its own box below the nav (on Home, below the name), over the
+   * live Grid.
    */
   html.grid-on #grid {
     display: block;
@@ -161,9 +161,9 @@ const themeCss = `
     background: transparent;
     color: transparent;
   }
-  /* Deep Dive links aren't drawn in cells; they show like a skip link when focused. */
-  html.grid-on header nav ul ul a,
-  html.grid-on main h1 {
+  /* Home's name is drawn in cells, so its h1 is hidden like a top-level Section's. */
+  .visually-hidden,
+  html.grid-on main.home h1 {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -171,18 +171,6 @@ const themeCss = `
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-  html.grid-on header nav ul ul a:focus {
-    position: fixed;
-    left: 8px;
-    bottom: 8px;
-    width: auto;
-    height: auto;
-    margin: 0;
-    padding: 6px 10px;
-    clip-path: none;
-    background: var(--bg);
-    outline: 2px solid var(--accent);
   }
   html.grid-on main {
     position: fixed;

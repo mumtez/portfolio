@@ -341,32 +341,24 @@ describe("Cell Typesetter", () => {
     });
   });
 
-  describe("a Section's heading", () => {
-    it("is drawn in Pinned Cells below the nav, centred", () => {
-      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/experience/");
-      const { title } = layout;
-      expect(rowsIn(layout.pinned, title)).toEqual(trimmed(textMask("Experience")));
-      expect(Math.abs(title.x + title.width / 2 - VIEWPORT.width / 2)).toBeLessThanOrEqual(1);
-      for (const item of layout.nav) expect(title.y).toBeGreaterThan(item.box.y + item.box.height);
-    });
+  describe("no Section but Home draws a heading", () => {
+    const OTHERS = TEST_CONTENT.sections.map((s) => s.path).filter((p) => p !== "/");
 
-    it("pins nothing but the heading and the nav", () => {
-      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/experience/");
-      const regions = [layout.title, ...layout.nav.map((i) => i.box)];
+    it.each(OTHERS)("pins nothing but the nav on %s", (path) => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, path);
+      const navCells = layout.nav.map((i) => i.box);
       for (const cell of layout.pinned)
-        expect(regions.some((r) => boxContains(r, cell))).toBe(true);
+        expect(navCells.some((r) => boxContains(r, cell))).toBe(true);
     });
 
-    it("wraps a long heading onto more lines inside the viewport", () => {
-      const viewport = { width: 120, height: 100 };
-      const layout = typesetSection(viewport, TEST_CONTENT, "/projects/baja/");
-      expect(boxInside(layout.title, viewport)).toBe(true);
-      expect(layout.title.height).toBeGreaterThan(textMask("X").height);
-      const cells = layout.pinned.filter((c) => boxContains(layout.title, c));
-      expect(cells.length).toBe(textMask("Bajafuel-levelestimator").cells.length);
+    it.each(OTHERS)("starts the Body Text directly below the nav on %s", (path) => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, path);
+      const navBottom = Math.max(...layout.nav.map((i) => i.box.y + i.box.height));
+      expect(layout.title.height).toBe(0);
+      expect(layout.title.y).toBe(navBottom);
     });
 
-    it("has no heading at a path the Grid doesn't know, only the nav", () => {
+    it("has only the nav at a path the Grid doesn't know", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/nowhere/");
       expect(layout.title.height).toBe(0);
       expect(layout.nav.some((i) => i.current)).toBe(false);
