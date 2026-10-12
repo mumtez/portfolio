@@ -1,23 +1,25 @@
 ---
-/** Marks content still waiting for Andrew's own words or media. Every one is listed in PLACEHOLDERS.md. */
+/**
+ * Marks content still waiting for Andrew's own words or media. Every one is listed in
+ * PLACEHOLDERS.md. It's a dashed Panel, unless it fills one already (a Frame waiting for
+ * its media, whose slot is then the dashed Panel).
+ */
 interface Props {
   /** What's missing. */
   note: string;
+  /** False when it fills a Panel that's already marked. */
+  panel?: boolean;
 }
 
-const { note } = Astro.props;
+const { note, panel = true } = Astro.props;
 ---
 
-<p class="placeholder">
+<p class="placeholder" data-panel={panel ? "dashed" : undefined}>
   <strong>Placeholder:</strong> {note}
 </p>
 
 <style>
   .placeholder {
-    padding: 8px 12px;
-    border: 2px dashed currentColor;
-    border-radius: 6px;
     font-style: italic;
-    opacity: 0.85;
   }
 </style>

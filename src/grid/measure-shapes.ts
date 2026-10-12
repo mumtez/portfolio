@@ -8,9 +8,9 @@ import type { Shape } from "./shapes";
 
 /**
  * Every rendered line of text in `main` that shows within `within` (cells), as a line
- * shape. Each text node's client rects are its line fragments; fragments of one line
- * (split by a link, say) are joined. Text hidden from sight (a visually hidden heading)
- * is left out.
+ * shape, and every Panel, as a Panel shape. Each text node's client rects are its line
+ * fragments; fragments of one line (split by a link, say) are joined. Text hidden from
+ * sight (a visually hidden heading) is left out.
  */
 export function measureShapes(main: Element, cellPx: number, within: Box): Shape[] {
   const hidden = new Map<Element, boolean>();
@@ -35,7 +35,44 @@ export function measureShapes(main: Element, cellPx: number, within: Box): Shape
       if (box) fragments.push(box);
     }
   }
-  return joinLines(fragments).map((box) => ({ kind: "line", box }));
+  const lineShapes: Shape[] = joinLines(fragments).map((box) => ({ kind: "line", box }));
+  return [...lineShapes, ...measurePanels(main, cellPx, within, isHidden)];
+}
+
+/**
+ * Every Panel in `main` (an element marked `data-panel` with its kind) that shows within
+ * `within`, as a Panel shape: its box snapped to the nearest cell edges, so its border
+ * Cells lie along its HTML box's edge, at most half a cell off (its padding hides that),
+ * and clipped to what shows.
+ */
+function measurePanels(
+  main: Element,
+  cellPx: number,
+  within: Box,
+  isHidden: (el: Element) => boolean,
+): Shape[] {
+  const shapes: Shape[] = [];
+  for (const el of main.querySelectorAll<HTMLElement>("[data-panel]")) {
+    const panel = el.dataset.panel;
+    if (panel !== "solid" && panel !== "dashed" && panel !== "button") continue;
+    if (isHidden(el)) continue;
+    const r = el.getBoundingClientRect();
+    const x = Math.round(r.left / cellPx);
+    const y = Math.round(r.top / cellPx);
+    const box = {
+      x,
+      y,
+      width: Math.round(r.right / cellPx) - x,
+      height: Math.round(r.bottom / cellPx) - y,
+    };
+    if (box.width < 2 || box.height < 2 || !overlapping(box, within)) continue;
+    shapes.push({ kind: "panel", panel, box, clip: within });
+  }
+  return shapes;
+}
+
+function overlapping(a: Box, b: Box): boolean {
+  return overlap(a.x, a.width, b.x, b.width) > 0 && overlap(a.y, a.height, b.y, b.height) > 0;
 }
 
 /** Join fragments on the same line (overlapping rows, at most a cell apart) into one box each. */

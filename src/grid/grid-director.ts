@@ -10,8 +10,13 @@
  * of Cells over the ticks left; the last tick releases them into Life as the HTML fades
  * in. (Paused is the Ticker's job, and Off is the Plain View with no Grid at all.)
  *
- * Frames are walls in the Life Engine. Their media are real HTML that scrolls with the
- * Body Text, so the page measures them and hands them over with `setFrames`.
+ * Panels (Entries, Frames, Placeholders) are shapes too: once settled, a Panel's border
+ * is pinned (every other cell of it for a dashed Panel) and its interior is walls in the
+ * Life Engine, so no Cell lives behind its text or media. In a Transition the next
+ * Section's borders condense in with its lines and stay pinned when the lines are
+ * released; on navigate the old Section's borders are released into Life with its other
+ * pins. Shapes move as the Body Text scrolls, and the borders and walls follow, snapped
+ * to cells.
  */
 import {
   boxContains,
@@ -26,7 +31,7 @@ import {
 import { INTRO_SEEDS, introCells, seedDensity, soupCells, type IntroSeed } from "./intro-seeds";
 import { LifeEngine, type Point } from "./life-engine";
 import { sectionPath, type GridContent } from "./routes";
-import { lineInk, lines, type Shape } from "./shapes";
+import { lineInk, lines, panelCells, type Shape } from "./shapes";
 
 /** One generation every this many milliseconds, during the Intro and after it. */
 export const TICK_MS = 120;
@@ -94,7 +99,11 @@ export class GridDirector {
   private readonly unpinnedBorders = new Map<string, number>();
   /** The button under the pointer, so moving within it doesn't start its border over. */
   private hovered: string | undefined;
-  /** Wall Cells for the Frames on screen. */
+  /**
+   * The Panels of the Section whose HTML is in the page: their border Cells, pinned once
+   * settled, and their interiors' Cells, walled off once settled.
+   */
+  private borders: readonly Point[] = [];
   private walls: readonly Point[] = [];
   private readonly random: () => number;
 
@@ -134,28 +143,41 @@ export class GridDirector {
     return this._phase !== "transition";
   }
 
-  /** Wall off the Frames on screen (boxes in viewport cells), replacing any before. */
-  setFrames(frames: readonly Box[]): void {
-    this.walls = frames.flatMap(boxCells);
-    this._engine.setWalls(this.walls);
-  }
-
   /**
    * The Body Text's shapes where they are now (in viewport cells), measured from the
    * Section whose HTML is in the page, replacing any before. Called once a Transition's
    * HTML has landed, and again whenever the text moves (scroll, resize). Mid-Transition,
-   * the lines condense in over the ticks still to come; the last of the Section's shapes
-   * are what dissolve when the next Transition leaves it.
+   * the lines and Panel borders condense in over the ticks still to come; once settled,
+   * the borders and walls are re-pinned where the Panels are now. The last of the
+   * Section's shapes are what dissolve when the next Transition leaves it.
    */
   setShapes(shapes: readonly Shape[]): void {
     this.shapes = shapes;
+    const { border } = this.placePanels();
+    if (this._phase === "settled") {
+      this.setPinned(this.pinnedNow);
+      this._engine.setWalls(this.walls);
+    }
     if (this._phase !== "transition") return;
     this.textFrom ??= this.transitionTick;
     this.arrivingText = shuffle(
-      lines(shapes).flatMap((line) => lineInk(line.box, this.random)),
+      [...lines(shapes).flatMap((line) => lineInk(line.box, this.random)), ...border],
       this.random,
     );
     this.pinArriving(this.transitionTick);
+  }
+
+  /**
+   * Where the Panels' borders and walls go: everywhere their shapes say, but under the
+   * nav and toggles, which the text can scroll beneath. Buttons stay drawn whole.
+   */
+  private placePanels(): { border: readonly Point[] } {
+    const { border, interior } = panelCells(this.shapes);
+    const boxes = [...this._layout.nav, ...this._layout.toggles].map((b) => b.box);
+    const clear = (p: Point) => !boxes.some((box) => boxContains(box, p));
+    this.borders = border.filter(clear);
+    this.walls = interior.filter(clear);
+    return { border: this.borders };
   }
 
   /** Advance one generation. */
@@ -205,8 +227,10 @@ export class GridDirector {
     this.toggles = toggles;
     const before = new Set(this._layout.pinned.map(key));
     this._layout = this.typeset(this._route);
+    this.placePanels();
     // The Intro pins the layout as it is when the name forms.
     if (this._phase === "intro") return;
+    if (this._phase === "settled") this._engine.setWalls(this.walls);
     const after = new Set(this._layout.pinned.map(key));
     const stays = (p: Point) => after.has(key(p));
     const added = this._layout.pinned.filter((p) => !before.has(key(p)));
@@ -237,8 +261,7 @@ export class GridDirector {
 
     this._route = route;
     this._layout = this.typeset(route);
-    // Its Frames and shapes come with its HTML; the page sets them once that's in.
-    this.setFrames([]);
+    // Its shapes come with its HTML; the page sets them once that's in.
     this.dissolveText();
     const target = this._layout.pinned;
     const next = new Set(target.map(key));
@@ -256,13 +279,18 @@ export class GridDirector {
 
   /**
    * The Section being left: its lines of Body Text appear as Free Cells where its text
-   * was, for Life to tear apart as its HTML fades out. A Section still arriving has no
-   * text showing; whatever of it had condensed is released with its other pins.
+   * was, and its Panels' walls go and their borders are released with its other pins,
+   * for Life to tear apart as its HTML fades out. A Section still arriving has no text
+   * showing; whatever of it had condensed is released with its other pins.
    */
   private dissolveText(): void {
+    // The walls go first: Cells can't be brought to life in a wall.
+    this.walls = [];
+    this._engine.setWalls([]);
     if (this._phase === "settled")
       this._engine.inject(lines(this.shapes).flatMap((line) => lineInk(line.box, this.random)));
     this.shapes = [];
+    this.borders = [];
     this.arrivingText = [];
     this.textFrom = undefined;
   }
@@ -348,20 +376,28 @@ export class GridDirector {
     this.pinLayout();
   }
 
-  /** Pin exactly the current layout and settle. */
+  /**
+   * Settle: pin exactly the current layout and its Panels' borders, and wall off the
+   * Panels' interiors.
+   */
   private pinLayout(): void {
+    this._phase = "settled";
     this.setPinned(this._layout.pinned);
+    this._engine.setWalls(this.walls);
     this.ticksUntilName = 0;
     this.kept = [];
     this.arriving = [];
     this.arrivingText = [];
     this.textFrom = undefined;
-    this._phase = "settled";
   }
 
-  /** Pin `points`, less the borders of buttons that are decaying for now. */
-  private setPinned(points: readonly Point[]): void {
-    this.pinnedNow = points;
+  /**
+   * Pin `layoutPoints`, and once settled the Panels' borders, less the borders of buttons
+   * that are decaying for now.
+   */
+  private setPinned(layoutPoints: readonly Point[]): void {
+    this.pinnedNow = layoutPoints;
+    const points = this._phase === "settled" ? [...layoutPoints, ...this.borders] : layoutPoints;
     const decaying = new Set(
       this.buttons()
         .filter((b) => this.unpinnedBorders.has(b.key))
@@ -395,13 +431,5 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
     const j = Math.floor(random() * (i + 1));
     [out[i], out[j]] = [out[j], out[i]];
   }
-  return out;
-}
-
-/** Every Cell in a box. */
-function boxCells({ x, y, width, height }: Box): Point[] {
-  const out: Point[] = [];
-  for (let dy = 0; dy < height; dy++)
-    for (let dx = 0; dx < width; dx++) out.push({ x: x + dx, y: y + dy });
   return out;
 }

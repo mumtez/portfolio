@@ -93,6 +93,32 @@ const themeCss = `
     display: none;
   }
 
+  /*
+   * Panels: blocks of Body Text inside a border. With the Grid on, the border is drawn in
+   * Pinned Cells, snapped to the cell grid, so the padding is wide enough (over one and a
+   * half cells) to keep the text clear of it. In Plain View it's a thin line in the
+   * theme's pinned green, dashed for a Placeholder.
+   */
+  [data-panel] {
+    box-sizing: border-box;
+    margin: 1.5em 0;
+    padding: 16px 20px;
+    border: 1px solid transparent;
+  }
+  [data-panel] > :first-child {
+    margin-top: 0;
+  }
+  [data-panel] > :last-child {
+    margin-bottom: 0;
+  }
+  html:not(.grid-on) [data-panel] {
+    border-color: var(--accent);
+    border-radius: 4px;
+  }
+  html:not(.grid-on) [data-panel="dashed"] {
+    border-style: dashed;
+  }
+
   .toggles {
     display: flex;
   }

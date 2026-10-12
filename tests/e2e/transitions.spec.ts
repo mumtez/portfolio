@@ -77,10 +77,10 @@ test("the old Section's HTML fades out, and the next one is released in about 80
  * the Section, and the first line on screen of every paragraph is one of them.
  */
 async function expectLinesOverText(page: Page): Promise<void> {
-  const { cellPx, shapes } = await measured(page);
+  const { cellPx, shapes: all } = await measured(page);
+  const shapes = all.filter((s) => s.kind === "line");
   expect(shapes.length).toBeGreaterThan(0);
-  for (const { kind, box } of shapes) {
-    expect(kind).toBe("line");
+  for (const { box } of shapes) {
     const inMain = await page.evaluate(
       ([x, y]) => !!document.elementFromPoint(x, y)?.closest("main"),
       [(box.x + box.width / 2) * cellPx, (box.y + box.height / 2) * cellPx],

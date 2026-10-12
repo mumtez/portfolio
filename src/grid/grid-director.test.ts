@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxContains } from "./cell-typesetter";
+import { boxContains, type Box } from "./cell-typesetter";
 import {
   BORDER_UNPIN_TICKS,
   GridDirector,
@@ -10,7 +10,7 @@ import {
 } from "./grid-director";
 import { INTRO_SEEDS } from "./intro-seeds";
 import { CellKind } from "./life-engine";
-import type { Shape } from "./shapes";
+import type { PanelKind, PanelShape, Shape } from "./shapes";
 import { mulberry32, TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
@@ -774,35 +774,206 @@ describe("Grid Director", () => {
     });
   });
 
-  describe("Frames", () => {
-    const settledAt = (route: string) => director({ route, introMemory: memory(true) });
-    const frame = { x: 60, y: 40, width: 30, height: 12 };
+  describe("Panels", () => {
+    const settledAt = (route: string) =>
+      director({ route, introMemory: memory(true), random: mulberry32(11) });
+    const BOX = { x: 60, y: 40, width: 30, height: 12 };
+    const panel = (kind: PanelKind, box = BOX): PanelShape => ({ kind: "panel", panel: kind, box });
+    /** The Cells on the edge of `box`, as "x,y" keys, going round it. */
+    const edge = ({ x, y, width, height }: Box): string[] => {
+      const out: string[] = [];
+      for (let dx = 0; dx < width; dx++) out.push(`${x + dx},${y}`);
+      for (let dy = 1; dy < height; dy++) out.push(`${x + width - 1},${y + dy}`);
+      for (let dx = width - 2; dx >= 0; dx--) out.push(`${x + dx},${y + height - 1}`);
+      for (let dy = height - 2; dy > 0; dy--) out.push(`${x},${y + dy}`);
+      return out;
+    };
+    const pinnedIn = (d: GridDirector, box: Box) =>
+      [...pinnedKeys(d)].filter((k) => {
+        const [x, y] = k.split(",").map(Number);
+        return boxContains(box, { x, y });
+      });
+    const interiorOf = ({ x, y, width, height }: Box): Box => ({
+      x: x + 1,
+      y: y + 1,
+      width: width - 2,
+      height: height - 2,
+    });
+    const allWalls = (d: GridDirector, box: Box) => {
+      for (let y = box.y; y < box.y + box.height; y++)
+        for (let x = box.x; x < box.x + box.width; x++)
+          if (d.engine.kindAt(x, y) !== CellKind.Wall) return false;
+      return true;
+    };
+    const noWalls = (d: GridDirector, box: Box) => {
+      for (let y = box.y; y < box.y + box.height; y++)
+        for (let x = box.x; x < box.x + box.width; x++)
+          if (d.engine.kindAt(x, y) === CellKind.Wall) return false;
+      return true;
+    };
 
-    it("wall off their region: no Cell lives there, whatever flies in", () => {
+    it("pin a solid Panel's border along its box's edge and wall off its interior", () => {
+      const d = settledAt("/experience/");
+      d.setShapes([panel("solid")]);
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+      for (let t = 0; t < 30; t++) d.tick();
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+    });
+
+    it("pin every other cell of a dashed Panel's border, going round it", () => {
       const d = settledAt("/projects/baja/");
-      d.setFrames([frame]);
+      d.setShapes([panel("dashed")]);
+      const round = edge(BOX);
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(round.filter((_, i) => i % 2 === 0)));
+      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+    });
+
+    it("keep their interior clear, like a Frame: no Cell lives there, whatever flies in", () => {
+      const d = settledAt("/projects/baja/");
+      d.setShapes([panel("solid")]);
+      const inside = interiorOf(BOX);
       for (let t = 0; t < 40; t++) {
         d.tick();
-        for (let y = frame.y; y < frame.y + frame.height; y++) {
-          for (let x = frame.x; x < frame.x + frame.width; x++)
+        for (let y = inside.y; y < inside.y + inside.height; y++)
+          for (let x = inside.x; x < inside.x + inside.width; x++)
             expect(d.engine.isAlive(x, y)).toBe(false);
-        }
       }
     });
 
-    it("move with their media: a new set replaces the old", () => {
-      const d = settledAt("/projects/baja/");
-      d.setFrames([frame]);
-      d.setFrames([{ ...frame, y: frame.y - 5 }]);
-      expect(d.engine.kindAt(frame.x, frame.y + frame.height - 1)).not.toBe(CellKind.Wall);
-      expect(d.engine.kindAt(frame.x, frame.y - 5)).toBe(CellKind.Wall);
+    it("re-pin at their new position when they move, leaving none of the old border or walls", () => {
+      const d = settledAt("/experience/");
+      d.setShapes([panel("solid")]);
+      const moved = { ...BOX, y: BOX.y - 5 };
+      d.setShapes([panel("solid", moved)]);
+      expect(new Set(pinnedIn(d, BOX))).toEqual(
+        new Set(edge(moved).filter((k) => boxContains(BOX, pointOf(k)))),
+      );
+      expect(allWalls(d, interiorOf(moved))).toBe(true);
+      expect(noWalls(d, { x: BOX.x, y: moved.y + moved.height, width: BOX.width, height: 5 })).toBe(
+        true,
+      );
     });
 
-    it("go when a Transition leaves their Section", () => {
-      const d = settledAt("/projects/baja/");
-      d.setFrames([frame]);
+    it("draw only the part that shows when scrolled partly out of sight", () => {
+      const d = settledAt("/experience/");
+      const clip = { x: 0, y: BOX.y + 4, width: VIEWPORT.width, height: 40 };
+      d.setShapes([{ ...panel("solid"), clip }]);
+      const shown = edge(BOX).filter((k) => boxContains(clip, pointOf(k)));
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(shown));
+      // No border is drawn across the clip's edge.
+      expect(d.engine.isPinned(BOX.x + 5, clip.y)).toBe(false);
+      expect(noWalls(d, { ...BOX, height: 4 })).toBe(true);
+      expect(allWalls(d, { ...interiorOf(BOX), y: clip.y, height: 7 })).toBe(true);
+    });
+
+    it("leave the toggles drawn whole when the text scrolls under them", () => {
+      const d = settledAt("/experience/");
+      d.setToggles([{ id: "theme", icon: "moon", pressed: true }]);
+      const toggle = d.layout.toggles[0];
+      const under = {
+        x: toggle.box.x - 10,
+        y: toggle.box.y - 5,
+        width: toggle.box.width + 20,
+        height: toggle.box.height + 10,
+      };
+      d.setShapes([panel("solid", under)]);
+      for (const p of d.layout.pinned.filter((p) => boxContains(toggle.box, p)))
+        expect(d.engine.isPinned(p.x, p.y) && d.engine.isAlive(p.x, p.y), `${p.x},${p.y}`).toBe(
+          true,
+        );
+      for (let y = toggle.box.y; y < toggle.box.y + toggle.box.height; y++)
+        for (let x = toggle.box.x; x < toggle.box.x + toggle.box.width; x++)
+          expect(d.engine.kindAt(x, y)).not.toBe(CellKind.Wall);
+    });
+
+    it("stay pinned when a toggle is pressed", () => {
+      const d = settledAt("/experience/");
+      d.setShapes([panel("solid")]);
+      d.setToggles([{ id: "theme", icon: "sun", pressed: true }]);
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+    });
+
+    it("condense their borders in a Transition, all in by the penultimate tick, and keep them pinned after", () => {
+      const d = settledAt("/about/");
+      d.navigate("/experience/");
+      d.tick();
+      d.setShapes([panel("solid")]);
+      const counts: number[] = [];
+      let penultimate: string[] = [];
+      while (d.phase === "transition") {
+        penultimate = pinnedIn(d, BOX);
+        counts.push(penultimate.length);
+        // While condensing, the interior isn't walled yet: the text condenses there too.
+        expect(noWalls(d, interiorOf(BOX))).toBe(true);
+        d.tick();
+      }
+      for (let i = 1; i < counts.length; i++) expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+      expect(new Set(penultimate)).toEqual(new Set(edge(BOX)));
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+      expect(allWalls(d, interiorOf(BOX))).toBe(true);
+      for (let t = 0; t < 10; t++) d.tick();
+      expect(new Set(pinnedIn(d, BOX))).toEqual(new Set(edge(BOX)));
+    });
+
+    it("follow their Panels when they move mid-Transition", () => {
+      const d = settledAt("/about/");
+      d.navigate("/experience/");
+      d.setShapes([panel("solid")]);
+      d.tick();
+      const moved = { ...BOX, y: BOX.y + 7 };
+      d.setShapes([panel("solid", moved)]);
+      expect(pinnedIn(d, { ...BOX, height: 7 })).toEqual([]);
+      ticksToSettle(d);
+      expect(new Set(pinnedIn(d, moved))).toEqual(new Set(edge(moved)));
+    });
+
+    it("release their borders into Life and their walls on navigate", () => {
+      const d = settledAt("/experience/");
+      d.setShapes([panel("solid"), panel("dashed", { ...BOX, y: BOX.y + 13, height: 6 })]);
       d.navigate("/about/");
-      expect(d.engine.kindAt(frame.x, frame.y)).not.toBe(CellKind.Wall);
+      expect(pinnedIn(d, { ...BOX, height: 19 })).toEqual([]);
+      for (const k of edge(BOX)) expect(d.engine.isAlive(...xy(k)), k).toBe(true);
+      expect(noWalls(d, BOX)).toBe(true);
+      // Real Life tears the border apart from there.
+      for (let t = 0; t < 3; t++) d.tick();
+      expect(edge(BOX).some((k) => !d.engine.isAlive(...xy(k)))).toBe(true);
+    });
+
+    it("let their lines of text dissolve on navigate too, once the walls behind them go", () => {
+      const d = settledAt("/experience/");
+      const line = { x: BOX.x + 3, y: BOX.y + 3, width: 24, height: 4 };
+      d.setShapes([panel("solid"), { kind: "line", box: line }]);
+      d.navigate("/about/");
+      let alive = 0;
+      for (let y = line.y; y < line.y + line.height; y++)
+        for (let x = line.x; x < line.x + line.width; x++) if (d.engine.isAlive(x, y)) alive++;
+      expect(alive).toBeGreaterThan(20);
+    });
+
+    it("end with the newer Section's Panels when redirected mid-Transition", () => {
+      const d = settledAt("/about/");
+      d.navigate("/experience/");
+      d.setShapes([panel("solid")]);
+      d.tick();
+      d.navigate("/projects/baja/");
+      expect(pinnedIn(d, BOX)).toEqual([]);
+      const frame = { x: 70, y: 36, width: 20, height: 10 };
+      d.setShapes([panel("solid", frame)]);
+      ticksToSettle(d);
+      expect(pinnedIn(d, BOX).filter((k) => !boxContains(frame, pointOf(k)))).toEqual([]);
+      expect(new Set(pinnedIn(d, frame))).toEqual(new Set(edge(frame)));
     });
   });
 });
+
+/** An "x,y" key as a point, and as arguments. */
+function pointOf(k: string): { x: number; y: number } {
+  const [x, y] = k.split(",").map(Number);
+  return { x, y };
+}
+function xy(k: string): [number, number] {
+  const { x, y } = pointOf(k);
+  return [x, y];
+}

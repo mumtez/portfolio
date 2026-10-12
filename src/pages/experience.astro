@@ -8,7 +8,7 @@ const { experience } = await getProfile();
 
 <Section {...section}>
   {experience.map(({ org, role, location, dates, points }) => (
-    <article>
+    <article data-panel="solid">
       <h2>{org}</h2>
       <p class="meta">
         {role} · {location} · {dates}

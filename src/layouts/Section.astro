@@ -37,6 +37,10 @@ const { path, heading, title, description, deepDive = false } = Astro.props;
   .section :global(h2) {
     margin-top: 2em;
   }
+  /* A Panel's content sets tight inside its padding. */
+  .section :global([data-panel] > :first-child) {
+    margin-top: 0;
+  }
   .section :global(.meta) {
     margin-top: -0.75em;
     opacity: 0.8;
@@ -44,8 +48,7 @@ const { path, heading, title, description, deepDive = false } = Astro.props;
 
   /* Plain View: the content starts right under the header; a Deep Dive's title sets tight. */
   :global(html:not(.grid-on)) .section > :global(:first-child),
-  :global(html:not(.grid-on)) .section > :global(.visually-hidden + *),
-  :global(html:not(.grid-on)) .section > :global(.visually-hidden + * > :first-child) {
+  :global(html:not(.grid-on)) .section > :global(.visually-hidden + *) {
     margin-top: 0;
   }
   :global(html:not(.grid-on)) .section :global(h1) {

@@ -21,6 +21,11 @@ export interface PanelShape {
   readonly kind: "panel";
   readonly panel: PanelKind;
   readonly box: Box;
+  /**
+   * The part of the Panel that shows, when it's scrolled partly out of sight: only its
+   * border and interior Cells in here are drawn. The whole box when left out.
+   */
+  readonly clip?: Box;
 }
 
 export type Shape = LineShape | PanelShape;
@@ -42,6 +47,53 @@ export function lineInk({ x, y, width, height }: Box, random: () => number): Poi
     for (let dx = 0; dx < width; dx++)
       if (random() < INK_DENSITY) cells.push({ x: x + dx, y: row });
   return cells;
+}
+
+/** A Panel's Cells: its border, pinned (every other cell for a dashed Panel), and its interior, walled off. */
+export interface PanelCells {
+  readonly border: Point[];
+  readonly interior: Point[];
+}
+
+/**
+ * The Cells the Panels among `shapes` are drawn with: each border going round its box's
+ * edge, every other cell of it for a dashed Panel, and each interior inside that edge,
+ * all within the Panel's clip.
+ */
+export function panelCells(shapes: readonly Shape[]): PanelCells {
+  const border: Point[] = [];
+  const interior: Point[] = [];
+  for (const s of shapes) {
+    if (s.kind !== "panel") continue;
+    const shows = (p: Point) => !s.clip || boxHolds(s.clip, p);
+    edgeRound(s.box).forEach((p, i) => {
+      if ((s.panel !== "dashed" || i % 2 === 0) && shows(p)) border.push(p);
+    });
+    const { x, y, width, height } = s.box;
+    for (let cy = y + 1; cy < y + height - 1; cy++)
+      for (let cx = x + 1; cx < x + width - 1; cx++)
+        if (shows({ x: cx, y: cy })) interior.push({ x: cx, y: cy });
+  }
+  return { border, interior };
+}
+
+/** The Cells on the edge of `box`, each once, in order going round it from its top-left corner. */
+function edgeRound({ x, y, width, height }: Box): Point[] {
+  const out: Point[] = [];
+  if (width <= 2 || height <= 2) {
+    for (let dy = 0; dy < height; dy++)
+      for (let dx = 0; dx < width; dx++) out.push({ x: x + dx, y: y + dy });
+    return out;
+  }
+  for (let dx = 0; dx < width; dx++) out.push({ x: x + dx, y });
+  for (let dy = 1; dy < height; dy++) out.push({ x: x + width - 1, y: y + dy });
+  for (let dx = width - 2; dx >= 0; dx--) out.push({ x: x + dx, y: y + height - 1 });
+  for (let dy = height - 2; dy > 0; dy--) out.push({ x, y: y + dy });
+  return out;
+}
+
+function boxHolds(box: Box, { x, y }: Point): boolean {
+  return x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
 }
 
 /** The line shapes among `shapes`. */

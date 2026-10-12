@@ -225,6 +225,17 @@ describe("Deep Dive Frames", () => {
     },
   );
 
+  it.each(["roborebels", "baja", "ftc-event-viewer"])(
+    "%s marks each Frame's slot as a Panel: solid round its media, dashed while it's a Placeholder",
+    (id) => {
+      for (const frame of builtPage(`/projects/${id}/`).querySelectorAll("figure.frame")) {
+        const slot = frame.querySelector(".frame-slot");
+        const media = frame.querySelector("img, video");
+        expect(slot?.getAttribute("data-panel")).toBe(media ? "solid" : "dashed");
+      }
+    },
+  );
+
   it("places a Frame where its marker is in the Markdown", () => {
     const body = builtPage("/projects/roborebels/").querySelector(".body-text");
     const order = [...(body?.children ?? [])].map(
@@ -233,6 +244,26 @@ describe("Deep Dive Frames", () => {
     expect(order.indexOf("robot")).toBeLessThan(order.indexOf("h2"));
     expect(order.indexOf("match")).toBeGreaterThan(order.indexOf("h2"));
   });
+});
+
+describe("Panels", () => {
+  it("every Experience Entry is a solid Panel", () => {
+    const entries = builtPage("/experience/").querySelectorAll("main article");
+    expect(entries.length).toBeGreaterThanOrEqual(2);
+    for (const entry of entries) expect(entry.getAttribute("data-panel")).toBe("solid");
+  });
+
+  it.each(SECTIONS)(
+    "%s marks Panels only with a known kind, and never one inside another",
+    (url) => {
+      const page = builtPage(url);
+      for (const panel of page.querySelectorAll("[data-panel]")) {
+        expect(["solid", "dashed", "button"]).toContain(panel.getAttribute("data-panel"));
+        expect(panel.parentElement?.closest("[data-panel]"), url).toBeNull();
+        expect(panel.closest("main"), url).not.toBeNull();
+      }
+    },
+  );
 });
 
 describe("Privacy", () => {
@@ -281,6 +312,11 @@ describe("Placeholders", () => {
 
   it("every placeholder is visibly labelled", () => {
     for (const { path, el } of placeholders) expect(text(el), path).toMatch(/^Placeholder:/);
+  });
+
+  it("every placeholder is a dashed Panel, or fills one (a Frame waiting for its media)", () => {
+    for (const { path, el } of placeholders)
+      expect(el.closest("[data-panel]")?.getAttribute("data-panel"), path).toBe("dashed");
   });
 
   it("every placeholder is listed in PLACEHOLDERS.md", () => {
