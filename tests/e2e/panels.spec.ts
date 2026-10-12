@@ -118,10 +118,13 @@ test.describe("Panels in the Grid", () => {
     await expectPanelsInGrid(page, ["solid"]);
   });
 
-  test("a Placeholder's border is dashed: every other cell pinned", async ({ page }) => {
+  test("About's blocks are Panels, a Placeholder's border dashed: every other cell pinned", async ({
+    page,
+  }) => {
     await page.goto("/about/");
     await expectSection(page, "/about/", "About");
-    await expectPanelsInGrid(page, ["dashed"]);
+    await expectPanelsInGrid(page, ["solid", "dashed"]);
+    await expectNoSidewaysScroll(page);
   });
 
   test("Panels condense in a Transition and stay pinned once it's done", async ({ page }) => {
@@ -180,7 +183,7 @@ for (const colorScheme of ["dark", "light"] as const) {
         color: await accent(),
       });
       await page.goto("/about/");
-      expect(await border(".placeholder")).toEqual({
+      expect(await border("[data-panel='dashed']")).toEqual({
         width: "1px",
         style: "dashed",
         color: await accent(),

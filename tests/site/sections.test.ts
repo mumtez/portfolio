@@ -300,6 +300,24 @@ describe("Panels", () => {
     for (const entry of entries) expect(entry.getAttribute("data-panel")).toBe("solid");
   });
 
+  it("every block on About is a Panel with its heading inside, About me dashed while it's a Placeholder", () => {
+    const page = builtPage("/about/");
+    const headings = [...page.querySelectorAll("main h2")];
+    expect(headings.map(text)).toEqual([
+      "Education",
+      "About me",
+      "Languages",
+      "Skills",
+      "Activities",
+    ]);
+    for (const h2 of headings) {
+      const panel = h2.parentElement!;
+      const placeholder = panel.querySelector(".placeholder") !== null;
+      expect(panel.getAttribute("data-panel"), text(h2)).toBe(placeholder ? "dashed" : "solid");
+      expect(panel.firstElementChild, text(h2)).toBe(h2);
+    }
+  });
+
   describe("Project Entries", () => {
     const page = builtPage("/projects/");
     const entries = [...page.querySelectorAll("main article")];

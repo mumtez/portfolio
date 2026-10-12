@@ -8,43 +8,53 @@ const { education, bio, languages, skills, activities } = await getProfile();
 ---
 
 <Section {...section}>
-  <h2>Education</h2>
-  <p>
-    <strong>{education.school}</strong>
-    <br />
-    {education.degree}
-    <br />
-    {education.dates}
-  </p>
+  <section data-panel="solid">
+    <h2>Education</h2>
+    <p>
+      <strong>{education.school}</strong>
+      <br />
+      {education.degree}
+      <br />
+      {education.dates}
+    </p>
+  </section>
 
-  <h2>About me</h2>
-  {typeof bio === "string" ? <p>{bio}</p> : <Placeholder note={bio.placeholder} />}
+  <section data-panel={typeof bio === "string" ? "solid" : "dashed"}>
+    <h2>About me</h2>
+    {typeof bio === "string" ? <p>{bio}</p> : <Placeholder note={bio.placeholder} panel={false} />}
+  </section>
 
-  <h2>Languages</h2>
-  <ul>
-    {languages.map((language) => (
-      <li>{language}</li>
-    ))}
-  </ul>
+  <section data-panel="solid">
+    <h2>Languages</h2>
+    <ul>
+      {languages.map((language) => (
+        <li>{language}</li>
+      ))}
+    </ul>
+  </section>
 
-  <h2>Skills</h2>
-  <dl>
-    {skills.map(({ area, items }) => (
-      <>
-        <dt>{area}</dt>
-        <dd>{items}</dd>
-      </>
-    ))}
-  </dl>
+  <section data-panel="solid">
+    <h2>Skills</h2>
+    <dl>
+      {skills.map(({ area, items }) => (
+        <>
+          <dt>{area}</dt>
+          <dd>{items}</dd>
+        </>
+      ))}
+    </dl>
+  </section>
 
-  <h2>Activities</h2>
-  <ul>
-    {activities.map(({ name, role, dates }) => (
-      <li>
-        <strong>{name}</strong>, {role} ({dates})
-      </li>
-    ))}
-  </ul>
+  <section data-panel="solid">
+    <h2>Activities</h2>
+    <ul>
+      {activities.map(({ name, role, dates }) => (
+        <li>
+          <strong>{name}</strong>, {role} ({dates})
+        </li>
+      ))}
+    </ul>
+  </section>
 </Section>
 
 <style>
