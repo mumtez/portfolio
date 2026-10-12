@@ -25,7 +25,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Type check, unit tests, then build and test the built site (leaves dist/).
+      # Format check, type check, unit tests, then build and test the built site (leaves dist/).
       - run: npm run test:all
       - uses: actions/upload-pages-artifact@v5
         with:
