@@ -249,8 +249,8 @@ export interface SectionLayout {
   /** Every Pinned Cell, in viewport coordinates: the title, the nav and the toggles. */
   readonly pinned: readonly Point[];
   /**
-   * The name on Home, the heading elsewhere; the Section's HTML content goes below it.
-   * Zero height at a path the Grid has no Section for.
+   * The name on Home, which the Section's HTML content goes below. No other Section
+   * draws a heading, so elsewhere it is zero height, along the bottom of the nav.
    */
   readonly title: Box;
   /** On Home only: which name layout `title` holds, so the Intro can pick a matching Intro Seed. */
@@ -279,10 +279,8 @@ const NAV_LINE_GAP = 2;
 const NAV_LINE_PITCH = BUTTON_HEIGHT + NAV_LINE_GAP;
 /** Cells kept clear at the viewport's left and right edges. */
 const SIDE = 3;
-/** Rows between the nav and the title. */
+/** Rows between the nav and Home's name. */
 const TITLE_GAP = 4;
-/** Rows from the top of one heading line to the next. */
-const HEADING_LINE_PITCH = GLYPH_HEIGHT + 3;
 /** The name's bottom edge sits at this fraction of the viewport height, unless the nav pushes it down. */
 const NAME_BASELINE = 0.45;
 
@@ -317,9 +315,9 @@ export function typesetSection(
   const nav = typesetNav(viewport, content, path, place);
   const toggles = typesetToggles(viewport, toggleSpecs, place);
   const navBottom = Math.max(NAV_TOP, ...nav.map((i) => i.box.y + i.box.height));
-  const top = navBottom + TITLE_GAP;
 
   if (path === "/") {
+    const top = navBottom + TITLE_GAP;
     const nameLayout = nameLayoutFor(viewport);
     const mask = nameMask(nameLayout);
     const x = Math.floor((viewport.width - mask.width) / 2);
@@ -329,20 +327,9 @@ export function typesetSection(
     return { pinned, title, nameLayout, nav, toggles, body: bodyRegion(viewport, title) };
   }
 
-  const section = content.sections.find((s) => s.path === path);
-  if (!section) {
-    const title = { x: 0, y: top, width: viewport.width, height: 0 };
-    return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
-  }
-
-  const lines = wrap(section.heading, viewport.width - 2 * SIDE).map(textMask);
-  const width = Math.max(...lines.map((l) => l.width));
-  const x0 = Math.floor((viewport.width - width) / 2);
-  lines.forEach((line, i) =>
-    place(line, Math.floor((viewport.width - line.width) / 2), top + i * HEADING_LINE_PITCH),
-  );
-  const height = (lines.length - 1) * HEADING_LINE_PITCH + GLYPH_HEIGHT;
-  const title = { x: x0, y: top, width, height };
+  // No other Section draws a heading: the underlined nav Button says where you are, and
+  // the Body Text starts directly below the nav. Its `h1` stays in the HTML.
+  const title = { x: 0, y: navBottom, width: viewport.width, height: 0 };
   return { pinned, title, nav, toggles, body: bodyRegion(viewport, title) };
 }
 
@@ -459,18 +446,6 @@ function navIsColumn(viewport: ViewportCells, items: number): boolean {
 
 function underline(width: number): CellMask {
   return { width, height: 1, cells: Array.from({ length: width }, (_, x) => ({ x, y: 0 })) };
-}
-
-/** Split `text` into lines no wider than `maxWidth` cells, breaking between words. */
-function wrap(text: string, maxWidth: number): string[] {
-  const lines: string[] = [];
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    const line = lines.at(-1);
-    if (line !== undefined && textMask(`${line} ${word}`).width <= maxWidth)
-      lines[lines.length - 1] = `${line} ${word}`;
-    else lines.push(word);
-  }
-  return lines.length ? lines : [""];
 }
 
 /**

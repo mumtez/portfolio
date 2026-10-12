@@ -1,7 +1,10 @@
 ---
-/** Plain HTML nav linking every Section, with Deep Dives nested under Projects. */
+/**
+ * Plain HTML nav linking the five top-level Sections. Deep Dives aren't in it: they're
+ * reached from their Project Entries.
+ */
 import { currentness } from "../grid/routes";
-import { deepDivePath, getDeepDives, getSections } from "../lib/content";
+import { getSections } from "../lib/content";
 
 interface Props {
   /** The current Section's path; its link, and Projects on a Deep Dive, get aria-current. */
@@ -10,28 +13,15 @@ interface Props {
 
 const { current } = Astro.props;
 const sections = await getSections();
-const deepDives = await getDeepDives();
-const ariaCurrent = (path: string) => currentness(path, current);
 ---
 
 <nav aria-label="Sections">
   <ul>
     {sections.map((section) => (
       <li>
-        <a href={section.path} aria-current={ariaCurrent(section.path)}>
+        <a href={section.path} aria-current={currentness(section.path, current)}>
           {section.nav}
         </a>
-        {section.path === "/projects/" && (
-          <ul>
-            {deepDives.map((project) => (
-              <li>
-                <a href={deepDivePath(project)} aria-current={ariaCurrent(deepDivePath(project))}>
-                  {project.data.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
       </li>
     ))}
   </ul>
@@ -48,15 +38,6 @@ const ariaCurrent = (path: string) => currentness(path, current);
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-  li {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-  }
-  ul ul {
-    gap: 4px 12px;
-    font-size: 0.875rem;
   }
   a[aria-current] {
     font-weight: 700;

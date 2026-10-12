@@ -1,16 +1,23 @@
 ---
-/** A content Section in Plain View: its heading as the only h1, then its content. */
+/**
+ * A content Section: its heading as the only h1, then its content. On a top-level
+ * Section the h1 is visually hidden (the nav marks where you are) but still announced;
+ * on a Deep Dive it shows at the top of the Body Text.
+ */
 import type { Section } from "../lib/content";
 import Base from "./Base.astro";
 
-type Props = Omit<Section, "nav" | "order">;
+type Props = Omit<Section, "nav" | "order"> & {
+  /** A Deep Dive, which isn't in the nav, so shows its heading. */
+  deepDive?: boolean;
+};
 
-const { path, heading, title, description } = Astro.props;
+const { path, heading, title, description, deepDive = false } = Astro.props;
 ---
 
 <Base title={title} description={description} path={path}>
   <main class="section">
-    <h1>{heading}</h1>
+    <h1 class:list={{ "visually-hidden": !deepDive }}>{heading}</h1>
     <slot />
   </main>
 </Base>
@@ -41,8 +48,8 @@ const { path, heading, title, description } = Astro.props;
     margin: 0;
     padding: 0 max(16px, calc((100% - 44rem) / 2)) 64px;
   }
-  :global(html.grid-on) .section > :global(:first-child:not(h1)),
-  :global(html.grid-on) .section > :global(h1 + *) {
+  :global(html.grid-on) .section > :global(:first-child),
+  :global(html.grid-on) .section > :global(.visually-hidden + *) {
     margin-top: 0;
   }
 </style>
