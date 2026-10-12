@@ -159,6 +159,8 @@ export function startGrid({
   /** The Body Text's shapes last handed to the Director, and their key, to skip handing over the same ones. */
   let shapes: Shape[] = [];
   let shapesKey = "";
+  /** Where the last draw put the faint region under the Body Text. */
+  let bodyText: Box = { x: 0, y: 0, width: 0, height: 0 };
   // Every listener goes when the Grid stops.
   const listening = new AbortController();
   const { signal } = listening;
@@ -190,23 +192,26 @@ export function startGrid({
   }
 
   function draw(): void {
-    renderer.draw(director.engine, syncHtml());
+    bodyText = syncHtml();
+    renderer.draw(director.engine, bodyText);
   }
 
   /**
    * Measure the Section's Body Text into shapes, its lines and Panels, where it is now
    * (it scrolls), once its HTML is in the page, even while it's still hidden for a
    * Transition; and return where its Body Text lies over the Grid, so the cells there are
-   * drawn faint: the text column, down to the end of the text.
+   * drawn faint: the text column, down to the end of the text. That's the next Section's
+   * as soon as its HTML lands, hidden or not, so the faint region doesn't jump when it
+   * fades in; until then, while the old Section leaves, it stays where it was.
    */
   function syncHtml(): Box {
     const { body } = director.layout;
     const main = document.querySelector("main");
-    if (!main || shownRoute !== director.route) return body;
+    if (!main) return body;
+    if (shownRoute !== director.route) return bodyText.width > 0 ? bodyText : body;
     const view = { x: 0, y: 0, width: director.engine.width, height: director.engine.height };
     const scrollBox = cellBoxCovering(main.getBoundingClientRect(), cellPx, view) ?? view;
     setShapes(measureShapes(main, cellPx, scrollBox));
-    if (!director.bodyTextReleased) return body;
     const textBottom = main.lastElementChild?.getBoundingClientRect().bottom ?? 0;
     const bottom = Math.min(body.y + body.height, Math.ceil(textBottom / cellPx));
     return { ...body, height: Math.max(0, bottom - body.y) };
@@ -462,6 +467,7 @@ export function startGrid({
 
   const hideTestHooks = exposeTestHooks({
     shapes: () => ({ cellPx, shapes }),
+    bodyText: () => bodyText,
     cell: (x, y) => ({
       pinned: director.engine.isPinned(x, y),
       wall: director.engine.kindAt(x, y) === CellKind.Wall,

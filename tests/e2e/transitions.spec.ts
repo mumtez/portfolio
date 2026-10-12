@@ -66,6 +66,42 @@ test("the old Section's HTML fades out, and the next one is released in about 80
   await expectNoSidewaysScroll(page);
 });
 
+test("the faint region behind the text takes the next Section's size as soon as its HTML lands", async ({
+  page,
+}) => {
+  await page.goto("/about/");
+  await expect(main(page)).toHaveCSS("opacity", "1");
+  await page.evaluate(() => fetch("/contact/"));
+  // Sample the faint region on every frame while the next Section's HTML is in the page
+  // but not yet released: it should already end where that Section's text ends.
+  await page.evaluate(() => {
+    const w = window as unknown as Record<string, unknown>;
+    w.faintSamples = [];
+    const poll = () => {
+      const arriving = document.querySelector("main.arriving:not(.released)");
+      if (arriving) {
+        const { cellPx } = window.gridTest!.shapes();
+        const textBottom = arriving.lastElementChild!.getBoundingClientRect().bottom;
+        const faint = window.gridTest!.bodyText();
+        (w.faintSamples as number[][]).push([
+          faint.y + faint.height,
+          Math.ceil(textBottom / cellPx),
+        ]);
+      }
+      if (!document.querySelector("main.released.arriving")) requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
+  });
+  await navLink(page, "Contact").click();
+  await expectSection(page, "/contact/", "Contact");
+  const samples = await page.evaluate(
+    () => (window as unknown as Record<string, number[][]>).faintSamples,
+  );
+  expect(samples.length).toBeGreaterThan(0);
+  // A frame's grace for the draw that follows the swap.
+  for (const [faintBottom, textBottom] of samples.slice(2)) expect(faintBottom).toBe(textBottom);
+});
+
 /**
  * The Grid's latest line shapes lie over the Section's text: each line's middle is over
  * the Section, and the first line on screen of every paragraph is one of them.

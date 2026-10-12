@@ -3,11 +3,14 @@
  * one namespace on `window`, there only when a test has asked for it by setting
  * `window.wantsGridTest` before the page's scripts run (the e2e fixtures do).
  */
+import type { Box } from "./box";
 import type { Shape } from "./shapes";
 
 export interface GridTestHooks {
   /** The Body Text's shapes the Grid last measured, and its cell size in CSS pixels. */
   shapes(): { cellPx: number; shapes: readonly Shape[] };
+  /** Where the Grid last drew the Cells under the Body Text faint, in cells. */
+  bodyText(): Box;
   /** The Cell at (x, y) in viewport cells, as the Life Engine has it now. */
   cell(x: number, y: number): { pinned: boolean; wall: boolean };
 }
