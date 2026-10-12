@@ -14,34 +14,35 @@ const profile = await getProfile();
 </Base>
 
 <style>
-  /* Plain View: the content as a centred page. */
+  /* Plain View: the name in large type and the tagline, straight under the nav. */
   .home {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0 16px;
-    text-align: center;
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 40px 16px 64px;
   }
   h1 {
     margin: 0;
-    font-size: clamp(2rem, 6vw, 4rem);
+    font-size: clamp(2.25rem, 9vw, 4rem);
+    line-height: 1.05;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
   p {
-    max-width: 40rem;
+    max-width: 36rem;
+    margin: 0.875em 0 0;
     font-size: 1.125rem;
     line-height: 1.5;
   }
 
-  /* Grid on: the name is drawn in Pinned Cells, and the tagline sits just under it. */
+  /* Grid on: the name is drawn in Pinned Cells, and the tagline sits centred just under it. */
   :global(html.grid-on) .home {
-    display: block;
-    min-height: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0 16px;
+    text-align: center;
   }
   :global(html.grid-on) p {
+    max-width: 40rem;
     margin: 0 auto;
   }
 </style>

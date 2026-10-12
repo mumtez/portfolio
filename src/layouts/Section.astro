@@ -42,6 +42,17 @@ const { path, heading, title, description, deepDive = false } = Astro.props;
     opacity: 0.8;
   }
 
+  /* Plain View: the content starts right under the header; a Deep Dive's title sets tight. */
+  :global(html:not(.grid-on)) .section > :global(:first-child),
+  :global(html:not(.grid-on)) .section > :global(.visually-hidden + *),
+  :global(html:not(.grid-on)) .section > :global(.visually-hidden + * > :first-child) {
+    margin-top: 0;
+  }
+  :global(html:not(.grid-on)) .section :global(h1) {
+    margin-bottom: 0.5em;
+    line-height: 1.15;
+  }
+
   /* Grid on: the whole width scrolls, with the content kept in the same centred column. */
   :global(html.grid-on) .section {
     max-width: none;

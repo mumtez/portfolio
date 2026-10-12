@@ -28,19 +28,34 @@ const sections = await getSections();
 </nav>
 
 <style>
-  nav {
-    padding: 12px 16px;
-  }
   ul {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 20px;
+    gap: 6px clamp(12px, 3.5vw, 22px);
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  a[aria-current] {
-    font-weight: 700;
+
+  /*
+   * Plain View: a quiet row of links, the current Section marked in the pinned green
+   * with an underline, like the Grid's underlined nav Button. With the Grid on, the
+   * links are laid transparently over their drawn Buttons instead.
+   */
+  :global(html:not(.grid-on)) a {
+    padding: 4px 0;
+    color: var(--text);
     text-decoration: none;
+    letter-spacing: 0.02em;
+  }
+  :global(html:not(.grid-on)) a:hover {
+    text-decoration: underline 1px;
+    text-underline-offset: 6px;
+  }
+  :global(html:not(.grid-on)) a[aria-current] {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline 2px;
+    text-underline-offset: 6px;
   }
 </style>
