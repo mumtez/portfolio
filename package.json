@@ -9,7 +9,9 @@
     "check": "astro check",
     "test": "vitest run --project unit",
     "test:site": "astro build && vitest run --project site",
-    "test:all": "npm run check && npm test && npm run test:site"
+    "test:all": "npm run check && npm test && npm run test:site",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "astro": "^7.3.8"
@@ -18,6 +20,8 @@
     "@astrojs/check": "^0.9.10",
     "@types/node": "^24.19.2",
     "linkedom": "^0.18.13",
+    "prettier": "^3.9.10",
+    "prettier-plugin-astro": "^1.1.1",
     "typescript": "^6.0.3",
     "vitest": "^5.0.3",
     "yaml": "^2.9.1"
