@@ -5,8 +5,10 @@
  * session, the history and the renderer. Home plays the Intro on a first visit. Every
  * Section pins its heading and the nav; the nav's real `<a>` elements are laid over
  * their cells, and clicking one (or going back or forward) runs a Transition while the
- * next Section's Plain View is swapped in. That Section's Body Text stays hidden while
- * it condenses out of cells, and fades in as they're released (ADR 0004). Its Frames are
+ * next Section's Plain View is swapped in. The page measures each Section's Body Text
+ * into line shapes in cells: the old Section's lines dissolve into Life as its HTML fades
+ * out, and the next Section's stay hidden while they condense out of cells, then fade in
+ * as they're released (ADR 0004). Its Frames are
  * measured where they lie in the page and walled off in the Life Engine. Each nav item is
  * a button drawn in cells, whose border decays for a moment on hover or focus, and so are
  * the theme and simulation toggles in the corner. Soup is kept alive by spaceships flying
@@ -25,6 +27,8 @@ import {
 import { GridDirector, TICK_MS, type IntroMemory } from "./grid-director";
 import { GridRenderer } from "./grid-renderer";
 import { cellBoxCovering } from "./html-regions";
+import { measureShapes } from "./measure-shapes";
+import type { Shape } from "./shapes";
 import type { Point } from "./life-engine";
 import { prefetchSection, swapToSection } from "./page-swap";
 import type { Palette } from "./palette";
@@ -40,6 +44,8 @@ const INTRO_SEEN_KEY = "intro-seen";
 const TRAIL_MAX_GAP = 12;
 /** Clicks on these drop no glider: they're for the content, not the Grid. */
 const INTERACTIVE = "a, button, input, textarea, select, label, summary, [role='button']";
+/** How long the old Section's HTML takes to fade out in a Transition (as `Base.astro` sets it). */
+const LEAVE_MS = 240;
 /** The real links laid over buttons drawn in cells (placed by `placeHtml`). */
 const DRAWN_BUTTON = "a.on-grid";
 /** The real toggle buttons laid over the toggles drawn in cells, each with `data-toggle` set to its id. */
@@ -147,6 +153,9 @@ export function startGrid({
   let shownRoute: string | undefined = sectionPath(window.location.pathname);
   /** The Frames last walled off, to skip setting the same ones again. */
   let framesKey = "";
+  /** The Body Text's shapes last handed to the Director, and their key, to skip handing over the same ones. */
+  let shapes: Shape[] = [];
+  let shapesKey = "";
   // Every listener goes when the Grid stops.
   const listening = new AbortController();
   const { signal } = listening;
@@ -167,6 +176,7 @@ export function startGrid({
     });
     renderer.resize(width, height, cellPx);
     framesKey = "";
+    shapesKey = "";
     redraw();
     placeHtml(director.layout, cellPx);
   }
@@ -182,19 +192,25 @@ export function startGrid({
   }
 
   /**
-   * Wall off the Frames of the Section on screen where they are now (they scroll with
-   * the Body Text), and return where its Body Text lies over the Grid, so the cells
-   * there are drawn faint: the text column, down to the end of the text.
+   * Measure the Section's Body Text into shapes where it is now (it scrolls), once its
+   * HTML is in the page, even while it's still hidden for a Transition; wall off its
+   * Frames once it's shown; and return where its Body Text lies over the Grid, so the
+   * cells there are drawn faint: the text column, down to the end of the text.
    */
   function syncHtml(): Box {
     const { body } = director.layout;
     const main = document.querySelector("main");
-    if (!main || !director.bodyTextReleased || shownRoute !== director.route) {
+    if (!main || shownRoute !== director.route) {
       setFrames([]);
       return body;
     }
     const view = { x: 0, y: 0, width: director.engine.width, height: director.engine.height };
     const scrollBox = cellBoxCovering(main.getBoundingClientRect(), cellPx, view) ?? view;
+    setShapes(measureShapes(main, cellPx, scrollBox));
+    if (!director.bodyTextReleased) {
+      setFrames([]);
+      return body;
+    }
     setFrames(
       [...main.querySelectorAll(".frame-slot")].flatMap(
         (el) => cellBoxCovering(el.getBoundingClientRect(), cellPx, scrollBox) ?? [],
@@ -210,6 +226,14 @@ export function startGrid({
     if (key === framesKey) return;
     framesKey = key;
     director.setFrames(frames);
+  }
+
+  function setShapes(next: Shape[]): void {
+    const key = JSON.stringify(next);
+    if (key === shapesKey) return;
+    shapesKey = key;
+    shapes = next;
+    director.setShapes(next);
   }
 
   /** Fade the arriving Section's HTML in once the Director has released its Body Text. */
@@ -237,15 +261,23 @@ export function startGrid({
   function goTo(path: string, push?: string): void {
     if (!director.navigate(path)) return;
     shownRoute = undefined;
+    // The Director has dissolved the old Section's lines; the next Section's are new.
+    shapes = [];
+    shapesKey = "";
     if (push !== undefined) history.pushState(null, "", push);
     placeHtml(director.layout, cellPx);
     redraw();
-    // If the page can't be fetched, load it the ordinary way: the URL already points at it.
-    // A page load is counted by GoatCounter's script; a swap has to be counted here.
-    swapToSection(path).then(
+    // The old Section's HTML fades out over its dissolving lines before the next one
+    // replaces it. If the page can't be fetched, load it the ordinary way: the URL
+    // already points at it. A page load is counted by GoatCounter's script; a swap has
+    // to be counted here.
+    document.querySelector("main")?.classList.add("leaving");
+    swapToSection(path, new Promise((done) => setTimeout(done, LEAVE_MS))).then(
       (landed) => {
         if (!landed) return;
         shownRoute = path;
+        // Measure it now, so its lines start condensing on the next tick.
+        draw();
         revealBodyText();
         countPageView(path);
       },
@@ -431,6 +463,10 @@ export function startGrid({
     { signal },
   );
 
+  // What the Grid last measured, for the browser tests to check against the page.
+  const measured = window as { gridShapes?: () => { cellPx: number; shapes: Shape[] } };
+  measured.gridShapes = () => ({ cellPx, shapes });
+
   rebuild();
   ticker = startTicker(() => {
     if (director.phase !== "intro") maybeLaunch(director.engine);
@@ -454,6 +490,7 @@ export function startGrid({
       ticker?.stop();
       clearTimeout(resizeTimer);
       cancelAnimationFrame(scrollFrame);
+      delete measured.gridShapes;
       unplaceHtml();
       document.body.style.cursor = "";
       document.documentElement.classList.remove("grid-on");

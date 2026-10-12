@@ -31,14 +31,15 @@ export function prefetchSection(path: string): void {
 /**
  * Show the Section at `path`: swap in its `<main>`, title and meta tags, mark its nav
  * link current, and move focus to its heading so screen readers announce it, or to the
- * URL's `#` target if it has one. Resolves false if another swap started meanwhile.
+ * URL's `#` target if it has one. The swap waits for the page and for `ready` (the old
+ * Section's HTML fading out). Resolves false if another swap started meanwhile.
  * Rejects if the page can't be fetched and no later swap has started.
  */
-export async function swapToSection(path: string): Promise<boolean> {
+export async function swapToSection(path: string, ready?: Promise<unknown>): Promise<boolean> {
   const token = ++latest;
   let next: Document;
   try {
-    next = await fetchPage(path);
+    [next] = await Promise.all([fetchPage(path), ready]);
   } catch (err) {
     // A failed fetch only matters if nothing has superseded it.
     if (token !== latest) return false;
@@ -54,7 +55,7 @@ export async function swapToSection(path: string): Promise<boolean> {
   document.title = next.title;
   syncMeta(next);
   const incoming = document.importNode(nextMain, true);
-  // Hidden until the Grid releases its Body Text's condensate (see `Base.astro`).
+  // Hidden until the Grid releases its Body Text's lines (see `Base.astro`).
   incoming.classList.add("arriving");
   main.replaceWith(incoming);
   markCurrent(path);

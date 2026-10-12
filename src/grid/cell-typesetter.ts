@@ -483,13 +483,6 @@ const DEFAULT_CELL_PX = 8;
 const BODY_GAP_PX = BODY_TEXT_CSS.gapRem * REM_PX;
 const BODY_COLUMN_PX = BODY_TEXT_CSS.columnRem * REM_PX;
 const BODY_GUTTER_PX = BODY_TEXT_CSS.gutterPx;
-const BODY_LINE_PX = REM_PX * BODY_TEXT_CSS.lineHeight;
-/** The condensate fills this share of each line's rows, like the x-height of a line of text. */
-const CONDENSATE_INK_ROWS = 0.6;
-/** Chance that a Cell on a condensate line is alive. */
-const CONDENSATE_DENSITY = 0.55;
-/** Lines the condensate holds at most: enough to read as a paragraph, not a wall. */
-const CONDENSATE_MAX_LINES = 8;
 
 function bodyRegion(viewport: ViewportCells, title: Box): Box {
   const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
@@ -497,31 +490,4 @@ function bodyRegion(viewport: ViewportCells, title: Box): Box {
   const x = Math.min(Math.ceil(gutter / cellPx), Math.floor(viewport.width / 2));
   const y = Math.min(title.y + title.height + Math.ceil(BODY_GAP_PX / cellPx), viewport.height);
   return { x, y, width: viewport.width - 2 * x, height: viewport.height - y };
-}
-
-/**
- * The cells a Section's Body Text condenses out of as it arrives (ADR 0004): a few
- * lines of scattered cells shaped like a paragraph at the top of its region, ragged on
- * the right. The Grid Director pins them during a Transition, then releases them into
- * Life as the HTML fades in over them.
- */
-export function bodyTextCondensate(
-  body: Box,
-  viewport: ViewportCells,
-  random: () => number,
-): Point[] {
-  const cellPx = viewport.cellPx ?? DEFAULT_CELL_PX;
-  const pitch = Math.max(2, Math.round(BODY_LINE_PX / cellPx));
-  const ink = Math.ceil(pitch * CONDENSATE_INK_ROWS);
-  const lines = Math.min(CONDENSATE_MAX_LINES, Math.floor(body.height / pitch));
-  const cells: Point[] = [];
-  for (let line = 0; line < lines; line++) {
-    const length = Math.round(body.width * (0.75 + 0.25 * random()));
-    for (let row = 0; row < ink; row++) {
-      const y = body.y + line * pitch + row;
-      for (let dx = 0; dx < length; dx++)
-        if (random() < CONDENSATE_DENSITY) cells.push({ x: body.x + dx, y });
-    }
-  }
-  return cells;
 }
