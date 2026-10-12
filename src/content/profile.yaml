@@ -35,7 +35,7 @@
 
   skills:
     - area: Software
-      items: Python, Java, TypeScript, MATLAB, PyTorch, TensorFlow, Keras, Git, Docker
+      items: Python, Java, TypeScript, MATLAB, PyTorch, TensorFlow, Keras, Git, Docker, Linux, GRUB/UEFI
     - area: CAD & PCB design
       items: Fusion 360, Onshape, SolidWorks, KiCad, Altium Designer
     - area: Fabrication
