@@ -1,6 +1,6 @@
 /**
  * The theme and simulation toggles: two real `<button>`s with `aria-pressed`, drawn in
- * the Grid's corner as Buttons while it runs, ordinary buttons in the Plain View.
+ * the Grid's corner as small icon Buttons while it runs, ordinary buttons in the Plain View.
  *
  * The theme follows the system's colour scheme until the visitor picks one (the inline
  * head script has already set it before first paint). The simulation runs unless the
@@ -42,10 +42,13 @@ export function startToggles({ canvas, content }: ToggleOptions): void {
   let simulation = resolveSimulation(store.get(SIMULATION_KEY), { reducedMotion });
   let grid: Grid | undefined;
 
-  /** The toggles as the Grid draws them, labelled as on the page: pressed means dark, and running. */
+  /**
+   * The toggles as the Grid draws them, as small icons: a moon for the dark theme and a
+   * sun for the light, a glider for Life. Pressed means dark, and running.
+   */
   const specs = (): ToggleSpec[] => [
-    { id: "theme", label: themeButton?.dataset.label ?? "", pressed: theme === "dark" },
-    { id: "simulation", label: simulationButton?.dataset.label ?? "", pressed: simulation },
+    { id: "theme", icon: theme === "dark" ? "moon" : "sun", pressed: theme === "dark" },
+    { id: "simulation", icon: "glider", pressed: simulation },
   ];
 
   function show(): void {

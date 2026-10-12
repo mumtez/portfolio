@@ -516,11 +516,11 @@ describe("Grid Director", () => {
       expect(pinnedKeys(d)).toEqual(layoutKeys(d));
     });
 
-    describe("the theme and simulation toggles", () => {
+    describe("the theme and simulation toggles, small icon Buttons", () => {
       const TOGGLES = [
-        { id: "theme", label: "Dark", pressed: true },
-        { id: "simulation", label: "Life", pressed: true },
-      ];
+        { id: "theme", icon: "moon", pressed: true },
+        { id: "simulation", icon: "glider", pressed: true },
+      ] as const;
       const withToggles = () => quiet({ toggles: TOGGLES });
       const theme = (d: GridDirector) => d.layout.toggles.find((t) => t.id === "theme")!;
       const themePinned = (d: GridDirector) =>
@@ -567,9 +567,10 @@ describe("Grid Director", () => {
           return dd.engine.isPinned(box.x + 2, row);
         };
         expect(underlined(d)).toBe(true);
-        d.setToggles([{ ...TOGGLES[0], pressed: false }, TOGGLES[1]]);
+        d.setToggles([{ ...TOGGLES[0], icon: "sun", pressed: false }, TOGGLES[1]]);
         expect(d.phase).toBe("settled");
         expect(theme(d).pressed).toBe(false);
+        expect(theme(d).icon).toBe("sun");
         expect(underlined(d)).toBe(false);
         expect(pinnedKeys(d)).toEqual(layoutKeys(d));
       });

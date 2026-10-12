@@ -86,16 +86,18 @@ const sessionIntroMemory: IntroMemory = {
 /**
  * Lay the page's HTML over the cells: each top-level nav link and each toggle exactly
  * over its drawn button (so clicks, focus and screen readers use the real element), and
- * the Section's content between its pinned title and the toggles.
+ * the Section's content below its pinned title, ending clear of the toggles.
  */
 function placeHtml(layout: SectionLayout, cellPx: number): void {
   const px = (cells: number) => `${cells * cellPx}px`;
   const { title } = layout;
   const root = document.documentElement.style;
   root.setProperty("--below-title", px(title.y + title.height));
+  // The toggles keep no strip of the screen: the content scrolls the full height, and
+  // ends this far up so its last line clears them.
   const togglesTop = Math.min(...layout.toggles.map((t) => t.box.y));
   root.setProperty(
-    "--above-toggles",
+    "--toggles-clearance",
     Number.isFinite(togglesTop) ? `${window.innerHeight - togglesTop * cellPx}px` : "0px",
   );
   const place = (el: HTMLElement, box: Box) => {
@@ -121,7 +123,7 @@ function placeHtml(layout: SectionLayout, cellPx: number): void {
 function unplaceHtml(): void {
   const root = document.documentElement.style;
   root.removeProperty("--below-title");
-  root.removeProperty("--above-toggles");
+  root.removeProperty("--toggles-clearance");
   for (const el of document.querySelectorAll<HTMLElement>(".on-grid")) {
     el.classList.remove("on-grid");
     for (const prop of ["left", "top", "width", "height"]) el.style.removeProperty(prop);

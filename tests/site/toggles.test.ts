@@ -19,22 +19,15 @@ describe.each(SECTIONS)("the toggles on %s (built HTML)", (url) => {
     doc.querySelector<HTMLButtonElement>(`button[data-toggle="${id}"]`);
 
   it.each([
-    ["theme", /dark/i],
-    ["simulation", /simulation/i],
-  ])(
-    "has a real %s toggle button with a pressed state, named to include its drawn label",
-    (id, name) => {
-      const button = toggle(id);
-      expect(button, id).not.toBeNull();
-      expect(button!.getAttribute("type")).toBe("button");
-      expect(["true", "false"]).toContain(button!.getAttribute("aria-pressed"));
-      const accessibleName = button!.textContent!.replace(/\s+/g, " ").trim();
-      expect(accessibleName).toMatch(name);
-      const drawn = button!.getAttribute("data-label") ?? "";
-      expect(drawn).not.toBe("");
-      expect(accessibleName.toLowerCase()).toContain(drawn.toLowerCase());
-    },
-  );
+    ["theme", "Dark theme"],
+    ["simulation", "Life simulation"],
+  ])("has a real %s toggle button with a pressed state and its accessible name, %s", (id, name) => {
+    const button = toggle(id);
+    expect(button, id).not.toBeNull();
+    expect(button!.getAttribute("type")).toBe("button");
+    expect(["true", "false"]).toContain(button!.getAttribute("aria-pressed"));
+    expect(button!.textContent!.replace(/\s+/g, " ").trim()).toBe(name);
+  });
 
   it("keeps them together in a labelled group, hidden until the script can make them work", () => {
     const group = toggle("theme")!.closest("[role='group']");

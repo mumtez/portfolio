@@ -228,15 +228,18 @@ export interface NavItem {
   readonly current: boolean;
 }
 
-/** A toggle to draw as a button, such as the theme or the simulation. */
+/** The small cell icons a toggle can show. */
+export type ToggleIcon = "sun" | "moon" | "glider";
+
+/** A toggle to draw as a small icon button, such as the theme or the simulation. */
 export interface ToggleSpec {
   readonly id: string;
-  readonly label: string;
+  readonly icon: ToggleIcon;
   /** On. Drawn underlined, as the current nav item is. */
   readonly pressed: boolean;
 }
 
-/** A toggle drawn in cells as a button: its label inside a border, in a corner of the viewport. */
+/** A toggle drawn in cells as a button: its icon inside a border, in a corner of the viewport. */
 export interface ToggleItem extends ToggleSpec {
   /** Its hit region: the button out to and including its border. */
   readonly box: Box;
@@ -392,12 +395,27 @@ function typesetNav(
 /** Cells between the toggles, and from the last one to the viewport's right and bottom edges. */
 const TOGGLE_GAP = 4;
 
+/** The toggle icons, 7 cells tall like the 5×7 font's capitals, so they underline like nav labels. */
+const TOGGLE_ICONS: Readonly<Record<ToggleIcon, CellMask>> = {
+  sun: maskFromRows(["...#...", ".#...#.", "..###..", "#.###.#", "..###..", ".#...#.", "...#..."]),
+  moon: maskFromRows(["..####.", ".##....", "##.....", "##.....", "##.....", ".##....", "..####."]),
+  glider: maskFromRows([
+    ".......",
+    "..##...",
+    "..##...",
+    "....##.",
+    "....##.",
+    "######.",
+    "######.",
+  ]),
+};
+
 function typesetToggles(
   viewport: ViewportCells,
   specs: readonly ToggleSpec[],
   place: (mask: CellMask, x: number, y: number) => void,
 ): ToggleItem[] {
-  const masks = specs.map((s) => textMask(s.label));
+  const masks = specs.map((s) => TOGGLE_ICONS[s.icon]);
   const width =
     masks.reduce((sum, m) => sum + m.width + 2 * BUTTON_PAD, 0) + TOGGLE_GAP * (masks.length - 1);
   let x = viewport.width - SIDE - width + BUTTON_PAD;

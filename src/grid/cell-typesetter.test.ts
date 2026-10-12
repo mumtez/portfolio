@@ -230,23 +230,42 @@ describe("Cell Typesetter", () => {
     });
   });
 
-  describe("the toggles, a pair of Buttons in a corner", () => {
+  describe("the toggles, a pair of small icon Buttons in a corner", () => {
     const TOGGLES = [
-      { id: "theme", label: "Dark", pressed: false },
-      { id: "simulation", label: "Life", pressed: true },
-    ];
+      { id: "theme", icon: "moon", pressed: false },
+      { id: "simulation", icon: "glider", pressed: true },
+    ] as const;
 
-    it("draws each toggle as a Button: its label inside a pinned border", () => {
+    it("draws each toggle as a small Button: its icon inside a pinned border", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", TOGGLES);
       const pinned = new Set(layout.pinned.map(key));
-      expect(layout.toggles.map((t) => [t.id, t.label, t.pressed])).toEqual([
-        ["theme", "Dark", false],
-        ["simulation", "Life", true],
+      expect(layout.toggles.map((t) => [t.id, t.icon, t.pressed])).toEqual([
+        ["theme", "moon", false],
+        ["simulation", "glider", true],
       ]);
-      const theme = layout.toggles[0];
-      expect(rowsIn(layout.pinned, inside(theme.box, 1))).toEqual(trimmed(textMask("Dark")));
-      expect(theme.border.length).toBe(2 * theme.box.width + 2 * theme.box.height - 4);
+      const [moon, life] = layout.toggles;
+      expect(rowsIn(layout.pinned, inside(moon.box, 1))).toEqual([
+        "..####",
+        ".##...",
+        "##....",
+        "##....",
+        "##....",
+        ".##...",
+        "..####",
+      ]);
+      expect(rowsIn(layout.pinned, inside(life.box, 1))).toEqual([
+        "..##...",
+        "..##...",
+        "....##.",
+        "....##.",
+        "######.",
+        "######.",
+        ".......",
+        ".......",
+        "#######",
+      ]);
       for (const toggle of layout.toggles) {
+        expect(toggle.border.length).toBe(2 * toggle.box.width + 2 * toggle.box.height - 4);
         for (const cell of toggle.border) {
           expect(pinned.has(key(cell))).toBe(true);
           expect(boxContains(toggle.box, cell) && !boxContains(inside(toggle.box, 1), cell)).toBe(
@@ -256,12 +275,35 @@ describe("Cell Typesetter", () => {
       }
     });
 
-    it("underlines a toggle that is pressed", () => {
+    it("draws the sun for the light theme", () => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", [
+        { id: "theme", icon: "sun", pressed: false },
+      ]);
+      expect(rowsIn(layout.pinned, inside(layout.toggles[0].box, 1))).toEqual([
+        "...#...",
+        ".#...#.",
+        "..###..",
+        "#.###.#",
+        "..###..",
+        ".#...#.",
+        "...#...",
+      ]);
+    });
+
+    it("is smaller than the narrowest nav Button", () => {
       const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", TOGGLES);
-      const life = layout.toggles[1];
-      expect(rowsIn(layout.pinned, inside(life.box, 1)).at(-1)).toBe(
-        "#".repeat(textMask("Life").width),
-      );
+      const narrowest = Math.min(...layout.nav.map((i) => i.box.width));
+      for (const t of layout.toggles) {
+        expect(t.box.width).toBeLessThan(narrowest);
+        expect(t.box.width).toBeLessThanOrEqual(11);
+      }
+    });
+
+    it("underlines a toggle that is pressed, and not one that isn't", () => {
+      const layout = typesetSection(VIEWPORT, TEST_CONTENT, "/about/", TOGGLES);
+      const [moon, life] = layout.toggles;
+      expect(rowsIn(layout.pinned, inside(life.box, 1)).at(-1)).toBe("#######");
+      expect(rowsIn(layout.pinned, inside(moon.box, 1))).toHaveLength(7);
     });
 
     it.each([
