@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .astro/
+# Playwright's output from the end-to-end tests.
+test-results/
+playwright-report/
 .DS_Store
 .env
 .private-terms

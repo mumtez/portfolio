@@ -38,6 +38,15 @@ describe("Deploy workflow", () => {
     expect(steps[upload].with?.path).toBe("dist");
   });
 
+  it("installs the browsers for the end-to-end tests before running them", () => {
+    const steps = workflow.jobs.build.steps;
+    const install = steps.findIndex(
+      (step) => step.run === "npx playwright install --with-deps chromium webkit",
+    );
+    expect(install).toBeGreaterThanOrEqual(0);
+    expect(steps.findIndex((step) => step.run === "npm run test:all")).toBeGreaterThan(install);
+  });
+
   it("deploys to Pages only after the tested build succeeds", () => {
     const deploy = workflow.jobs.deploy;
     expect(deploy.needs).toBe("build");

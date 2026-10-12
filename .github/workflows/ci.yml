@@ -24,5 +24,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Format check, type check, unit tests, then build and test the built site.
+      # Browsers for the end-to-end tests: WebKit, since every iPhone browser is WebKit.
+      - run: npx playwright install --with-deps chromium webkit
+      # Format check, type check, unit tests, then build and test the built site, in
+      # browsers too.
       - run: npm run test:all

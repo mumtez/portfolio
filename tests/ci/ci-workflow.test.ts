@@ -38,6 +38,15 @@ describe("CI workflow", () => {
     expect(steps.some((step) => step.run === "npm run test:all")).toBe(true);
   });
 
+  it("installs the browsers for the end-to-end tests before running them", () => {
+    const steps = Object.values(workflow().jobs).flatMap((job) => job.steps);
+    const install = steps.findIndex(
+      (step) => step.run === "npx playwright install --with-deps chromium webkit",
+    );
+    expect(install).toBeGreaterThanOrEqual(0);
+    expect(steps.findIndex((step) => step.run === "npm run test:all")).toBeGreaterThan(install);
+  });
+
   it("doesn't deploy", () => {
     const steps = Object.values(workflow().jobs).flatMap((job) => job.steps);
     expect(steps.some((step) => step.uses?.startsWith("actions/deploy-pages@"))).toBe(false);

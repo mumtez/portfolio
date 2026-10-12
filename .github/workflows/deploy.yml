@@ -25,7 +25,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Format check, type check, unit tests, then build and test the built site (leaves dist/).
+      # Browsers for the end-to-end tests: WebKit, since every iPhone browser is WebKit.
+      - run: npx playwright install --with-deps chromium webkit
+      # Format check, type check, unit tests, then build and test the built site, in
+      # browsers too (leaves dist/).
       - run: npm run test:all
       - uses: actions/upload-pages-artifact@v5
         with:
