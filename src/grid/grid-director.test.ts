@@ -744,6 +744,25 @@ describe("Grid Director", () => {
       expect(pinnedInLines(d, [LINES[0]])).toEqual([]);
     });
 
+    it("keeps what has condensed when measured again: only the Cells of what moved change", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/");
+      d.setShapes(LINES);
+      d.tick();
+      d.tick();
+      const before = pinnedInLines(d, LINES.slice(0, 2));
+      expect(before.length).toBeGreaterThan(0);
+      // Measured again (it scrolled a little): the last line moved, a new one came into sight.
+      const moved = { ...LINES[2], box: { ...LINES[2].box, y: 50 } };
+      const appeared: Shape = { kind: "line", box: { x: 57, y: 30, width: 87, height: 4 } };
+      d.setShapes([LINES[0], LINES[1], moved, appeared]);
+      expect(pinnedInLines(d, LINES.slice(0, 2))).toEqual(before);
+      d.tick();
+      // Still condensing from there, never undoing what was in.
+      const after = new Set(pinnedInLines(d, LINES.slice(0, 2)));
+      for (const k of before) expect(after.has(k), k).toBe(true);
+    });
+
     it("ends on the newer Section when redirected mid-Transition, condensing its lines", () => {
       const d = settledAt("/about/");
       d.navigate("/projects/");

@@ -33,7 +33,7 @@ import {
 import { INTRO_SEEDS, introCells, seedDensity, soupCells, type IntroSeed } from "./intro-seeds";
 import { LifeEngine, type Point } from "./life-engine";
 import { sectionPath, type GridContent } from "./routes";
-import { lineInk, lines, panelCells, type Shape } from "./shapes";
+import { lineInk, panelCells, type Shape } from "./shapes";
 
 /** One generation every this many milliseconds, during the Intro and after it. */
 export const TICK_MS = 120;
@@ -101,11 +101,19 @@ export class GridDirector {
   /** The Body Text's shapes for the Section whose HTML is in the page, as last measured. */
   private shapes: readonly Shape[] = [];
   /**
-   * During a Transition, once the next Section's HTML has landed: its lines' Cells, in
-   * the order they condense, and the Transition's tick when they started.
+   * During a Transition, once the next Section's HTML has landed: the Cells its lines
+   * and Panel borders condense into, where they are now, and the Transition's tick when
+   * they started to.
    */
   private arrivingText: readonly Point[] = [];
-  private textFrom: number | undefined;
+  private textArrivedAt: number | undefined;
+  /**
+   * A random number per Cell for the Section's text, drawn once each: whether a Cell of
+   * a line is inked, and how early in the Transition a Cell condenses. Measuring the
+   * text again (it scrolled) changes only the Cells of what moved.
+   */
+  private readonly inkDraws: CellDraws;
+  private readonly condenseDraws: CellDraws;
   /** The toggles as they should be drawn now. */
   private toggles: readonly ToggleSpec[];
   /** Buttons whose border is unpinned for now, by key, with the generations left before it pins again. */
@@ -116,7 +124,7 @@ export class GridDirector {
    * The Panels of the Section whose HTML is in the page: their border and label Cells,
    * pinned once settled, and their interiors' other Cells, walled off once settled.
    */
-  private borders: readonly Point[] = [];
+  private panelPins: readonly Point[] = [];
   private walls: readonly Point[] = [];
   /** The Panels among them that are Buttons, which decay on hover and focus like the nav's. */
   private buttonPanels: readonly ButtonPanel[] = [];
@@ -124,6 +132,8 @@ export class GridDirector {
 
   constructor(private readonly options: GridDirectorOptions) {
     this.random = options.random ?? Math.random;
+    this.inkDraws = new CellDraws(this.random);
+    this.condenseDraws = new CellDraws(this.random);
     this.toggles = options.toggles ?? [];
     this._route = sectionPath(options.route);
     this._layout = this.typeset(this._route);
@@ -168,29 +178,31 @@ export class GridDirector {
    */
   setShapes(shapes: readonly Shape[]): void {
     this.shapes = shapes;
-    const { border } = this.placePanels();
+    this.placePanels();
     if (this._phase === "settled") {
       this.setPinned(this.pinnedNow);
       this._engine.setWalls(this.walls);
     }
     if (this._phase !== "transition") return;
-    this.textFrom ??= this.transitionTick;
-    this.arrivingText = shuffle(
-      [...lines(shapes).flatMap((line) => lineInk(line.box, this.random)), ...border],
-      this.random,
-    );
+    this.textArrivedAt ??= this.transitionTick;
+    this.arrivingText = [...this.textInk(), ...this.panelPins];
     this.pinArriving(this.transitionTick);
+  }
+
+  /** The Cells the lines of Body Text are drawn as while they condense or dissolve. */
+  private textInk(): Point[] {
+    return lineInk(this.shapes, (cell) => this.inkDraws.at(cell));
   }
 
   /**
    * Where the Panels' borders and walls go: everywhere their shapes say, but under the
    * nav and toggles, which the text can scroll beneath. Buttons stay drawn whole.
    */
-  private placePanels(): { border: readonly Point[] } {
+  private placePanels(): void {
     const { border, label, interior } = panelCells(this.shapes);
     const boxes = [...this._layout.nav, ...this._layout.toggles].map((b) => b.box);
     const clear = (p: Point) => !boxes.some((box) => boxContains(box, p));
-    this.borders = [...border, ...label].filter(clear);
+    this.panelPins = [...border, ...label].filter(clear);
     this.walls = interior.filter(clear);
     this.buttonPanels = this.shapes.flatMap((s) =>
       s.kind === "panel" && s.panel === "button" && s.href !== undefined
@@ -203,7 +215,6 @@ export class GridDirector {
           ]
         : [],
     );
-    return { border: this.borders };
   }
 
   /** Advance one generation. */
@@ -321,12 +332,14 @@ export class GridDirector {
     // The walls go first: Cells can't be brought to life in a wall.
     this.walls = [];
     this._engine.setWalls([]);
-    if (this._phase === "settled")
-      this._engine.inject(lines(this.shapes).flatMap((line) => lineInk(line.box, this.random)));
+    if (this._phase === "settled") this._engine.inject(this.textInk());
     this.shapes = [];
-    this.borders = [];
+    this.panelPins = [];
     this.arrivingText = [];
-    this.textFrom = undefined;
+    this.textArrivedAt = undefined;
+    // The next Section's text is drawn afresh.
+    this.inkDraws.clear();
+    this.condenseDraws.clear();
   }
 
   /**
@@ -340,15 +353,14 @@ export class GridDirector {
       return;
     }
     const last = TRANSITION_TICKS - 1;
-    const share = (cells: readonly Point[], from: number) =>
-      cells.slice(
-        0,
-        from >= last ? cells.length : Math.ceil((cells.length * (tick - from)) / (last - from)),
-      );
+    /** How much of what started condensing on tick `from` is in by now, from 0 to 1. */
+    const condensed = (from: number) => (from >= last ? 1 : (tick - from) / (last - from));
+    const textIn = this.textArrivedAt === undefined ? 0 : condensed(this.textArrivedAt);
     this.setPinned([
       ...this.kept,
-      ...share(this.arriving, 0),
-      ...(this.textFrom === undefined ? [] : share(this.arrivingText, this.textFrom)),
+      ...this.arriving.slice(0, Math.ceil(this.arriving.length * condensed(0))),
+      // Each Cell of the text condenses on its own draw, so the ones in stay in when it's measured again.
+      ...this.arrivingText.filter((cell) => this.condenseDraws.at(cell) < textIn),
     ]);
   }
 
@@ -423,7 +435,7 @@ export class GridDirector {
     this.kept = [];
     this.arriving = [];
     this.arrivingText = [];
-    this.textFrom = undefined;
+    this.textArrivedAt = undefined;
   }
 
   /**
@@ -432,7 +444,7 @@ export class GridDirector {
    */
   private setPinned(layoutPoints: readonly Point[]): void {
     this.pinnedNow = layoutPoints;
-    const points = this._phase === "settled" ? [...layoutPoints, ...this.borders] : layoutPoints;
+    const points = this._phase === "settled" ? [...layoutPoints, ...this.panelPins] : layoutPoints;
     const decaying = new Set(
       this.buttons()
         .filter((b) => this.unpinnedBorders.has(b.key))
@@ -467,4 +479,22 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+/** A random number per Cell, drawn the first time it's asked for and the same after, until cleared. */
+class CellDraws {
+  private readonly drawn = new Map<string, number>();
+
+  constructor(private readonly random: () => number) {}
+
+  at(cell: Point): number {
+    const k = key(cell);
+    let draw = this.drawn.get(k);
+    if (draw === undefined) this.drawn.set(k, (draw = this.random()));
+    return draw;
+  }
+
+  clear(): void {
+    this.drawn.clear();
+  }
 }

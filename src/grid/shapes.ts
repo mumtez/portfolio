@@ -47,16 +47,25 @@ const INK_ROWS = 0.6;
 const INK_DENSITY = 0.55;
 
 /**
- * The Cells a line of Body Text is drawn as while it condenses or dissolves: a ragged
- * band through the middle of its box, so it reads as a line of text, not a block.
+ * The Cells the lines of Body Text among `shapes` are drawn as while they condense or
+ * dissolve: a ragged band through the middle of each line's box, so it reads as a line
+ * of text, not a block. Whether a Cell of a band is inked is down to `draw`, a random
+ * number for that Cell: the same Cell drawn the same each time keeps its ink, however
+ * often the lines are measured.
  */
-export function lineInk({ x, y, width, height }: Box, random: () => number): Point[] {
-  const rows = Math.max(1, Math.round(height * INK_ROWS));
-  const top = y + Math.floor((height - rows) / 2);
+export function lineInk(shapes: readonly Shape[], draw: (cell: Point) => number): Point[] {
   const cells: Point[] = [];
-  for (let row = top; row < top + rows; row++)
-    for (let dx = 0; dx < width; dx++)
-      if (random() < INK_DENSITY) cells.push({ x: x + dx, y: row });
+  for (const s of shapes) {
+    if (s.kind !== "line") continue;
+    const { x, y, width, height } = s.box;
+    const rows = Math.max(1, Math.round(height * INK_ROWS));
+    const top = y + Math.floor((height - rows) / 2);
+    for (let row = top; row < top + rows; row++)
+      for (let dx = 0; dx < width; dx++) {
+        const cell = { x: x + dx, y: row };
+        if (draw(cell) < INK_DENSITY) cells.push(cell);
+      }
+  }
   return cells;
 }
 
@@ -106,9 +115,4 @@ export function panelCells(shapes: readonly Shape[]): PanelCells {
           interior.push({ x: cx, y: cy });
   }
   return { border, label, interior };
-}
-
-/** The line shapes among `shapes`. */
-export function lines(shapes: readonly Shape[]): LineShape[] {
-  return shapes.filter((s): s is LineShape => s.kind === "line");
 }
