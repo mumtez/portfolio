@@ -189,9 +189,19 @@ const themeCss = `
     height: var(--toggles-clearance, 0px);
   }
   /*
-   * A Section arriving in a Transition: its Body Text stays hidden while it condenses
-   * out of cells, then fades in as the Grid script releases them into Life (ADR 0004).
-   * It stays in the accessibility tree throughout, and its heading takes focus at once.
+   * A Section leaving in a Transition: its Body Text fades out over its lines dissolving
+   * into Life, before the next Section replaces it (`LEAVE_MS` in the Grid script).
+   */
+  html.grid-on main.leaving {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms ease-in;
+  }
+  /*
+   * A Section arriving in a Transition: its Body Text stays hidden while its lines
+   * condense out of cells, then fades in as the Grid script releases them into Life
+   * (ADR 0004). It stays in the accessibility tree throughout, and its heading takes
+   * focus once it's swapped in.
    */
   html.grid-on main.arriving:not(.released) {
     opacity: 0;

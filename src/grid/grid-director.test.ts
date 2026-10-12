@@ -4,12 +4,14 @@ import {
   BORDER_UNPIN_TICKS,
   GridDirector,
   TICK_MS,
+  TRANSITION_TICKS,
   type GridDirectorOptions,
   type IntroMemory,
 } from "./grid-director";
 import { INTRO_SEEDS } from "./intro-seeds";
 import { CellKind } from "./life-engine";
-import { TEST_CONTENT } from "./test-support";
+import type { Shape } from "./shapes";
+import { mulberry32, TEST_CONTENT } from "./test-support";
 
 const VIEWPORT = { width: 201, height: 60 };
 
@@ -274,13 +276,13 @@ describe("Grid Director", () => {
   describe("a Transition between Sections", () => {
     const settledAt = (route: string) => director({ route, introMemory: memory(true) });
 
-    it("pins the next Section in within the tick budget for about 600ms", () => {
+    it("pins the next Section in within the tick budget for about 800ms", () => {
       const d = settledAt("/about/");
       expect(d.navigate("/projects/")).toBe(true);
       expect(d.phase).toBe("transition");
       const ticks = ticksToSettle(d);
       expect(ticks).toBeGreaterThan(0);
-      expect(ticks * TICK_MS).toBeLessThanOrEqual(600);
+      expect(ticks * TICK_MS).toBeLessThanOrEqual(850);
       expect(d.phase).toBe("settled");
       expect(d.route).toBe("/projects/");
       expect(pinnedKeys(d)).toEqual(
@@ -360,7 +362,7 @@ describe("Grid Director", () => {
       d.tick();
       d.navigate("/contact/");
       const ticks = ticksToSettle(d);
-      expect(ticks * TICK_MS).toBeLessThanOrEqual(600);
+      expect(ticks * TICK_MS).toBeLessThanOrEqual(850);
       expect(d.route).toBe("/contact/");
       expect(pinnedKeys(d)).toEqual(
         new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),
@@ -602,44 +604,92 @@ describe("Grid Director", () => {
     });
   });
 
-  describe("Body Text arriving in a Transition", () => {
-    const settledAt = (route: string) => director({ route, introMemory: memory(true) });
-    const pinnedInBody = (d: GridDirector) =>
+  describe("Body Text shapes in a Transition", () => {
+    const settledAt = (route: string) =>
+      director({ route, introMemory: memory(true), random: mulberry32(7) });
+    /** Three lines of Body Text below the nav, as the page measures them. */
+    const LINES: Shape[] = [38, 42, 46].map((y) => ({
+      kind: "line",
+      box: { x: 57, y, width: 87, height: 4 },
+    }));
+    /**
+     * Cells a line drawn in Cells has at least: a band across its 87-cell width, well
+     * above what the ambient soup leaves in a line's box (about 30).
+     */
+    const INKED = 70;
+    const pinnedInLines = (d: GridDirector, lines: readonly Shape[] = LINES) =>
       [...pinnedKeys(d)].filter((k) => {
         const [x, y] = k.split(",").map(Number);
-        return boxContains(d.layout.body, { x, y });
+        return lines.some((s) => boxContains(s.box, { x, y }));
       });
+    const aliveInLines = (d: GridDirector, lines: readonly Shape[] = LINES) =>
+      lines.flatMap(({ box }) => {
+        const out: string[] = [];
+        for (let y = box.y; y < box.y + box.height; y++)
+          for (let x = box.x; x < box.x + box.width; x++)
+            if (d.engine.isAlive(x, y)) out.push(`${x},${y}`);
+        return out;
+      });
+    /** Run a Transition to `path` whose HTML lands after `landsAfter` ticks, measuring as `LINES`. */
+    function transition(d: GridDirector, path: string, landsAfter = 1): string[] {
+      d.navigate(path);
+      let condensed: string[] = [];
+      for (let t = 0; d.phase === "transition"; t++) {
+        if (t === landsAfter) d.setShapes(LINES);
+        condensed = pinnedInLines(d);
+        d.tick();
+      }
+      return condensed;
+    }
 
-    it("is released at once when a Section loads directly", () => {
+    it("is released at once when a Section loads directly, and stays released as it's measured", () => {
       const d = settledAt("/projects/baja/");
       expect(d.bodyTextReleased).toBe(true);
-      expect(pinnedInBody(d)).toEqual([]);
+      d.setShapes(LINES);
+      expect(pinnedInLines(d)).toEqual([]);
     });
 
-    it("condenses out of Cells, pinned in its region, as the Transition runs", () => {
+    it("pins the lines no matter how late the HTML lands, up to the penultimate tick", () => {
       const d = settledAt("/about/");
-      d.navigate("/projects/roborebels/");
-      expect(d.bodyTextReleased).toBe(false);
-      const counts: number[] = [];
-      while (d.phase === "transition") {
-        counts.push(pinnedInBody(d).length);
-        d.tick();
-      }
-      expect(counts[0]).toBe(0);
-      for (let i = 1; i < counts.length; i++) expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+      const condensed = transition(d, "/projects/", TRANSITION_TICKS - 1);
+      expect(condensed.length).toBeGreaterThan(3 * INKED);
     });
 
-    it("releases into Life when the Transition settles, which is when its HTML fades in", () => {
+    it("settles without lines when the HTML lands later than that; they're just measured", () => {
       const d = settledAt("/about/");
-      d.navigate("/projects/roborebels/");
-      let condensed: string[] = [];
-      while (d.phase === "transition") {
-        condensed = pinnedInBody(d);
-        d.tick();
-      }
-      expect(condensed.length).toBeGreaterThan(50);
+      d.navigate("/projects/");
+      ticksToSettle(d);
+      d.setShapes(LINES);
       expect(d.bodyTextReleased).toBe(true);
-      expect(pinnedInBody(d)).toEqual([]);
+      expect(pinnedInLines(d)).toEqual([]);
+    });
+
+    it("condenses the arriving lines out of Cells as the Transition runs, all in by the penultimate tick", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/");
+      expect(d.bodyTextReleased).toBe(false);
+      d.tick();
+      // The arriving Section's HTML has landed: the page measures it.
+      d.setShapes(LINES);
+      expect(pinnedInLines(d)).toEqual([]);
+      const counts: number[] = [];
+      let penultimate: number[] = [];
+      while (d.phase === "transition") {
+        counts.push(pinnedInLines(d).length);
+        penultimate = LINES.map((line) => pinnedInLines(d, [line]).length);
+        d.tick();
+      }
+      for (let i = 1; i < counts.length; i++) expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+      // Every line is inked across its width, like a line of text.
+      for (const pinned of penultimate) expect(pinned).toBeGreaterThan(INKED);
+    });
+
+    it("releases the lines into Life on the last tick, which is when the HTML fades in", () => {
+      const d = settledAt("/about/");
+      const condensed = transition(d, "/projects/roborebels/");
+      expect(condensed.length).toBeGreaterThan(3 * INKED);
+      expect(d.bodyTextReleased).toBe(true);
+      expect(pinnedInLines(d)).toEqual([]);
       for (const k of condensed) {
         const [x, y] = k.split(",").map(Number);
         expect(d.engine.isAlive(x, y), k).toBe(true);
@@ -654,20 +704,69 @@ describe("Grid Director", () => {
       ).toBe(true);
     });
 
-    it("still settles within the Transition's budget of about 600ms", () => {
+    it("settles within the Transition's budget of about 800ms", () => {
       const d = settledAt("/about/");
       d.navigate("/projects/baja/");
-      expect(ticksToSettle(d) * TICK_MS).toBeLessThanOrEqual(600);
+      d.setShapes(LINES);
+      expect(ticksToSettle(d) * TICK_MS).toBeLessThanOrEqual(850);
     });
 
-    it("starts condensing again for the latest Section when redirected", () => {
+    it("dissolves the outgoing lines on navigate: Free Cells where its text was, for Life to tear apart", () => {
+      const d = settledAt("/about/");
+      d.setShapes(LINES);
+      // Settled, the text is HTML: its lines are only soup.
+      for (const line of LINES) expect(aliveInLines(d, [line]).length).toBeLessThan(INKED);
+      d.navigate("/projects/");
+      for (const line of LINES) expect(aliveInLines(d, [line]).length).toBeGreaterThan(INKED);
+      expect(pinnedInLines(d)).toEqual([]);
+    });
+
+    it("keeps the latest measure of the outgoing lines, so they dissolve where the text has scrolled to", () => {
+      const d = settledAt("/about/");
+      d.setShapes(LINES);
+      const scrolled: Shape[] = [{ kind: "line", box: { x: 57, y: 52, width: 87, height: 4 } }];
+      d.setShapes(scrolled);
+      d.navigate("/projects/");
+      expect(aliveInLines(d, [LINES[0]]).length).toBeLessThan(INKED);
+      expect(aliveInLines(d, scrolled).length).toBeGreaterThan(INKED);
+    });
+
+    it("follows the lines when they move mid-Transition", () => {
+      const d = settledAt("/about/");
+      d.navigate("/projects/");
+      d.setShapes(LINES);
+      d.tick();
+      d.tick();
+      const scrolled: Shape[] = LINES.map((s) => ({ ...s, box: { ...s.box, y: s.box.y + 8 } }));
+      d.setShapes(scrolled);
+      expect(pinnedInLines(d, scrolled).length).toBeGreaterThan(0);
+      // The rows the lines left are clear of their pins.
+      expect(pinnedInLines(d, [LINES[0]])).toEqual([]);
+    });
+
+    it("ends on the newer Section when redirected mid-Transition, condensing its lines", () => {
       const d = settledAt("/about/");
       d.navigate("/projects/");
       d.tick();
+      d.setShapes(LINES);
       d.tick();
+      const half = pinnedInLines(d);
+      expect(half.length).toBeGreaterThan(0);
       d.navigate("/contact/");
       expect(d.bodyTextReleased).toBe(false);
+      // What had condensed of the abandoned Section is released into Life.
+      expect(pinnedInLines(d)).toEqual([]);
+      for (const k of half) {
+        const [x, y] = k.split(",").map(Number);
+        expect(d.engine.isAlive(x, y), k).toBe(true);
+      }
+      d.tick();
+      // The newer Section's HTML lands and condenses in the ticks left.
+      d.setShapes(LINES);
+      d.tick();
+      expect(pinnedInLines(d).length).toBeGreaterThan(0);
       ticksToSettle(d);
+      expect(d.route).toBe("/contact/");
       expect(d.bodyTextReleased).toBe(true);
       expect(pinnedKeys(d)).toEqual(
         new Set(settledAt("/contact/").layout.pinned.map((p) => `${p.x},${p.y}`)),

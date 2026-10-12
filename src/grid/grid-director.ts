@@ -4,16 +4,16 @@
  * Phases: Intro → Settled ⇄ Transition. On a first visit to Home the Intro plays a
  * random Intro Seed under strict Life, then pins the name. A Transition releases the
  * current Section's pins into Free Cells and pins the next Section in while real Life
- * runs, while the next Section's Body Text condenses out of Cells in its region; when
- * the Transition settles, that condensate is released into Life as the Body Text's HTML
- * fades in (ADR 0004). (Paused is the Ticker's job, and Off is the Plain View with no
- * Grid at all.)
+ * runs. The Body Text is real HTML (ADR 0004), which the page measures into shapes and
+ * hands over with `setShapes`: on navigate the old Section's lines appear as Free Cells
+ * where its text was, and once the next Section's HTML has landed its lines condense out
+ * of Cells over the ticks left; the last tick releases them into Life as the HTML fades
+ * in. (Paused is the Ticker's job, and Off is the Plain View with no Grid at all.)
  *
  * Frames are walls in the Life Engine. Their media are real HTML that scrolls with the
  * Body Text, so the page measures them and hands them over with `setFrames`.
  */
 import {
-  bodyTextCondensate,
   boxContains,
   navItemAt,
   toggleAt,
@@ -26,14 +26,15 @@ import {
 import { INTRO_SEEDS, introCells, seedDensity, soupCells, type IntroSeed } from "./intro-seeds";
 import { LifeEngine, type Point } from "./life-engine";
 import { sectionPath, type GridContent } from "./routes";
+import { lineInk, lines, type Shape } from "./shapes";
 
 /** One generation every this many milliseconds, during the Intro and after it. */
 export const TICK_MS = 120;
 /**
- * Generations a Transition takes: 5 × 120ms = 600ms. The next Section's pins and its
- * Body Text's condensate are all in by the last of them, which releases the condensate.
+ * Generations a Transition takes: 7 × 120ms = 840ms. The next Section's pins and its
+ * Body Text's lines are all in by the one before the last, and the last releases the lines.
  */
-export const TRANSITION_TICKS = 5;
+export const TRANSITION_TICKS = 7;
 /** Generations a button's border stays unpinned after a hover or focus, decaying under real Life: 360ms. */
 export const BORDER_UNPIN_TICKS = 3;
 /** Chance that a Cell starts alive in the ambient soup when there is no Intro. */
@@ -79,6 +80,14 @@ export class GridDirector {
   private kept: readonly Point[] = [];
   private arriving: readonly Point[] = [];
   private transitionTick = 0;
+  /** The Body Text's shapes for the Section whose HTML is in the page, as last measured. */
+  private shapes: readonly Shape[] = [];
+  /**
+   * During a Transition, once the next Section's HTML has landed: its lines' Cells, in
+   * the order they condense, and the Transition's tick when they started.
+   */
+  private arrivingText: readonly Point[] = [];
+  private textFrom: number | undefined;
   /** The toggles as they should be drawn now. */
   private toggles: readonly ToggleSpec[];
   /** Buttons whose border is unpinned for now, by key, with the generations left before it pins again. */
@@ -129,6 +138,24 @@ export class GridDirector {
   setFrames(frames: readonly Box[]): void {
     this.walls = frames.flatMap(boxCells);
     this._engine.setWalls(this.walls);
+  }
+
+  /**
+   * The Body Text's shapes where they are now (in viewport cells), measured from the
+   * Section whose HTML is in the page, replacing any before. Called once a Transition's
+   * HTML has landed, and again whenever the text moves (scroll, resize). Mid-Transition,
+   * the lines condense in over the ticks still to come; the last of the Section's shapes
+   * are what dissolve when the next Transition leaves it.
+   */
+  setShapes(shapes: readonly Shape[]): void {
+    this.shapes = shapes;
+    if (this._phase !== "transition") return;
+    this.textFrom ??= this.transitionTick;
+    this.arrivingText = shuffle(
+      lines(shapes).flatMap((line) => lineInk(line.box, this.random)),
+      this.random,
+    );
+    this.pinArriving(this.transitionTick);
   }
 
   /** Advance one generation. */
@@ -210,10 +237,10 @@ export class GridDirector {
 
     this._route = route;
     this._layout = this.typeset(route);
-    // Its Frames come with its HTML; the page sets them once that's in.
+    // Its Frames and shapes come with its HTML; the page sets them once that's in.
     this.setFrames([]);
-    const condensate = bodyTextCondensate(this._layout.body, this.options.viewport, this.random);
-    const target = [...this._layout.pinned, ...condensate];
+    this.dissolveText();
+    const target = this._layout.pinned;
     const next = new Set(target.map(key));
     const now = new Set(this.pinnedNow.map(key));
     this.kept = this.pinnedNow.filter((p) => next.has(key(p)));
@@ -228,17 +255,39 @@ export class GridDirector {
   }
 
   /**
+   * The Section being left: its lines of Body Text appear as Free Cells where its text
+   * was, for Life to tear apart as its HTML fades out. A Section still arriving has no
+   * text showing; whatever of it had condensed is released with its other pins.
+   */
+  private dissolveText(): void {
+    if (this._phase === "settled")
+      this._engine.inject(lines(this.shapes).flatMap((line) => lineInk(line.box, this.random)));
+    this.shapes = [];
+    this.arrivingText = [];
+    this.textFrom = undefined;
+  }
+
+  /**
    * Pin the share of the arriving pins due after `tick` generations of the Transition:
    * all of them on the generation before the last, which then settles, releasing the
-   * condensate.
+   * lines. Lines whose HTML landed late condense over the ticks left.
    */
   private pinArriving(tick: number): void {
     if (tick >= TRANSITION_TICKS) {
       this.pinLayout();
       return;
     }
-    const count = Math.ceil((this.arriving.length * tick) / (TRANSITION_TICKS - 1));
-    this.setPinned([...this.kept, ...this.arriving.slice(0, count)]);
+    const last = TRANSITION_TICKS - 1;
+    const share = (cells: readonly Point[], from: number) =>
+      cells.slice(
+        0,
+        from >= last ? cells.length : Math.ceil((cells.length * (tick - from)) / (last - from)),
+      );
+    this.setPinned([
+      ...this.kept,
+      ...share(this.arriving, 0),
+      ...(this.textFrom === undefined ? [] : share(this.arrivingText, this.textFrom)),
+    ]);
   }
 
   /**
@@ -305,6 +354,8 @@ export class GridDirector {
     this.ticksUntilName = 0;
     this.kept = [];
     this.arriving = [];
+    this.arrivingText = [];
+    this.textFrom = undefined;
     this._phase = "settled";
   }
 
