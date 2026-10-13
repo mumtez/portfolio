@@ -13,28 +13,41 @@ const overscroll = (page: Page) =>
     ),
   );
 
-test("with the Grid on, neither the scroll box nor the page bounces", async ({ page }) => {
+test("with the Grid on, neither the Body Text's scroll box nor the page bounces", async ({
+  page,
+}) => {
   await page.goto("/projects/baja/");
   await expectGrid(page, true);
   await expectSection(page, "/projects/baja/", "Baja fuel-level estimator");
   expect(await overscroll(page)).toEqual(["none", "none"]);
 });
 
-test("the Plain View keeps the browser's own overscroll", async ({ page }) => {
-  await page.goto("/projects/baja/");
-  await expectGrid(page, true);
-  await toggle(page, "simulation").click();
-  await expectGrid(page, false);
-  expect(await overscroll(page)).toEqual(["auto", "auto"]);
-});
+const PLAIN_VIEWS = [
+  {
+    why: "simulation toggled off",
+    use: {},
+    open: async (page: Page) => {
+      await page.goto("/projects/baja/");
+      await expectGrid(page, true);
+      await toggle(page, "simulation").click();
+    },
+  },
+  {
+    why: "reduced motion",
+    use: { reducedMotion: "reduce" as const },
+    open: (page: Page) => page.goto("/projects/baja/"),
+  },
+];
 
-test.describe("under reduced motion", () => {
-  test.use({ reducedMotion: "reduce" });
+for (const { why, use, open } of PLAIN_VIEWS) {
+  test.describe(`the Plain View (${why})`, () => {
+    test.use(use);
 
-  test("the Plain View keeps the browser's own overscroll", async ({ page }) => {
-    await page.goto("/projects/baja/");
-    await expectGrid(page, false);
-    await expect(main(page)).toBeVisible();
-    expect(await overscroll(page)).toEqual(["auto", "auto"]);
+    test("keeps the browser's own overscroll", async ({ page }) => {
+      await open(page);
+      await expectGrid(page, false);
+      await expect(main(page)).toBeVisible();
+      expect(await overscroll(page)).toEqual(["auto", "auto"]);
+    });
   });
-});
+}

@@ -220,14 +220,8 @@ const themeCss = `
    * live Grid, down to the bottom of the screen, or to the toggles where they're in the
    * bottom corner over its column.
    */
-  /*
-   * No rubber-band bounce past the scroll ends while the Grid runs: on iPhone it moves
-   * the text without changing the scroll position the Cells follow, so they'd drift
-   * apart. The page itself can bounce too (iOS does even when it doesn't overflow), so
-   * it's off on the root as well as on the Section's scroll box (`main`, below).
-   */
-  html.grid-on,
-  html.grid-on main {
+  html.grid-on {
+    /* No bounce: iOS bounces the page even when it doesn't overflow (see `main` below). */
     overscroll-behavior: none;
   }
   html.grid-on #grid {
@@ -282,6 +276,11 @@ const themeCss = `
     left: 0;
     z-index: 1;
     overflow-y: auto;
+    /*
+     * No rubber-band bounce past the scroll ends: on iPhone it moves the text without
+     * changing the scroll position the Cells follow, so they'd drift apart.
+     */
+    overscroll-behavior: none;
     text-shadow: 0 0 6px var(--bg);
   }
   /*
