@@ -1,7 +1,7 @@
 ---
 title: Homelab
 order: 6
-tools: Proxmox, Docker, Portainer, Nginx Proxy Manager
+tools: Proxmox, Docker, Portainer, Nginx Proxy Manager, Linux, GRUB
 summary: Self-hosted services on a Proxmox host.
 points:
   - Build Docker images and Compose stacks with container networks and health checks
