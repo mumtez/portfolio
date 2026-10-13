@@ -6,6 +6,7 @@ import {
   expectTransition,
   main,
   navLink,
+  TEST_SECTION,
   test,
 } from "./fixtures";
 
@@ -153,7 +154,7 @@ test("the Body Text is measured into line shapes that lie over its text", async 
 });
 
 test("the line shapes follow the text as it scrolls", async ({ page }) => {
-  await page.goto("/projects/baja/");
+  await page.goto(TEST_SECTION);
   await expect(main(page)).toHaveCSS("opacity", "1");
   await expect.poll(async () => (await measured(page)).shapes.length).toBeGreaterThan(0);
   const before = JSON.stringify((await measured(page)).shapes);

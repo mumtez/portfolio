@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { parseHTML } from "linkedom";
 
+export { TEST_SECTION } from "../../src/lib/test-section";
+
 /** Astro's built output (`npm run test:site` builds first). */
 export const DIST = new URL("../../dist/", import.meta.url);
 

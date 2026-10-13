@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-import { builtPage, DIST, SECTIONS } from "./built";
+import { builtPage, DIST, SECTIONS, TEST_SECTION } from "./built";
 
 function text(el: Element | Document | null | undefined): string {
   const node = el && "body" in el ? el.body : el;
@@ -429,6 +429,39 @@ describe("Privacy", () => {
   );
 });
 
+describe(`the test-only Section ${TEST_SECTION} (in test builds only)`, () => {
+  const doc = builtPage(TEST_SECTION);
+  const main = doc.querySelector("main")!;
+
+  it("always has a dashed Placeholder Panel, an empty Frame and a solid Panel", () => {
+    const placeholder = main.querySelector(":scope > .placeholder");
+    expect(placeholder?.getAttribute("data-panel")).toBe("dashed");
+    expect(text(placeholder)).toMatch(/^Placeholder:/);
+    const frame = main.querySelector("figure.frame .frame-slot");
+    expect(frame?.getAttribute("data-panel")).toBe("dashed");
+    expect(frame?.querySelector("img, video")).toBeNull();
+    expect(frame?.querySelector(".placeholder")).not.toBeNull();
+    expect(main.querySelectorAll('section[data-panel="solid"]').length).toBeGreaterThan(0);
+  });
+
+  it("has one h1, and isn't in the nav or the Grid's content", () => {
+    expect(doc.querySelectorAll("h1")).toHaveLength(1);
+    const hrefs = [...doc.querySelectorAll("nav a")].map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual(["/", "/about/", "/experience/", "/projects/", "/contact/"]);
+    expect(doc.querySelectorAll('nav a[aria-current="page"]')).toHaveLength(0);
+    const content = JSON.parse(doc.querySelector("script#grid-content")?.textContent ?? "") as {
+      sections: { path: string }[];
+    };
+    expect(content.sections.map((s) => s.path).sort()).toEqual([...SECTIONS].sort());
+  });
+
+  it("isn't linked from any real Section", () => {
+    for (const url of SECTIONS)
+      for (const a of builtPage(url).querySelectorAll("a"))
+        expect(a.getAttribute("href"), url).not.toContain("test-only");
+  });
+});
+
 describe("Placeholders", () => {
   const list = readFileSync(new URL("../../PLACEHOLDERS.md", import.meta.url), "utf8").replace(
     /\s+/g,
@@ -437,9 +470,11 @@ describe("Placeholders", () => {
   const placeholders = allBuiltHtml().flatMap(({ path, html }) =>
     [...parseHTML(html).document.querySelectorAll(".placeholder")].map((el) => ({ path, el })),
   );
+  /** The test-only Section's Placeholders aren't Andrew's to fill, so aren't listed. */
+  const testOnly = TEST_SECTION.replace(/^\//, "");
 
-  it("there are placeholders while Andrew's own copy is missing", () => {
-    expect(placeholders.length).toBeGreaterThan(0);
+  it("the test build shows placeholders (the test-only Section always has some)", () => {
+    expect(placeholders.filter(({ path }) => path.startsWith(testOnly)).length).toBeGreaterThan(0);
   });
 
   it("every placeholder is visibly labelled", () => {
@@ -453,6 +488,7 @@ describe("Placeholders", () => {
 
   it("every placeholder is listed in PLACEHOLDERS.md", () => {
     for (const { path, el } of placeholders) {
+      if (path.startsWith(testOnly)) continue;
       const note = text(el).replace(/^Placeholder:\s*/, "");
       expect(list, `${path}: "${note}"`).toContain(note);
     }

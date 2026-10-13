@@ -1,6 +1,6 @@
 # Placeholders
 
-Everything on the site still waiting for Andrew's own words or media. Placeholders only show locally (`npm run dev`): the live site leaves them out, along with Frames that have no media yet, so it's always ready to send. Fill one in locally, push to main, and it appears on the live site. Each one shows in its Section as a dashed box labelled **Placeholder:**. `npm run test:site` fails if a placeholder on the site isn't listed here.
+Everything on the site still waiting for Andrew's own words or media. Placeholders only show locally (`npm run dev`): the live site leaves them out, along with Frames that have no media yet, so it's always ready to send. Fill one in locally, push to main, and it appears on the live site. Each one shows in its Section as a dashed box labelled **Placeholder:**. `npm run test:site` fails if a placeholder on the site isn't listed here, except on the test-only Section (`/test-only/placeholders/`, in `npm run dev` and the test builds only): its Placeholders are for the tests and never need filling in.
 
 To fill one in, edit the file named, remove the `placeholder` field (or replace `{ placeholder: ... }` with your text), and delete its line below.
 

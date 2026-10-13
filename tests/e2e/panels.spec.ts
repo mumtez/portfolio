@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { expect, expectNoSidewaysScroll, expectSection, main, navLink, test } from "./fixtures";
+import {
+  expect,
+  expectNoSidewaysScroll,
+  expectSection,
+  main,
+  navLink,
+  TEST_SECTION,
+  test,
+} from "./fixtures";
 
 // Panels: blocks of Body Text inside a border. With the Grid on, each Panel's border is
 // Pinned Cells along its HTML box's edge (every other cell for a dashed Placeholder),
@@ -128,8 +136,8 @@ test.describe("Panels in the Grid", () => {
   });
 
   test("a Placeholder's border is dashed: every other cell pinned", async ({ page }) => {
-    await page.goto("/projects/baja/");
-    await expectSection(page, "/projects/baja/", "Baja fuel-level estimator");
+    await page.goto(TEST_SECTION);
+    await expectSection(page, TEST_SECTION, "Test-only Section");
     await expectPanelsInGrid(page, ["solid", "dashed"]);
     await expectNoSidewaysScroll(page);
   });
@@ -143,8 +151,8 @@ test.describe("Panels in the Grid", () => {
   });
 
   test("Panel borders follow their text as it scrolls, still on its HTML box", async ({ page }) => {
-    await page.goto("/projects/baja/");
-    await expectSection(page, "/projects/baja/", "Baja fuel-level estimator");
+    await page.goto(TEST_SECTION);
+    await expectSection(page, TEST_SECTION, "Test-only Section");
     const scrolled = await main(page).evaluate((el) => {
       const frame = el.querySelector(".frame-slot")!;
       el.scrollTop += frame.getBoundingClientRect().top - el.getBoundingClientRect().top - 40;
@@ -189,7 +197,7 @@ for (const colorScheme of ["dark", "light"] as const) {
         style: "solid",
         color: await accent(),
       });
-      await page.goto("/projects/baja/");
+      await page.goto(TEST_SECTION);
       expect(await border("p[data-panel='dashed']")).toEqual({
         width: "1px",
         style: "dashed",

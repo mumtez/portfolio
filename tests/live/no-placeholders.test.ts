@@ -1,7 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-import { DIST } from "../site/built";
+import { builtPath, DIST, TEST_SECTION } from "../site/built";
 
 /** Every built page, by its path under dist/. */
 function builtPages(dir: URL = DIST): { path: string; document: Document }[] {
@@ -16,6 +16,15 @@ function builtPages(dir: URL = DIST): { path: string; document: Document }[] {
 
 // The live build (`npm run build`, as deployed) leaves out everything still waiting for
 // Andrew's words or media; `npm run dev` and the test builds show it.
+describe("the live build", () => {
+  it(`leaves out the test-only Section ${TEST_SECTION}`, () => {
+    expect(existsSync(builtPath(TEST_SECTION))).toBe(false);
+    expect(builtPages().map(({ path }) => path)).not.toContainEqual(
+      expect.stringMatching(/^test-only\//),
+    );
+  });
+});
+
 describe.each(builtPages())("the live build of $path", ({ document }) => {
   it("shows no Placeholder", () => {
     expect(document.querySelectorAll(".placeholder")).toHaveLength(0);

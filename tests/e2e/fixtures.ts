@@ -9,6 +9,8 @@
 import { test as base, expect, type Page } from "@playwright/test";
 import type {} from "../../src/grid/test-hooks";
 
+export { TEST_SECTION } from "../../src/lib/test-section";
+
 export { expect };
 
 /** Requests the tests block: GoatCounter's script and its counting endpoint. */

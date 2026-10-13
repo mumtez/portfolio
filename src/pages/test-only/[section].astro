@@ -1,0 +1,49 @@
+---
+/**
+ * The test-only Section (see `src/lib/test-section.ts`): a dashed Placeholder Panel, a
+ * solid Panel, a Frame with no media and another solid Panel, whatever Andrew has filled
+ * in elsewhere. Built only when Placeholders are shown, so never on the live site.
+ */
+import type { GetStaticPaths } from "astro";
+import Frame from "../../components/Frame.astro";
+import Placeholder from "../../components/Placeholder.astro";
+import Section from "../../layouts/Section.astro";
+import { SHOW_PLACEHOLDERS } from "../../lib/placeholders";
+import { TEST_SECTION } from "../../lib/test-section";
+
+export const getStaticPaths = (() => {
+  const section = TEST_SECTION.split("/").at(-2)!;
+  return SHOW_PLACEHOLDERS ? [{ params: { section } }] : [];
+}) satisfies GetStaticPaths;
+---
+
+<Section
+  deepDive
+  path={TEST_SECTION}
+  heading="Test-only Section"
+  title="Test-only Section · Andrew Aburustum"
+  description="Only in test builds: a Placeholder, an empty Frame and a solid Panel, for the tests."
+>
+  <Placeholder note="Only in test builds, so the tests always have one." />
+  <div class="body-text">
+    <section data-panel="solid">
+      <h2>A solid Panel</h2>
+      <p>Short enough to fit on a phone's screen with the Placeholder above it.</p>
+    </section>
+    <Frame
+      deepDive="test-only"
+      files={[]}
+      slot="empty"
+      alt="Nothing: this Frame never has media"
+      aspect="3 / 2"
+    />
+    <section data-panel="solid">
+      <h2>Another solid Panel</h2>
+      <p>Below the Frame, so there's always enough to scroll it to the top of the Section.</p>
+      <p>
+        A second paragraph, for the same reason: the Section scrolls at every window size the
+        browser tests use.
+      </p>
+    </section>
+  </div>
+</Section>
