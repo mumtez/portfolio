@@ -79,7 +79,7 @@ A Panel that is also a Button: pressing it follows its link, and its border deca
 _Avoid_: Card link, clickable card
 
 **Cell label**:
-A short label in capitals drawn in Pinned Cells inside a Button Panel's border, standing in for its link's full text (EMAIL for the email address). It stays pinned while the border decays.
+A short label in capitals drawn in Pinned Cells inside a Button Panel's border, standing in for its link's full text (EMAIL for the email address). A Button Panel can show a small icon in Cells instead, such as a Deep Dive's arrow back to Projects. Either stays pinned while the border decays.
 _Avoid_: Badge, tag, caption
 
 **Entry**:

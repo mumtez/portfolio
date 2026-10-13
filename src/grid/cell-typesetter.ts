@@ -218,12 +218,12 @@ export interface NavItem {
   readonly current: boolean;
 }
 
-/** The small cell icons a toggle can show. */
-export type ToggleIcon = "sun" | "moon" | "glider";
-
 /** Every small cell icon: a toggle's, and the arrow on a Deep Dive's Button back to Projects. */
 export const CELL_ICONS = ["sun", "moon", "glider", "arrow-left"] as const;
 export type CellIcon = (typeof CELL_ICONS)[number];
+
+/** The small cell icons a toggle can show. */
+export type ToggleIcon = Exclude<CellIcon, "arrow-left">;
 
 export function isCellIcon(icon: string | undefined): icon is CellIcon {
   return (CELL_ICONS as readonly (string | undefined)[]).includes(icon);

@@ -47,7 +47,8 @@ export interface PanelShape {
   readonly label?: string;
   /**
    * A small icon drawn in Pinned Cells in place of a label (a Deep Dive's arrow back to
-   * Projects), centred and kept pinned in the same way.
+   * Projects), centred and kept pinned in the same way. It's 7 rows tall like the
+   * capitals, and if a Panel has both, the icon is drawn.
    */
   readonly icon?: CellIcon;
   /**

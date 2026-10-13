@@ -10,7 +10,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GetStaticPaths } from "astro";
-import { cellIconButton } from "../../grid/cell-typesetter";
+import { cellIconButton, type CellIcon } from "../../grid/cell-typesetter";
 import Frame from "../../components/Frame.astro";
 import Placeholder from "../../components/Placeholder.astro";
 import Section from "../../layouts/Section.astro";
@@ -43,7 +43,8 @@ const parts = placeFrames(
   frames.map((f) => f.slot),
 );
 const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
-const backButton = cellIconButton("arrow-left");
+const BACK_ICON: CellIcon = "arrow-left";
+const backButton = cellIconButton(BACK_ICON);
 ---
 
 <Section
@@ -57,7 +58,7 @@ const backButton = cellIconButton("arrow-left");
     <a
       href="/projects/"
       data-panel="button"
-      data-cell-icon="arrow-left"
+      data-cell-icon={BACK_ICON}
       style={`--button-cells: ${backButton.width}; --button-rows: ${backButton.height}`}
     >
       <span class="visually-hidden-on-grid">
@@ -95,7 +96,6 @@ const backButton = cellIconButton("arrow-left");
   /* Plain View: an ordinary link, not a Panel. */
   :global(html:not(.grid-on)) .back {
     margin: 0 0 0.75em;
-    font-size: 0.875rem;
   }
   :global(html:not(.grid-on)) .back a {
     margin: 0;

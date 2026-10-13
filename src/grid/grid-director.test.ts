@@ -1156,6 +1156,7 @@ describe("Grid Director", () => {
           expect(iconIn(d, ARROWED)).toEqual(ARROW);
           for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
           for (const k of edge(ARROWED)) expect(d.engine.isPinned(...xy(k)), k).toBe(true);
+          expect(iconIn(d, ARROWED)).toEqual(ARROW);
         });
       });
 
