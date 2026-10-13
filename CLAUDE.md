@@ -1,3 +1,5 @@
+Running, previewing, screenshotting or phone-testing the site: see `docs/agents/running.md`. Filling in Placeholders: see `PLACEHOLDERS.md`.
+
 ## Agent skills
 
 ### Issue tracker
