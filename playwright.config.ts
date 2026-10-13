@@ -3,8 +3,8 @@ import { defineConfig, type PlaywrightTestConfig } from "@playwright/test";
 /** Where `astro preview` serves the built site for the browser tests. */
 const PORT = Number(process.env.E2E_PORT ?? 4329);
 
-/** A desktop window, and an iPhone's: 390px wide at 3× with touch. */
-const VIEWPORTS = {
+/** A desktop window, and an iPhone's: 390px wide at 3× with touch. `npm run shots` uses them too. */
+export const VIEWPORTS = {
   desktop: { viewport: { width: 1440, height: 900 } },
   iphone: {
     viewport: { width: 390, height: 844 },

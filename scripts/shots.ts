@@ -8,18 +8,24 @@
  * or Ctrl-C, and a port already in use is an error rather than a server to reuse.
  */
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { mkdir, readdir } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import { connect } from "node:net";
 import { parseArgs } from "node:util";
-import { chromium, type Browser, type BrowserContextOptions } from "@playwright/test";
+import { chromium, type Browser } from "@playwright/test";
+import { VIEWPORTS as CONTEXTS } from "../playwright.config.ts";
+import type { Theme } from "../src/grid/palette.ts";
+import { SIMULATION_KEY, THEME_KEY } from "../src/lib/preferences.ts";
 
-const VIEWPORTS = ["desktop", "iphone"] as const;
-const THEMES = ["dark", "light"] as const;
-const VIEWS = ["grid", "plain"] as const;
+type Viewport = keyof typeof CONTEXTS;
+/** Grid on, or the Plain View. */
+type View = "grid" | "plain";
 
-type Viewport = (typeof VIEWPORTS)[number];
-type Theme = (typeof THEMES)[number];
-type View = (typeof VIEWS)[number];
+const VIEWPORTS: readonly Viewport[] = ["desktop", "iphone"];
+const THEMES: readonly Theme[] = ["dark", "light"];
+const VIEWS: readonly View[] = ["grid", "plain"];
+
+/** The Intro is skipped when this is "1" in session storage (`INTRO_SEEN_KEY` in `src/grid/grid.ts`). */
+const INTRO_SEEN_KEY = "intro-seen";
 
 export interface Shot {
   path: string;
@@ -44,20 +50,12 @@ export const OUT_DIR = ".shots";
 /** The port its own `astro preview` serves on: not the end-to-end tests' 4329. */
 const PORT = 4330;
 
-/** The same sizes as the end-to-end tests (`playwright.config.ts`). */
-const CONTEXTS: Record<Viewport, BrowserContextOptions> = {
-  desktop: { viewport: { width: 1440, height: 900 } },
-  iphone: {
-    viewport: { width: 390, height: 844 },
-    deviceScaleFactor: 3,
-    isMobile: true,
-    hasTouch: true,
-  },
-};
+/** A URL path's parts, e.g. `["projects", "baja"]` for `/projects/baja/`. */
+const pathParts = (path: string) => path.split("/").filter(Boolean);
 
 /** The file a shot is saved to, e.g. `.shots/projects-baja-iphone-light-plain.png`. */
 export function shotFile({ path, viewport, theme, view }: Shot): string {
-  const name = path.split("/").filter(Boolean).join("-") || "home";
+  const name = pathParts(path).join("-") || "home";
   return `${OUT_DIR}/${name}-${viewport}-${theme}-${view}.png`;
 }
 
@@ -75,7 +73,7 @@ export function parseShotsArgs(argv: string[]): ShotsOptions {
   });
   return {
     paths: positionals.map((path) => {
-      const parts = path.split("/").filter(Boolean);
+      const parts = pathParts(path);
       return parts.length > 0 ? `/${parts.join("/")}/` : "/";
     }),
     viewports: oneOrAll("--viewport", values.viewport, VIEWPORTS),
@@ -96,8 +94,8 @@ function oneOrAll<T extends string>(
   return [value as T];
 }
 
-/** Every shot: each path at each viewport, theme and view. */
-function plan(options: ShotsOptions, paths: string[]): Shot[] {
+/** Every shot: each path at each of the options' viewports, themes and views. */
+function allShots(paths: string[], options: ShotsOptions): Shot[] {
   return paths.flatMap((path) =>
     options.viewports.flatMap((viewport) =>
       options.themes.flatMap((theme) =>
@@ -125,17 +123,22 @@ function portInUse(port: number): Promise<boolean> {
   });
 }
 
-/** Start `astro preview` in its own process group and wait until it answers. */
+/**
+ * Start `astro preview` in its own process group and wait until it answers. From the
+ * moment it starts, exiting or Ctrl-C stops it too.
+ */
 async function startPreview(): Promise<ChildProcess> {
-  if (await portInUse(PORT)) {
-    throw new Error(
-      `Port ${PORT} is already in use: stop that server first (npx astro preview stop)`,
-    );
-  }
   const server = spawn("npx", ["astro", "preview", "--port", String(PORT), "--ignore-lock"], {
     detached: true,
     stdio: "ignore",
   });
+  process.once("exit", () => stopPreview(server));
+  for (const [signal, code] of [
+    ["SIGINT", 130],
+    ["SIGTERM", 143],
+  ] as const) {
+    process.once(signal, () => process.exit(code));
+  }
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     if (server.exitCode !== null) throw new Error(`astro preview exited (${server.exitCode})`);
@@ -161,7 +164,7 @@ function stopPreview(server: ChildProcess): void {
 }
 
 /** Take one shot: the stored preferences set before the page's scripts run, the Intro skipped. */
-async function take(browser: Browser, shot: Shot): Promise<string> {
+async function takeShot(browser: Browser, shot: Shot): Promise<string> {
   const context = await browser.newContext({
     ...CONTEXTS[shot.viewport],
     colorScheme: shot.theme,
@@ -170,12 +173,16 @@ async function take(browser: Browser, shot: Shot): Promise<string> {
   try {
     await context.route(/goatcounter\.com|gc\.zgo\.at/, (route) => route.abort());
     await context.addInitScript(
-      ({ theme, simulation }) => {
-        localStorage.setItem("theme", theme);
-        localStorage.setItem("simulation", simulation);
-        sessionStorage.setItem("intro-seen", "1");
+      ({ keys, theme, simulation }) => {
+        localStorage.setItem(keys.theme, theme);
+        localStorage.setItem(keys.simulation, simulation);
+        sessionStorage.setItem(keys.introSeen, "1");
       },
-      { theme: shot.theme, simulation: shot.view === "grid" ? "on" : "off" },
+      {
+        keys: { theme: THEME_KEY, simulation: SIMULATION_KEY, introSeen: INTRO_SEEN_KEY },
+        theme: shot.theme,
+        simulation: shot.view === "grid" ? "on" : "off",
+      },
     );
     const page = await context.newPage();
     await page.goto(shot.path);
@@ -195,31 +202,33 @@ async function take(browser: Browser, shot: Shot): Promise<string> {
 
 async function main(): Promise<void> {
   const options = parseShotsArgs(process.argv.slice(2));
+  if (await portInUse(PORT)) {
+    throw new Error(
+      `Port ${PORT} is already in use: stop that server first (npx astro preview stop)`,
+    );
+  }
   const build = spawnSync("npx", ["astro", "build"], {
     stdio: ["ignore", "inherit", "inherit"],
     env: { ...process.env, SHOW_PLACEHOLDERS: String(options.placeholders) },
   });
   if (build.status !== 0) throw new Error("astro build failed");
-  const shots = plan(options, options.paths.length > 0 ? options.paths : await builtSections());
-  await mkdir(OUT_DIR, { recursive: true });
+  const shots = allShots(options.paths.length > 0 ? options.paths : await builtSections(), options);
+  // Only this run's shots in the folder, so nothing stale is mistaken for new.
+  await rm(OUT_DIR, { recursive: true, force: true });
+  await mkdir(OUT_DIR);
 
   const server = await startPreview();
-  const stop = () => stopPreview(server);
-  process.once("exit", stop);
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => (stop(), process.exit(130)));
-  }
   try {
     const browser = await chromium.launch();
     try {
       const files: string[] = [];
-      for (const shot of shots) files.push(await take(browser, shot));
+      for (const shot of shots) files.push(await takeShot(browser, shot));
       console.log(`\n${files.length} screenshots:\n${files.join("\n")}`);
     } finally {
       await browser.close();
     }
   } finally {
-    stop();
+    stopPreview(server);
   }
 }
 
