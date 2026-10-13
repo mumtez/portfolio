@@ -3,18 +3,20 @@
  * The test-only Section (see `src/lib/test-section.ts`): a dashed Placeholder Panel, a
  * solid Panel, a Frame with no media and another solid Panel, whatever Andrew has filled
  * in elsewhere. Built only when Placeholders are shown, so never on the live site.
+ *
+ * It's laid out like a Deep Dive (its heading shows, since it's not in the nav), though
+ * it isn't one, and its Frame is given no media files, so it's always empty.
  */
 import type { GetStaticPaths } from "astro";
 import Frame from "../../components/Frame.astro";
 import Placeholder from "../../components/Placeholder.astro";
 import Section from "../../layouts/Section.astro";
 import { SHOW_PLACEHOLDERS } from "../../lib/placeholders";
-import { TEST_SECTION } from "../../lib/test-section";
+import { TEST_SECTION, TEST_SECTION_SLUG } from "../../lib/test-section";
 
-export const getStaticPaths = (() => {
-  const section = TEST_SECTION.split("/").at(-2)!;
-  return SHOW_PLACEHOLDERS ? [{ params: { section } }] : [];
-}) satisfies GetStaticPaths;
+// No paths unless Placeholders are shown: that's what keeps it out of the live build.
+export const getStaticPaths = (() =>
+  SHOW_PLACEHOLDERS ? [{ params: { slug: TEST_SECTION_SLUG } }] : []) satisfies GetStaticPaths;
 ---
 
 <Section

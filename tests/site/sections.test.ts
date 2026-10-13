@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
-import { builtPage, DIST, SECTIONS, TEST_SECTION } from "./built";
+import { builtPage, builtPath, DIST, SECTIONS, TEST_SECTION } from "./built";
 
 function text(el: Element | Document | null | undefined): string {
   const node = el && "body" in el ? el.body : el;
@@ -458,7 +458,7 @@ describe(`the test-only Section ${TEST_SECTION} (in test builds only)`, () => {
   it("isn't linked from any real Section", () => {
     for (const url of SECTIONS)
       for (const a of builtPage(url).querySelectorAll("a"))
-        expect(a.getAttribute("href"), url).not.toContain("test-only");
+        expect(a.getAttribute("href"), url).not.toContain(TEST_SECTION.slice(0, -1));
   });
 });
 
@@ -470,11 +470,13 @@ describe("Placeholders", () => {
   const placeholders = allBuiltHtml().flatMap(({ path, html }) =>
     [...parseHTML(html).document.querySelectorAll(".placeholder")].map((el) => ({ path, el })),
   );
-  /** The test-only Section's Placeholders aren't Andrew's to fill, so aren't listed. */
-  const testOnly = TEST_SECTION.replace(/^\//, "");
+  // The test-only Section's Placeholders aren't Andrew's to fill, so aren't listed.
+  const testOnlyPage = builtPath(TEST_SECTION).href;
+  const isTestOnly = ({ path }: { path: string }) => new URL(path, DIST).href === testOnlyPage;
+  const andrews = placeholders.filter((p) => !isTestOnly(p));
 
   it("the test build shows placeholders (the test-only Section always has some)", () => {
-    expect(placeholders.filter(({ path }) => path.startsWith(testOnly)).length).toBeGreaterThan(0);
+    expect(placeholders.filter(isTestOnly).length).toBeGreaterThan(0);
   });
 
   it("every placeholder is visibly labelled", () => {
@@ -487,8 +489,7 @@ describe("Placeholders", () => {
   });
 
   it("every placeholder is listed in PLACEHOLDERS.md", () => {
-    for (const { path, el } of placeholders) {
-      if (path.startsWith(testOnly)) continue;
+    for (const { path, el } of andrews) {
       const note = text(el).replace(/^Placeholder:\s*/, "");
       expect(list, `${path}: "${note}"`).toContain(note);
     }

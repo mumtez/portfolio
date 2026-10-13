@@ -19,9 +19,8 @@ function builtPages(dir: URL = DIST): { path: string; document: Document }[] {
 describe("the live build", () => {
   it(`leaves out the test-only Section ${TEST_SECTION}`, () => {
     expect(existsSync(builtPath(TEST_SECTION))).toBe(false);
-    expect(builtPages().map(({ path }) => path)).not.toContainEqual(
-      expect.stringMatching(/^test-only\//),
-    );
+    const dir = TEST_SECTION.split("/")[1];
+    expect(builtPages().filter(({ path }) => path.startsWith(`${dir}/`))).toEqual([]);
   });
 });
 
