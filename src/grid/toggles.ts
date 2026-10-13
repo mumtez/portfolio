@@ -1,6 +1,6 @@
 /**
  * The theme and simulation toggles: two real `<button>`s with `aria-pressed`, drawn in
- * the Grid's corner as small icon Buttons while it runs, ordinary buttons in the Plain View.
+ * the Grid as small icon Buttons (in a corner, or beside CONTACT on a phone) while it runs, ordinary buttons in the Plain View.
  *
  * The theme follows the system's colour scheme until the visitor picks one (the inline
  * head script has already set it before first paint). The simulation runs unless the

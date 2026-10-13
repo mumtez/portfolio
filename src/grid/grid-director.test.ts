@@ -590,6 +590,64 @@ describe("Grid Director", () => {
         expect(theme(d).pressed).toBe(false);
         expect(pinnedKeys(d)).toEqual(layoutKeys(d));
       });
+
+      describe("on a phone held upright, beside CONTACT on the nav's last row", () => {
+        // iPhone 390×844 at 3×.
+        const PHONE = { width: 90, height: 195, cellPx: 13 / 3 };
+        const onPhone = () => quiet({ viewport: PHONE, toggles: TOGGLES });
+
+        it("sits them on CONTACT's row, pinned with the Section", () => {
+          const d = onPhone();
+          for (const t of d.layout.toggles) {
+            expect(t.box.y).toBe(contact(d).box.y);
+            expect(t.box.x).toBeGreaterThan(contact(d).box.x + contact(d).box.width);
+          }
+          expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+        });
+
+        it("decays a toggle's border on hover, leaving CONTACT's pinned, then pins it again", () => {
+          const d = onPhone();
+          const { box } = theme(d);
+          d.hover({ x: box.x + 2, y: box.y + 2 });
+          expect(themePinned(d)).toBe(0);
+          expect(borderPinned(d)).toBe(contact(d).border.length);
+          for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+          expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+        });
+
+        it("decays a toggle's border on keyboard focus", () => {
+          const d = onPhone();
+          d.focusToggle("theme");
+          expect(themePinned(d)).toBe(0);
+          expect(borderPinned(d)).toBe(contact(d).border.length);
+        });
+
+        it("redraws a pressed toggle in place and keeps it through a Transition", () => {
+          const d = onPhone();
+          const before = theme(d).box;
+          d.setToggles([{ ...TOGGLES[0], icon: "sun", pressed: false }, TOGGLES[1]]);
+          expect(theme(d).box).toEqual(before);
+          d.navigate("/projects/baja/");
+          ticksToSettle(d);
+          expect(theme(d).box).toEqual(before);
+          expect(pinnedKeys(d)).toEqual(layoutKeys(d));
+        });
+
+        it("lets the Intro land exactly on the stacked name below the shorter nav", () => {
+          const { depth, seeds } = INTRO_SEEDS.stacked;
+          seeds.forEach((_, i) => {
+            const picker = seedPicker();
+            picker.pickSeed(i, seeds.length);
+            const d = director({ viewport: PHONE, toggles: TOGGLES, random: picker.random });
+            expect(d.phase).toBe("intro");
+            expect(ticksToSettle(d)).toBe(depth);
+            expect(nameIsPinned(d)).toBe(true);
+            expect(nameFormedExactly(d)).toBe(true);
+            const toggleBottom = Math.max(...d.layout.toggles.map((t) => t.box.y + t.box.height));
+            expect(d.layout.title.y).toBeGreaterThan(toggleBottom);
+          });
+        });
+      });
     });
 
     it("starts the Intro clean when it replays mid-decay", () => {

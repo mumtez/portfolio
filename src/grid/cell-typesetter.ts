@@ -237,7 +237,7 @@ export interface ToggleSpec {
   readonly pressed: boolean;
 }
 
-/** A toggle drawn in cells as a button: its icon inside a border, in a corner of the viewport. */
+/** A toggle drawn in cells as a button: its icon inside a border, in a corner of the viewport or (on a phone) in the nav. */
 export interface ToggleItem extends ToggleSpec {
   /** Its hit region: the button out to and including its border. */
   readonly box: Box;
@@ -259,11 +259,15 @@ export interface SectionLayout {
   readonly nav: readonly NavItem[];
   /**
    * Where the Section's Body Text (its HTML content) lies over the Grid: the centred
-   * text column below the title, down to the bottom of the viewport, or to the toggles
-   * when they're in the bottom corner over the column. Pins nothing.
+   * text column below the title (and the nav, with the toggles in it on a phone), down to
+   * the bottom of the viewport, or to the toggles when they're in the bottom corner over
+   * the column. Pins nothing.
    */
   readonly body: Box;
-  /** The toggles, side by side in the top-right corner, or the bottom-right one if the nav leaves no room. */
+  /**
+   * The toggles, side by side: in the top-right corner, or the bottom-right one if the nav
+   * leaves no room; on a phone held upright, at the end of the nav's last line, right of CONTACT.
+   */
   readonly toggles: readonly ToggleItem[];
 }
 
@@ -323,7 +327,7 @@ function nameLayoutFor(viewport: ViewportCells): NameLayout {
 /** The top row of the nav's `row`th line (its hit regions), so also the bottom of the `row` lines above it. */
 const navRowTop = (row: number) => NAV_TOP + row * NAV_LINE_PITCH;
 
-/** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport, with `toggles` in its corner. */
+/** Lay out the Section at `path` (normalised, e.g. `/about/`) for a viewport, with `toggles` as icon Buttons. */
 export function typesetSection(
   viewport: ViewportCells,
   content: GridContent,
@@ -335,9 +339,11 @@ export function typesetSection(
     for (const c of mask.cells) pinned.push({ x: c.x + x, y: c.y + y });
   };
 
-  const nav = typesetNav(viewport, content, path, place);
-  const toggles = typesetToggles(viewport, toggleSpecs, nav, place);
-  const navBottom = Math.max(NAV_TOP, ...nav.map((i) => i.box.y + i.box.height));
+  const {
+    nav,
+    toggles,
+    bottom: navBottom,
+  } = typesetButtons(viewport, content, path, toggleSpecs, place);
 
   if (path === "/") {
     const top = navBottom + TITLE_GAP;
@@ -361,42 +367,96 @@ export function navItemAt(layout: SectionLayout, at: Point): NavItem | undefined
   return layout.nav.find((item) => boxContains(item.box, at));
 }
 
-function typesetNav(
+/** A Button to set in a line of the nav: a nav item, or (on a phone) a toggle. */
+type Slot =
+  | { readonly kind: "nav"; readonly path: string; readonly label: string; readonly mask: CellMask }
+  | { readonly kind: "toggle"; readonly spec: ToggleSpec; readonly mask: CellMask };
+
+/** Cells across a line of Buttons takes, from its first label to its last. */
+const lineWidth = (line: readonly Slot[]) =>
+  line.reduce((sum, s) => sum + s.mask.width, 0) + NAV_GAP * (line.length - 1);
+
+/**
+ * The nav and the toggles. On a wide screen (or a phone on its side) the nav wraps into
+ * as few lines as fit and the toggles go in a corner (see `typesetToggles`). On a phone
+ * held upright the nav is four lines, HOME with ABOUT, then EXPERIENCE, PROJECTS and
+ * CONTACT, and the toggles join CONTACT's line (see `phoneLines`).
+ */
+function typesetButtons(
   viewport: ViewportCells,
   content: GridContent,
   path: string,
+  toggleSpecs: readonly ToggleSpec[],
   place: (mask: CellMask, x: number, y: number) => void,
-): NavItem[] {
-  const entries = content.sections.flatMap((s) =>
-    s.nav ? [{ path: s.path, label: s.nav, mask: textMask(s.nav) }] : [],
+): { nav: NavItem[]; toggles: ToggleItem[]; bottom: number } {
+  const entries: Slot[] = content.sections.flatMap((s) =>
+    s.nav ? [{ kind: "nav" as const, path: s.path, label: s.nav, mask: textMask(s.nav) }] : [],
   );
   const maxWidth = viewport.width - 2 * SIDE;
-  const column = navIsColumn(viewport, entries.length);
-  const lines: (typeof entries)[] = [];
-  let lineWidth = 0;
+  if (isPhoneUpright(viewport, entries.length)) {
+    const toggleSlots: Slot[] = toggleSpecs.map((spec) => ({
+      kind: "toggle",
+      spec,
+      mask: iconMask(spec.icon),
+    }));
+    return drawLines(viewport, phoneLines(entries, toggleSlots, maxWidth), path, place);
+  }
+  const lines: Slot[][] = [];
   for (const entry of entries) {
     const line = lines.at(-1);
-    if (line && !column && lineWidth + NAV_GAP + entry.mask.width <= maxWidth) {
-      line.push(entry);
-      lineWidth += NAV_GAP + entry.mask.width;
-    } else {
-      lines.push([entry]);
-      lineWidth = entry.mask.width;
-    }
+    if (line && lineWidth([...line, entry]) <= maxWidth) line.push(entry);
+    else lines.push([entry]);
   }
+  const { nav, bottom } = drawLines(viewport, lines, path, place);
+  return { nav, bottom, toggles: typesetToggles(viewport, toggleSpecs, nav, place) };
+}
 
-  const items: NavItem[] = [];
+/**
+ * The phone's lines: the first two nav items share one, every other item has its own,
+ * and the toggles join the last, so the nav is a line shorter than a column and the
+ * toggles sit inside it, above the Body Text. A line too wide for the viewport falls
+ * back to its nav items one per line, then its toggles together on a line of their own.
+ */
+function phoneLines(
+  entries: readonly Slot[],
+  toggles: readonly Slot[],
+  maxWidth: number,
+): Slot[][] {
+  const lines = [entries.slice(0, 2), ...entries.slice(2).map((e) => [e])].filter((l) => l.length);
+  if (lines.length) lines[lines.length - 1] = [...lines[lines.length - 1], ...toggles];
+  else if (toggles.length) lines.push([...toggles]);
+  return lines.flatMap((line) => {
+    if (lineWidth(line) <= maxWidth) return [line];
+    const navs = line.filter((s) => s.kind === "nav").map((s) => [s]);
+    const rest = line.filter((s) => s.kind === "toggle");
+    return rest.length ? [...navs, rest] : navs;
+  });
+}
+
+/** Draw lines of Buttons, each centred, one nav line pitch apart from the top; `bottom` is below the last. */
+function drawLines(
+  viewport: ViewportCells,
+  lines: readonly (readonly Slot[])[],
+  path: string,
+  place: (mask: CellMask, x: number, y: number) => void,
+): { nav: NavItem[]; toggles: ToggleItem[]; bottom: number } {
+  const nav: NavItem[] = [];
+  const toggles: ToggleItem[] = [];
   lines.forEach((line, row) => {
-    const width = line.reduce((sum, e) => sum + e.mask.width, 0) + NAV_GAP * (line.length - 1);
-    let x = Math.floor((viewport.width - width) / 2);
+    let x = Math.floor((viewport.width - lineWidth(line)) / 2);
     const y = navRowTop(row) + BUTTON_PAD;
-    for (const { path: to, label, mask } of line) {
-      const current = currentness(to, path) !== undefined;
-      items.push({ path: to, label, current, ...drawButton(mask, x, y, current, place) });
-      x += mask.width + NAV_GAP;
+    for (const slot of line) {
+      if (slot.kind === "nav") {
+        const current = currentness(slot.path, path) !== undefined;
+        const button = drawButton(slot.mask, x, y, current, place);
+        nav.push({ path: slot.path, label: slot.label, current, ...button });
+      } else {
+        toggles.push({ ...slot.spec, ...drawButton(slot.mask, x, y, slot.spec.pressed, place) });
+      }
+      x += slot.mask.width + NAV_GAP;
     }
   });
-  return items;
+  return { nav, toggles, bottom: Math.max(NAV_TOP, navRowTop(lines.length) - NAV_LINE_GAP) };
 }
 
 /** Cells between the toggles, and from the last one to the viewport's right and bottom edges. */
@@ -453,11 +513,11 @@ export function iconMask(icon: CellIcon): CellMask {
 }
 
 /**
- * The toggles, side by side in the top-right corner beside the nav's first line (on a
- * phone, beside the nav column's first Button), where they're above the Body Text and
- * never cover it. Where the nav leaves no room there (a wide row of it), they go in the
- * bottom-right corner instead, and the Body Text region ends above them if they share
- * its columns (see `bodyRegion`).
+ * The toggles off a phone: side by side in the top-right corner beside the nav's first
+ * line, where they're above the Body Text and never cover it. Where the nav leaves no
+ * room there (a wide row of it), they go in the bottom-right corner instead, and the Body
+ * Text region ends above them if they share its columns (see `bodyRegion`). On a phone
+ * they're in the nav's last line instead (see `phoneLines`).
  */
 function typesetToggles(
   viewport: ViewportCells,
@@ -513,12 +573,14 @@ export function toggleAt(layout: SectionLayout, at: Point): ToggleItem | undefin
 }
 
 /**
- * Whether the nav stacks into a single column: on a narrow viewport (one that gets the
- * stacked name), as long as the stacked name still fits below the column. A short one (a
- * phone on its side) wraps the nav into rows instead. It depends on the viewport alone,
- * so every Section has the same nav and a Transition leaves it pinned.
+ * Whether the viewport is a phone held upright, which gets the phone's nav lines (see
+ * `phoneLines`): a narrow viewport (one that gets the stacked name), as long as the
+ * stacked name would still fit below a column of every nav item, one per line (the
+ * phone's lines are never more). A short one (a phone on its side) wraps the nav into
+ * rows instead. It depends on the viewport alone, so every Section has the same nav and
+ * a Transition leaves it pinned.
  */
-function navIsColumn(viewport: ViewportCells, items: number): boolean {
+function isPhoneUpright(viewport: ViewportCells, items: number): boolean {
   return (
     nameLayoutFor(viewport) === "stacked" &&
     navRowTop(items) + TITLE_GAP + STACKED_NAME.height <= viewport.height

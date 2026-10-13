@@ -33,6 +33,19 @@ function trimmed(mask: CellMask): string[] {
 
 const key = (p: Point) => `${p.x},${p.y}`;
 
+/** Labels (or toggle ids) grouped by the row their hit regions sit on, top to bottom, left to right. */
+function navRows(items: readonly { box: Box; label?: string; id?: string }[]): string[][] {
+  const rows = new Map<number, { x: number; name: string }[]>();
+  for (const item of items) {
+    const row = rows.get(item.box.y) ?? [];
+    row.push({ x: item.box.x, name: item.label ?? item.id ?? "" });
+    rows.set(item.box.y, row);
+  }
+  return [...rows.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, row]) => row.sort((a, b) => a.x - b.x).map((r) => r.name));
+}
+
 /** `box` shrunk by `by` cells on every side. */
 function inside(box: Box, by: number): Box {
   return { x: box.x + by, y: box.y + by, width: box.width - 2 * by, height: box.height - 2 * by };
@@ -170,25 +183,32 @@ describe("Cell Typesetter", () => {
     describe("on a narrow viewport (a phone held upright)", () => {
       const PHONE = { width: 90, height: 190 };
 
-      it("stacks into a single column, one item per row, in order", () => {
+      it("sets four rows: HOME and ABOUT, then EXPERIENCE, PROJECTS and CONTACT", () => {
         const { nav } = typesetSection(PHONE, TEST_CONTENT, "/about/");
         expect(nav.map((i) => i.path)).toEqual(NAV.map(([path]) => path));
-        const ys = nav.map((i) => i.box.y);
-        expect([...ys].sort((a, b) => a - b)).toEqual(ys);
-        expect(new Set(ys).size).toBe(nav.length);
+        expect(navRows(nav)).toEqual([
+          ["Home", "About"],
+          ["Experience"],
+          ["Projects"],
+          ["Contact"],
+        ]);
         for (const item of nav) expect(boxInside(item.box, PHONE), item.label).toBe(true);
         nav.forEach((a, i) =>
           nav.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)),
         );
       });
 
-      it("centres each item and draws its label inside its hit region", () => {
+      it("centres each row and draws each label inside its hit region", () => {
         const layout = typesetSection(PHONE, TEST_CONTENT, "/about/");
+        const [home, about] = layout.nav;
+        // HOME's border, 4 clear cells, ABOUT's border: as on a wide screen's nav row.
+        expect(about.box.x - (home.box.x + home.box.width)).toBe(4);
+        for (const row of [[home, about], ...layout.nav.slice(2).map((i) => [i])]) {
+          const left = row[0].box.x;
+          const right = row.at(-1)!.box.x + row.at(-1)!.box.width;
+          expect(Math.abs((left + right) / 2 - PHONE.width / 2)).toBeLessThanOrEqual(1);
+        }
         for (const item of layout.nav) {
-          expect(
-            Math.abs(item.box.x + item.box.width / 2 - PHONE.width / 2),
-            item.label,
-          ).toBeLessThanOrEqual(1);
           const label = trimmed(textMask(item.label));
           expect(
             rowsIn(layout.pinned, inside(item.box, 1)).slice(0, label.length),
@@ -206,9 +226,10 @@ describe("Cell Typesetter", () => {
           };
           expect(navItemAt(layout, middle)?.path).toBe(item.path);
         }
-        // Beside a short label, in the column's row, is not a link.
-        const home = layout.nav[0];
+        // Beside a short label, and in the gap between HOME and ABOUT, is not a link.
+        const [home, about] = layout.nav;
         expect(navItemAt(layout, { x: home.box.x - 1, y: home.box.y + 2 })).toBeUndefined();
+        expect(navItemAt(layout, { x: about.box.x - 1, y: about.box.y + 2 })).toBeUndefined();
       });
 
       it("is the same nav on every Section, so a Transition leaves it pinned", () => {
@@ -356,25 +377,86 @@ describe("Cell Typesetter", () => {
       [90, 195, 13 / 3],
       [94, 167, 4],
       [92, 163, 3.5],
+      // The narrowest the Grid allows: the stacked name and 3 cells each side.
+      [84, 160, 6],
     ])(
-      "on a %i×%i phone sits them in the top-right corner beside the nav column, above the Body Text",
+      "on a %i×%i phone sits them right of CONTACT on the nav's last row, above the Body Text",
       (width, height, cellPx) => {
         const viewport = { width, height, cellPx };
         for (const path of ["/", "/about/", "/projects/baja/"]) {
           const layout = typesetSection(viewport, TEST_CONTENT, path, TOGGLES);
+          expect(navRows([...layout.nav, ...layout.toggles])).toEqual([
+            ["Home", "About"],
+            ["Experience"],
+            ["Projects"],
+            ["Contact", "theme", "simulation"],
+          ]);
+          const contact = layout.nav.at(-1)!;
           const [theme, life] = layout.toggles;
+          // The same 4 clear cells between borders as between HOME and ABOUT.
+          expect(theme.box.x - (contact.box.x + contact.box.width)).toBe(4);
+          expect(life.box.x - (theme.box.x + theme.box.width)).toBe(4);
           for (const t of layout.toggles) {
-            expect(t.box.y).toBe(layout.nav[0].box.y);
-            for (const item of layout.nav) expect(boxesOverlap(t.box, item.box)).toBe(false);
+            expect(boxInside(t.box, viewport)).toBe(true);
+            expect(t.box.height).toBe(contact.box.height);
             expect(t.box.y + t.box.height).toBeLessThanOrEqual(layout.body.y);
           }
-          expect(theme.box.x + theme.box.width).toBeLessThanOrEqual(life.box.x);
-          expect(life.box.x + life.box.width).toBeGreaterThan(width - 6);
+          // The row is centred as a whole.
+          const middle = (contact.box.x + life.box.x + life.box.width) / 2;
+          expect(Math.abs(middle - width / 2)).toBeLessThanOrEqual(1);
           // Nothing to keep clear at the bottom: the Body Text runs to the bottom edge.
           expect(layout.body.y + layout.body.height).toBe(height);
         }
       },
     );
+
+    it("starts the Body Text one nav row higher on an iPhone than a five-row nav did", () => {
+      // 390×844 at 3×: four rows of 14-cell Buttons 2 rows apart, 3 rows down, end at row
+      // 65; the Body Text starts 1.25rem (5 cells) below. Five rows ended at 81, so 86.
+      const layout = typesetSection(
+        { width: 90, height: 195, cellPx: 13 / 3 },
+        TEST_CONTENT,
+        "/about/",
+        TOGGLES,
+      );
+      expect(layout.title.y).toBe(65);
+      expect(layout.body.y).toBe(70);
+    });
+
+    describe("on a phone too narrow for a row", () => {
+      // Narrower than the Grid ever is, to reach the fallback.
+      it("wraps CONTACT and the toggles onto two rows, toggles below", () => {
+        const viewport = { width: 70, height: 190 };
+        const layout = typesetSection(viewport, TEST_CONTENT, "/about/", TOGGLES);
+        expect(navRows([...layout.nav, ...layout.toggles])).toEqual([
+          ["Home", "About"],
+          ["Experience"],
+          ["Projects"],
+          ["Contact"],
+          ["theme", "simulation"],
+        ]);
+        const all = [...layout.nav, ...layout.toggles];
+        for (const b of all) expect(boxInside(b.box, viewport)).toBe(true);
+        all.forEach((a, i) =>
+          all.slice(i + 1).forEach((b) => expect(boxesOverlap(a.box, b.box)).toBe(false)),
+        );
+        for (const t of layout.toggles)
+          expect(t.box.y + t.box.height).toBeLessThanOrEqual(layout.body.y);
+      });
+
+      it("wraps HOME and ABOUT onto a row each when they don't fit together", () => {
+        const viewport = { width: 64, height: 190 };
+        const layout = typesetSection(viewport, TEST_CONTENT, "/", TOGGLES);
+        expect(navRows([...layout.nav, ...layout.toggles])).toEqual([
+          ["Home"],
+          ["About"],
+          ["Experience"],
+          ["Projects"],
+          ["Contact"],
+          ["theme", "simulation"],
+        ]);
+      });
+    });
 
     it("ends the Body Text above them when they're at the bottom, in its columns", () => {
       // A phone on its side, 844×390: the nav wraps into two wide rows.

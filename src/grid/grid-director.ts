@@ -66,7 +66,7 @@ export interface GridDirectorOptions {
   readonly introMemory: IntroMemory;
   /** Every Section's heading and nav label, from the same content as the Plain View. */
   readonly content: GridContent;
-  /** Toggles drawn as buttons in a corner of every Section (the theme and the simulation). */
+  /** Toggles drawn as buttons in a corner of every Section, or beside CONTACT on a phone (the theme and the simulation). */
   readonly toggles?: readonly ToggleSpec[];
   readonly random?: () => number;
 }

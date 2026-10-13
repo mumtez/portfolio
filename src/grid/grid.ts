@@ -12,7 +12,7 @@
  * its lines are released (ADR 0004) and the Panels' borders stay pinned round it, their
  * interiors walled off, following the text as it scrolls. Each nav item is
  * a button drawn in cells, whose border decays for a moment on hover or focus, and so are
- * the theme and simulation toggles in the corner and the Button Panels (a Project Entry):
+ * the theme and simulation toggles (in a corner, or beside CONTACT on a phone) and the Button Panels (a Project Entry):
  * real links in the Body Text, hit-tested on their measured box. Soup is kept alive by spaceships flying
  * in from the edges, and stirred by the pointer. Switching the simulation off stops it all
  * and leaves the Plain View.
@@ -56,7 +56,7 @@ export interface GridOptions {
   /** Every Section's heading and nav label, embedded in the page from the content collections. */
   readonly content: GridContent;
   readonly palette: Palette;
-  /** The toggles to draw in the corner, each laid under the `DRAWN_TOGGLE` button with its id. */
+  /** The toggles to draw in a corner (on a phone, beside CONTACT), each laid under the `DRAWN_TOGGLE` button with its id. */
   readonly toggles: readonly ToggleSpec[];
   readonly reducedMotion: boolean;
 }

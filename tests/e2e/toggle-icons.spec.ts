@@ -1,24 +1,27 @@
-import { expect, expectGrid, main, test, toggle } from "./fixtures";
+import { expect, expectGrid, main, navLink, test, toggle } from "./fixtures";
 
-// In the Grid the toggles are two small icon Buttons in a corner, with their real buttons
-// laid over the cells.
+// In the Grid the toggles are two small icon Buttons, with their real buttons laid over
+// the cells: in a corner, or on a phone beside CONTACT at the end of the nav.
 
-test("sits the toggles small, side by side, in a corner", async ({ page }) => {
+test("sits the toggles small, side by side, in a corner or beside CONTACT", async ({ page }) => {
   await page.goto("/about/");
   await expectGrid(page, true);
   const viewport = page.viewportSize()!;
   const theme = (await toggle(page, "theme").boundingBox())!;
   const life = (await toggle(page, "simulation").boundingBox())!;
-  // On a phone, top-right beside the nav column; on a desktop, whose nav fills the top
-  // row, bottom-right, beside the Body Text's column.
-  const top = viewport.width < 600;
+  const contact = (await navLink(page, "Contact").boundingBox())!;
+  // On a phone, right of CONTACT on the nav's last row; on a desktop, whose nav fills the
+  // top row, bottom-right, beside the Body Text's column.
+  const phone = viewport.width < 600;
   for (const box of [theme, life]) {
     // Small: no bigger than a fingertip's comfortable target, 80px at most.
     expect(box.width).toBeLessThanOrEqual(80);
     expect(box.height).toBeLessThanOrEqual(90);
     expect(box.x).toBeGreaterThan(viewport.width / 2);
-    if (top) expect(box.y).toBeLessThan(40);
-    else expect(box.y + box.height).toBeGreaterThan(viewport.height - 40);
+    if (phone) {
+      expect(box.y).toBeCloseTo(contact.y, 0);
+      expect(box.x).toBeGreaterThan(contact.x + contact.width);
+    } else expect(box.y + box.height).toBeGreaterThan(viewport.height - 40);
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
   }
   expect(theme.x + theme.width).toBeLessThanOrEqual(life.x);
@@ -70,8 +73,9 @@ for (const path of ["/experience/", "/projects/", "/projects/roborebels/"]) {
       (["theme", "simulation"] as const).map(async (id) => (await toggle(page, id).boundingBox())!),
     );
     const scrollable = await main(page).evaluate((el) => el.scrollHeight - el.clientHeight);
-    // On a phone every one of these is long, so there's a middle to scroll through.
-    if (page.viewportSize()!.width < 600) expect(scrollable).toBeGreaterThan(200);
+    // On a phone every one of these is long, so there's a middle to scroll through (on
+    // Experience about 170px, with the four-row nav).
+    if (page.viewportSize()!.width < 600) expect(scrollable).toBeGreaterThan(120);
 
     for (const share of [0, 0.25, 0.5, 0.75, 1]) {
       await main(page).evaluate((el, share) => (el.scrollTop = share * el.scrollHeight), share);

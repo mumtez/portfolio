@@ -25,18 +25,17 @@ const BAJA = DEEP_DIVES[1];
 const back = (page: Page) => main(page).getByRole("link", { name: "All projects", exact: true });
 
 /**
- * The link's Cells: whether every Cell on the edge of its box (rounded to Cells) is
+ * The Cells in a box on screen (rounded to Cells): whether every Cell on its edge is
  * pinned, whether any is, and how many Pinned Cells lie inside it (the arrow).
  */
-const cells = (button: Locator) =>
-  button.evaluate((el) => {
+const cellsAt = (page: Page, box: { x: number; y: number; width: number; height: number }) =>
+  page.evaluate((r) => {
     const grid = window.gridTest!;
     const { cellPx } = grid.shapes();
-    const r = el.getBoundingClientRect();
-    const left = Math.round(r.left / cellPx);
-    const top = Math.round(r.top / cellPx);
-    const right = Math.round(r.right / cellPx) - 1;
-    const bottom = Math.round(r.bottom / cellPx) - 1;
+    const left = Math.round(r.x / cellPx);
+    const top = Math.round(r.y / cellPx);
+    const right = Math.round((r.x + r.width) / cellPx) - 1;
+    const bottom = Math.round((r.y + r.height) / cellPx) - 1;
     const edge: boolean[] = [];
     for (let x = left; x <= right; x++)
       edge.push(grid.cell(x, top).pinned, grid.cell(x, bottom).pinned);
@@ -46,7 +45,10 @@ const cells = (button: Locator) =>
     for (let y = top + 1; y < bottom; y++)
       for (let x = left + 1; x < right; x++) if (grid.cell(x, y).pinned) arrow++;
     return { border: edge.every(Boolean), anyBorder: edge.some(Boolean), arrow };
-  });
+  }, box);
+
+/** The link's Cells, as `cellsAt` its box. */
+const cells = async (button: Locator) => cellsAt(button.page(), (await button.boundingBox())!);
 
 /** The arrow icon is 25 Cells. */
 const ARROW_CELLS = 25;
@@ -130,9 +132,12 @@ test.describe("the arrow back to Projects in the Grid", () => {
       expect(await button.boundingBox()).toEqual(before);
       expect(await cells(button)).toEqual({ border: true, anyBorder: true, arrow: ARROW_CELLS });
     } else {
-      // Scrolled up with the story, out of the scroll box: its Cells go with it.
+      // Scrolled up with the story, out of the scroll box: its Cells go with it, leaving
+      // none where it was. (Where it is now, behind the nav, the nav's Cells are.)
       expect((await button.boundingBox())!.y).toBeLessThan(before.y - 100);
-      await expect.poll(async () => (await cells(button)).anyBorder).toBe(false);
+      await expect
+        .poll(() => cellsAt(page, before))
+        .toEqual({ border: false, anyBorder: false, arrow: 0 });
     }
   });
 
