@@ -10,7 +10,8 @@ import Frame from "../../components/Frame.astro";
 import Placeholder from "../../components/Placeholder.astro";
 import Section from "../../layouts/Section.astro";
 import { deepDivePath, getDeepDives, type Project } from "../../lib/content";
-import { mediaDir, panelBlocks, placeFrames } from "../../lib/frames";
+import { frameMedia, mediaDir, panelBlocks, placeFrames } from "../../lib/frames";
+import { SHOW_PLACEHOLDERS } from "../../lib/placeholders";
 
 export const getStaticPaths = (async () => {
   return (await getDeepDives()).map((project) => ({
@@ -55,14 +56,14 @@ const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
       </>
     )}
   </p>
-  {placeholder && <Placeholder note={placeholder} />}
+  {placeholder && SHOW_PLACEHOLDERS && <Placeholder note={placeholder} />}
   <div class="body-text">
     {parts.map((part) =>
       "html" in part ? (
         panelBlocks(part.html).map((block) => <section data-panel="solid" set:html={block} />)
-      ) : (
+      ) : SHOW_PLACEHOLDERS || frameMedia(project.id, part.frame, files) ? (
         <Frame deepDive={project.id} files={files} {...frameFor(part.frame)} />
-      ),
+      ) : null,
     )}
   </div>
   <p>

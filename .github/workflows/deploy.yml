@@ -30,6 +30,10 @@ jobs:
       # Format check, type check, unit tests, then build and test the built site, in
       # browsers too (leaves dist/).
       - run: npm run test:all
+      # The tests build with Placeholders shown; the live site leaves them out, so build it
+      # again as it's deployed, and check that build before uploading it.
+      - run: npm run build
+      - run: npm run test:live
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

@@ -18,6 +18,14 @@ export default defineConfig({
           environment: "node",
         },
       },
+      {
+        // The live build, as deployed: run after a plain `astro build`.
+        test: {
+          name: "live",
+          include: ["tests/live/**/*.test.ts"],
+          environment: "node",
+        },
+      },
     ],
   },
 });

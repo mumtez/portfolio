@@ -2,6 +2,7 @@
 import Placeholder from "../components/Placeholder.astro";
 import Section from "../layouts/Section.astro";
 import { getProfile, getSection } from "../lib/content";
+import { SHOW_PLACEHOLDERS } from "../lib/placeholders";
 
 const section = await getSection("about");
 const { education, bio, languages, skills, activities } = await getProfile();
@@ -19,10 +20,16 @@ const { education, bio, languages, skills, activities } = await getProfile();
     </p>
   </section>
 
-  <section data-panel={typeof bio === "string" ? "solid" : "dashed"}>
-    <h2>About me</h2>
-    {typeof bio === "string" ? <p>{bio}</p> : <Placeholder note={bio.placeholder} panel={false} />}
-  </section>
+  {(typeof bio === "string" || SHOW_PLACEHOLDERS) && (
+    <section data-panel={typeof bio === "string" ? "solid" : "dashed"}>
+      <h2>About me</h2>
+      {typeof bio === "string" ? (
+        <p>{bio}</p>
+      ) : (
+        <Placeholder note={bio.placeholder} panel={false} />
+      )}
+    </section>
+  )}
 
   <section data-panel="solid">
     <h2>Languages</h2>

@@ -38,6 +38,17 @@ describe("Deploy workflow", () => {
     expect(steps[upload].with?.path).toBe("dist");
   });
 
+  it("uploads a fresh live build, checked to have no Placeholders, not the tests' build", () => {
+    const steps = workflow.jobs.build.steps;
+    const tests = steps.findIndex((step) => step.run === "npm run test:all");
+    const build = steps.findIndex((step) => step.run === "npm run build");
+    const live = steps.findIndex((step) => step.run === "npm run test:live");
+    const upload = steps.findIndex(usesAction("actions/upload-pages-artifact"));
+    expect(build).toBeGreaterThan(tests);
+    expect(live).toBeGreaterThan(build);
+    expect(upload).toBeGreaterThan(live);
+  });
+
   it("installs the browsers for the end-to-end tests before running them", () => {
     const steps = workflow.jobs.build.steps;
     const install = steps.findIndex(

@@ -118,11 +118,18 @@ test.describe("Panels in the Grid", () => {
     await expectPanelsInGrid(page, ["solid"]);
   });
 
-  test("About's blocks are Panels, a Placeholder's border dashed: every other cell pinned", async ({
+  test("About's blocks are Panels, their borders pinned along their HTML boxes", async ({
     page,
   }) => {
     await page.goto("/about/");
     await expectSection(page, "/about/", "About");
+    await expectPanelsInGrid(page, ["solid"]);
+    await expectNoSidewaysScroll(page);
+  });
+
+  test("a Placeholder's border is dashed: every other cell pinned", async ({ page }) => {
+    await page.goto("/projects/baja/");
+    await expectSection(page, "/projects/baja/", "Baja fuel-level estimator");
     await expectPanelsInGrid(page, ["solid", "dashed"]);
     await expectNoSidewaysScroll(page);
   });
@@ -182,13 +189,12 @@ for (const colorScheme of ["dark", "light"] as const) {
         style: "solid",
         color: await accent(),
       });
-      await page.goto("/about/");
-      expect(await border("[data-panel='dashed']")).toEqual({
+      await page.goto("/projects/baja/");
+      expect(await border("p[data-panel='dashed']")).toEqual({
         width: "1px",
         style: "dashed",
         color: await accent(),
       });
-      await page.goto("/projects/baja/");
       expect(await border(".frame-slot")).toMatchObject({ width: "1px", style: "dashed" });
       await expectNoSidewaysScroll(page);
     });
