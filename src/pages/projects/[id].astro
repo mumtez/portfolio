@@ -126,4 +126,34 @@ const backButton = cellIconButton(BACK_ICON);
     outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
+
+  /*
+   * A wide screen, whose margin left of the column holds the link (the "← All projects"
+   * text, the wider of the two) plus a clear gap: it's fixed there, its top level with
+   * the title's, while the Body Text scrolls. `.back` sticks to the top of what scrolls
+   * (with the Grid on, `main`, so the link stays inside the box the Grid measures Panels
+   * in) and takes no room, so the title sets where it did; the link hangs off its left.
+   * Narrower, it stays above the title and scrolls with the story.
+   */
+  @media (min-width: 64rem) {
+    .back {
+      position: sticky;
+      height: 0;
+    }
+    .back a {
+      position: absolute;
+      /* Under the focus ring's room with the Grid on: level with the title's top. */
+      top: 100%;
+      right: calc(100% + 2rem);
+      white-space: nowrap;
+    }
+    :global(html:not(.grid-on)) .back {
+      top: 1.5rem;
+      margin: 0;
+    }
+    :global(html.grid-on) .back {
+      top: 0;
+      margin: 0;
+    }
+  }
 </style>
