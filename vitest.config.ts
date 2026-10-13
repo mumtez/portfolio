@@ -7,7 +7,7 @@ export default defineConfig({
         // Everything that runs without a build, including checks on the CI workflow.
         test: {
           name: "unit",
-          include: ["src/**/*.test.ts", "tests/ci/**/*.test.ts"],
+          include: ["src/**/*.test.ts", "scripts/**/*.test.ts", "tests/ci/**/*.test.ts"],
           environment: "node",
         },
       },

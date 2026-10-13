@@ -4,6 +4,8 @@ dist/
 # Playwright's output from the end-to-end tests.
 test-results/
 playwright-report/
+# Screenshots from `npm run shots`.
+.shots/
 .DS_Store
 .env
 .private-terms
