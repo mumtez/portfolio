@@ -51,8 +51,13 @@ const cells = (button: Locator) =>
 /** The arrow icon is 25 Cells. */
 const ARROW_CELLS = 25;
 
-/** From this viewport width up, the margin left of the column holds the arrow, fixed. */
+/**
+ * From this viewport width up (the page's `64rem` breakpoint), the margin left of the
+ * column holds the arrow, fixed.
+ */
 const WIDE_PX = 1024;
+/** Clear space at least between the link and the column, and the screen's edge. */
+const CLEAR_PX = 24;
 const isWide = (page: Page) => page.viewportSize()!.width >= WIDE_PX;
 
 /** Scroll the Body Text by `px` (its own scroll box in the Grid, else the page), and say how far it went. */
@@ -74,8 +79,9 @@ async function expectPlaced(page: Page, link: Locator): Promise<void> {
   const box = (await link.boundingBox())!;
   const title = (await main(page).locator("h1").boundingBox())!;
   if (isWide(page)) {
-    expect(box.x + box.width).toBeLessThanOrEqual(title.x - 16);
-    expect(box.x).toBeGreaterThanOrEqual(16);
+    expect(box.x + box.width).toBeLessThanOrEqual(title.x - CLEAR_PX);
+    expect(box.x).toBeGreaterThanOrEqual(CLEAR_PX);
+    // Level: within a pixel's rounding.
     expect(Math.abs(box.y - title.y)).toBeLessThan(2);
   } else {
     expect(box.y + box.height).toBeLessThanOrEqual(title.y);
@@ -178,6 +184,41 @@ test.describe("the arrow back to Projects in the Grid", () => {
     });
   });
 
+  test("it arrives with a Deep Dive through a Transition, in place, and its pins go when it leaves", async ({
+    page,
+  }) => {
+    await page.goto("/projects/");
+    await expectSection(page, "/projects/", "Projects");
+    await expectTransition(page, async () => {
+      await main(page).locator(`a[href="${BAJA.path}"]`).first().click();
+      await expectSection(page, BAJA.path, BAJA.heading);
+    });
+    const button = back(page);
+    await expect
+      .poll(() => cells(button))
+      .toEqual({ border: true, anyBorder: true, arrow: ARROW_CELLS });
+    await expectPlaced(page, button);
+    const where = (await button.boundingBox())!;
+    await back(page).click();
+    await expectSection(page, "/projects/", "Projects");
+    // Nothing stays pinned in the margin where the arrow was. (Narrower, Projects' own
+    // Entries are pinned where it was.)
+    if (!isWide(page)) return;
+    await expect
+      .poll(() =>
+        page.evaluate(({ x, y, width, height }) => {
+          const grid = window.gridTest!;
+          const { cellPx } = grid.shapes();
+          let pinned = 0;
+          for (let cy = Math.round(y / cellPx); cy < Math.round((y + height) / cellPx); cy++)
+            for (let cx = Math.round(x / cellPx); cx < Math.round((x + width) / cellPx); cx++)
+              if (grid.cell(cx, cy).pinned) pinned++;
+          return pinned;
+        }, where),
+      )
+      .toBe(0);
+  });
+
   for (const key of ["Enter", "Space"]) {
     test(`${key} goes back to Projects through a Transition`, async ({ page }) => {
       await openDeepDive(page);
@@ -224,9 +265,10 @@ for (const { why, use } of PLAIN_VIEWS) {
       expect(scrolled).toBeGreaterThan(100);
       const after = (await link.boundingBox())!;
       if (isWide(page)) {
-        expect(after.y).toBeGreaterThanOrEqual(0);
-        expect(after.x).toBe(before.x);
-      } else expect(after.y).toBeCloseTo(before.y - scrolled, 0);
+        expect(after).toEqual(before);
+      } else {
+        expect(after.y).toBeCloseTo(before.y - scrolled, 0);
+      }
       await scrollBodyText(page, -400);
       await link.click();
       await expectSection(page, "/projects/", "Projects");
