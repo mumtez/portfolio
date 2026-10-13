@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import {
+  cellsRound,
   expect,
   expectGrid,
   expectNoSidewaysScroll,
@@ -65,20 +66,7 @@ async function expectAllInside(page: Page): Promise<void> {
 }
 
 /** Whether every Cell of the border round `button` is pinned now. */
-const borderPinned = (button: Locator) =>
-  button.evaluate((el) => {
-    const grid = window.gridTest!;
-    const { cellPx } = grid.shapes();
-    const r = el.getBoundingClientRect();
-    const [left, top] = [Math.round(r.left / cellPx), Math.round(r.top / cellPx)];
-    const [right, bottom] = [Math.round(r.right / cellPx) - 1, Math.round(r.bottom / cellPx) - 1];
-    const edge: boolean[] = [];
-    for (let x = left; x <= right; x++)
-      edge.push(grid.cell(x, top).pinned, grid.cell(x, bottom).pinned);
-    for (let y = top + 1; y < bottom; y++)
-      edge.push(grid.cell(left, y).pinned, grid.cell(right, y).pinned);
-    return edge.every(Boolean);
-  });
+const borderPinned = async (button: Locator) => (await cellsRound(button)).border;
 
 const FOUR_ROWS = [["Home", "About"], ["Experience"], ["Projects"], ["Contact", ...TOGGLES]];
 

@@ -237,7 +237,10 @@ export interface ToggleSpec {
   readonly pressed: boolean;
 }
 
-/** A toggle drawn in cells as a button: its icon inside a border, in a corner of the viewport or (on a phone) in the nav. */
+/**
+ * A toggle drawn in cells as a button: its icon inside a border, in a corner of the
+ * viewport or (on a phone) in the nav.
+ */
 export interface ToggleItem extends ToggleSpec {
   /** Its hit region: the button out to and including its border. */
   readonly box: Box;
@@ -368,12 +371,19 @@ export function navItemAt(layout: SectionLayout, at: Point): NavItem | undefined
 }
 
 /** A Button to set in a line of the nav: a nav item, or (on a phone) a toggle. */
-type Slot =
+type LineButton =
   | { readonly kind: "nav"; readonly path: string; readonly label: string; readonly mask: CellMask }
   | { readonly kind: "toggle"; readonly spec: ToggleSpec; readonly mask: CellMask };
 
+/** The nav and toggle Buttons as set, and the row below the nav's last line. */
+interface NavButtons {
+  readonly nav: NavItem[];
+  readonly toggles: ToggleItem[];
+  readonly bottom: number;
+}
+
 /** Cells across a line of Buttons takes, from its first label to its last. */
-const lineWidth = (line: readonly Slot[]) =>
+const lineWidth = (line: readonly LineButton[]) =>
   line.reduce((sum, s) => sum + s.mask.width, 0) + NAV_GAP * (line.length - 1);
 
 /**
@@ -388,20 +398,20 @@ function typesetButtons(
   path: string,
   toggleSpecs: readonly ToggleSpec[],
   place: (mask: CellMask, x: number, y: number) => void,
-): { nav: NavItem[]; toggles: ToggleItem[]; bottom: number } {
-  const entries: Slot[] = content.sections.flatMap((s) =>
+): NavButtons {
+  const entries: LineButton[] = content.sections.flatMap((s) =>
     s.nav ? [{ kind: "nav" as const, path: s.path, label: s.nav, mask: textMask(s.nav) }] : [],
   );
   const maxWidth = viewport.width - 2 * SIDE;
   if (isPhoneUpright(viewport, entries.length)) {
-    const toggleSlots: Slot[] = toggleSpecs.map((spec) => ({
+    const toggleButtons: LineButton[] = toggleSpecs.map((spec) => ({
       kind: "toggle",
       spec,
       mask: iconMask(spec.icon),
     }));
-    return drawLines(viewport, phoneLines(entries, toggleSlots, maxWidth), path, place);
+    return drawLines(viewport, phoneLines(entries, toggleButtons, maxWidth), path, place);
   }
-  const lines: Slot[][] = [];
+  const lines: LineButton[][] = [];
   for (const entry of entries) {
     const line = lines.at(-1);
     if (line && lineWidth([...line, entry]) <= maxWidth) line.push(entry);
@@ -418,10 +428,10 @@ function typesetButtons(
  * back to its nav items one per line, then its toggles together on a line of their own.
  */
 function phoneLines(
-  entries: readonly Slot[],
-  toggles: readonly Slot[],
+  entries: readonly LineButton[],
+  toggles: readonly LineButton[],
   maxWidth: number,
-): Slot[][] {
+): LineButton[][] {
   const lines = [entries.slice(0, 2), ...entries.slice(2).map((e) => [e])].filter((l) => l.length);
   if (lines.length) lines[lines.length - 1] = [...lines[lines.length - 1], ...toggles];
   else if (toggles.length) lines.push([...toggles]);
@@ -436,10 +446,10 @@ function phoneLines(
 /** Draw lines of Buttons, each centred, one nav line pitch apart from the top; `bottom` is below the last. */
 function drawLines(
   viewport: ViewportCells,
-  lines: readonly (readonly Slot[])[],
+  lines: readonly (readonly LineButton[])[],
   path: string,
   place: (mask: CellMask, x: number, y: number) => void,
-): { nav: NavItem[]; toggles: ToggleItem[]; bottom: number } {
+): NavButtons {
   const nav: NavItem[] = [];
   const toggles: ToggleItem[] = [];
   lines.forEach((line, row) => {

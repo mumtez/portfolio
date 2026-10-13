@@ -1,5 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import {
+  cellsAt,
+  cellsRound,
   expect,
   expectNoSidewaysScroll,
   expectSection,
@@ -23,32 +25,6 @@ const DEEP_DIVES = [
 const BAJA = DEEP_DIVES[1];
 
 const back = (page: Page) => main(page).getByRole("link", { name: "All projects", exact: true });
-
-/**
- * The Cells in a box on screen (rounded to Cells): whether every Cell on its edge is
- * pinned, whether any is, and how many Pinned Cells lie inside it (the arrow).
- */
-const cellsAt = (page: Page, box: { x: number; y: number; width: number; height: number }) =>
-  page.evaluate((r) => {
-    const grid = window.gridTest!;
-    const { cellPx } = grid.shapes();
-    const left = Math.round(r.x / cellPx);
-    const top = Math.round(r.y / cellPx);
-    const right = Math.round((r.x + r.width) / cellPx) - 1;
-    const bottom = Math.round((r.y + r.height) / cellPx) - 1;
-    const edge: boolean[] = [];
-    for (let x = left; x <= right; x++)
-      edge.push(grid.cell(x, top).pinned, grid.cell(x, bottom).pinned);
-    for (let y = top + 1; y < bottom; y++)
-      edge.push(grid.cell(left, y).pinned, grid.cell(right, y).pinned);
-    let arrow = 0;
-    for (let y = top + 1; y < bottom; y++)
-      for (let x = left + 1; x < right; x++) if (grid.cell(x, y).pinned) arrow++;
-    return { border: edge.every(Boolean), anyBorder: edge.some(Boolean), arrow };
-  }, box);
-
-/** The link's Cells, as `cellsAt` its box. */
-const cells = async (button: Locator) => cellsAt(button.page(), (await button.boundingBox())!);
 
 /** The arrow icon is 25 Cells. */
 const ARROW_CELLS = 25;
@@ -106,8 +82,8 @@ test.describe("the arrow back to Projects in the Grid", () => {
       await expect(button).toHaveCount(1);
       await expect(button).toHaveAttribute("href", "/projects/");
       await expect
-        .poll(() => cells(button))
-        .toEqual({ border: true, anyBorder: true, arrow: ARROW_CELLS });
+        .poll(() => cellsRound(button))
+        .toEqual({ border: true, anyBorder: true, inside: ARROW_CELLS });
       await expectPlaced(page, button);
       const box = (await button.boundingBox())!;
       // Leaving never needs a scroll: it's in sight as the Section opens.
@@ -121,7 +97,7 @@ test.describe("the arrow back to Projects in the Grid", () => {
   }) => {
     await openDeepDive(page);
     const button = back(page);
-    await expect.poll(async () => (await cells(button)).border).toBe(true);
+    await expect.poll(async () => (await cellsRound(button)).border).toBe(true);
     const before = (await button.boundingBox())!;
     expect(await scrollBodyText(page, 120)).toBeGreaterThan(100);
     if (isWide(page)) {
@@ -130,14 +106,18 @@ test.describe("the arrow back to Projects in the Grid", () => {
         () => new Promise((done) => requestAnimationFrame(() => setTimeout(done, 100))),
       );
       expect(await button.boundingBox()).toEqual(before);
-      expect(await cells(button)).toEqual({ border: true, anyBorder: true, arrow: ARROW_CELLS });
+      expect(await cellsRound(button)).toEqual({
+        border: true,
+        anyBorder: true,
+        inside: ARROW_CELLS,
+      });
     } else {
       // Scrolled up with the story, out of the scroll box: its Cells go with it, leaving
       // none where it was. (Where it is now, behind the nav, the nav's Cells are.)
       expect((await button.boundingBox())!.y).toBeLessThan(before.y - 100);
       await expect
         .poll(() => cellsAt(page, before))
-        .toEqual({ border: false, anyBorder: false, arrow: 0 });
+        .toEqual({ border: false, anyBorder: false, inside: 0 });
     }
   });
 
@@ -151,8 +131,8 @@ test.describe("the arrow back to Projects in the Grid", () => {
       await openDeepDive(page);
       const button = back(page);
       await expect
-        .poll(() => cells(button))
-        .toEqual({ border: true, anyBorder: true, arrow: ARROW_CELLS });
+        .poll(() => cellsRound(button))
+        .toEqual({ border: true, anyBorder: true, inside: ARROW_CELLS });
       await expectPlaced(page, button);
       await expectNoSidewaysScroll(page);
     }
@@ -165,19 +145,23 @@ test.describe("the arrow back to Projects in the Grid", () => {
     test.skip(hasTouch, "no hover on a touch screen");
     await openDeepDive(page);
     const button = back(page);
-    await expect.poll(async () => (await cells(button)).border).toBe(true);
+    await expect.poll(async () => (await cellsRound(button)).border).toBe(true);
     await button.hover();
-    await expect.poll(() => cells(button)).toMatchObject({ border: false, arrow: ARROW_CELLS });
-    await expect.poll(async () => (await cells(button)).border).toBe(true);
+    await expect
+      .poll(() => cellsRound(button))
+      .toMatchObject({ border: false, inside: ARROW_CELLS });
+    await expect.poll(async () => (await cellsRound(button)).border).toBe(true);
   });
 
   test("focusing it decays its border, with a focus ring round it", async ({ page }) => {
     await openDeepDive(page);
     const button = back(page);
-    await expect.poll(async () => (await cells(button)).border).toBe(true);
+    await expect.poll(async () => (await cellsRound(button)).border).toBe(true);
     await button.focus();
-    await expect.poll(() => cells(button)).toMatchObject({ border: false, arrow: ARROW_CELLS });
-    await expect.poll(async () => (await cells(button)).border).toBe(true);
+    await expect
+      .poll(() => cellsRound(button))
+      .toMatchObject({ border: false, inside: ARROW_CELLS });
+    await expect.poll(async () => (await cellsRound(button)).border).toBe(true);
     await expect(button).toHaveCSS("outline-style", "solid");
   });
 
@@ -200,8 +184,8 @@ test.describe("the arrow back to Projects in the Grid", () => {
     });
     const button = back(page);
     await expect
-      .poll(() => cells(button))
-      .toEqual({ border: true, anyBorder: true, arrow: ARROW_CELLS });
+      .poll(() => cellsRound(button))
+      .toEqual({ border: true, anyBorder: true, inside: ARROW_CELLS });
     await expectPlaced(page, button);
     const where = (await button.boundingBox())!;
     await back(page).click();
