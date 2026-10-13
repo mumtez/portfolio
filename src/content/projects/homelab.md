@@ -1,6 +1,6 @@
 ---
 title: Homelab
-order: 5
+order: 6
 tools: Proxmox, Docker, Portainer, Nginx Proxy Manager
 summary: Self-hosted services on a Proxmox host.
 points:
