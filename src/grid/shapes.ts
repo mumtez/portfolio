@@ -5,7 +5,7 @@
  * condenses the next Section's out of it.
  */
 import { boxContains, edgeCells, type Box } from "./box";
-import { CAPITAL_ROWS, textMask } from "./cell-typesetter";
+import { CAPITAL_ROWS, iconMask, textMask, type CellIcon } from "./cell-typesetter";
 import type { Point } from "./life-engine";
 
 /**
@@ -46,6 +46,11 @@ export interface PanelShape {
    */
   readonly label?: string;
   /**
+   * A small icon drawn in Pinned Cells in place of a label (a Deep Dive's arrow back to
+   * Projects), centred and kept pinned in the same way.
+   */
+  readonly icon?: CellIcon;
+  /**
    * Whether its interior is walled off, so no Cell lives there: only a Frame holding a
    * photo or video, which covers it. Behind a Panel's text, Life carries on, drawn faint.
    */
@@ -83,8 +88,8 @@ export function lineInk(shapes: readonly Shape[], draw: (cell: Point) => number)
 }
 
 /**
- * A Panel's Cells: its border, pinned (every other cell for a dashed Panel), its label,
- * pinned, and, for a walled Panel, the rest of its interior, walled off.
+ * A Panel's Cells: its border, pinned (every other cell for a dashed Panel), its label or
+ * icon, pinned, and, for a walled Panel, the rest of its interior, walled off.
  */
 export interface PanelCells {
   readonly border: Point[];
@@ -94,7 +99,7 @@ export interface PanelCells {
 
 /**
  * The Cells the Panels among `shapes` are drawn with: each border going round its box's
- * edge, every other cell of it for a dashed Panel, each label centred inside that edge,
+ * edge, every other cell of it for a dashed Panel, each label or icon centred inside that edge,
  * and the rest of each walled Panel's interior, all within the Panel's clip.
  */
 export function panelCells(shapes: readonly Shape[]): PanelCells {
@@ -109,8 +114,8 @@ export function panelCells(shapes: readonly Shape[]): PanelCells {
     });
     const { x, y, width, height } = s.box;
     const labelled = new Set<string>();
-    if (s.label) {
-      const mask = textMask(s.label);
+    const mask = s.icon ? iconMask(s.icon) : s.label ? textMask(s.label) : undefined;
+    if (mask) {
       const lx = x + Math.floor((width - mask.width) / 2);
       const ly = y + Math.floor((height - CAPITAL_ROWS) / 2);
       for (const c of mask.cells) {

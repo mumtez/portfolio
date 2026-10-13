@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import prototypeLayouts from "../../tests/fixtures/prototype-name-layouts.json";
 import {
   BODY_TEXT_CSS,
+  cellIconButton,
   cellLabelButton,
+  iconMask,
   nameMask,
   navItemAt,
   textMask,
@@ -292,6 +294,22 @@ describe("Cell Typesetter", () => {
         ".#...#.",
         "...#...",
       ]);
+    });
+
+    it("has a left-pointing arrow for a Button that goes back", () => {
+      expect(toRows(iconMask("arrow-left"))).toEqual([
+        "...#...",
+        "..##...",
+        ".######",
+        "#######",
+        ".######",
+        "..##...",
+        "...#...",
+      ]);
+    });
+
+    it("sizes an icon Button to its icon, a clear cell and the border round it", () => {
+      expect(cellIconButton("arrow-left")).toEqual({ width: 11, height: 11 });
     });
 
     it("is smaller than the narrowest nav Button", () => {

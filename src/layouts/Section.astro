@@ -2,7 +2,8 @@
 /**
  * A content Section: its heading as the only h1, then its content. On a top-level
  * Section the h1 is visually hidden (the nav marks where you are) but still announced;
- * on a Deep Dive it shows at the top of the Body Text.
+ * on a Deep Dive it shows at the top of the Body Text, below anything slotted
+ * `above-heading` (a Deep Dive's way back to Projects).
  */
 import type { Section } from "../lib/content";
 import Base from "./Base.astro";
@@ -17,6 +18,7 @@ const { path, heading, title, description, deepDive = false } = Astro.props;
 
 <Base title={title} description={description} path={path}>
   <main class="section">
+    <slot name="above-heading" />
     <h1 class:list={{ "visually-hidden": !deepDive }}>{heading}</h1>
     <slot />
   </main>

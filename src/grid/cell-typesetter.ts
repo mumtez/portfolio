@@ -221,6 +221,14 @@ export interface NavItem {
 /** The small cell icons a toggle can show. */
 export type ToggleIcon = "sun" | "moon" | "glider";
 
+/** Every small cell icon: a toggle's, and the arrow on a Deep Dive's Button back to Projects. */
+export const CELL_ICONS = ["sun", "moon", "glider", "arrow-left"] as const;
+export type CellIcon = (typeof CELL_ICONS)[number];
+
+export function isCellIcon(icon: string | undefined): icon is CellIcon {
+  return (CELL_ICONS as readonly (string | undefined)[]).includes(icon);
+}
+
 /** A toggle to draw as a small icon button, such as the theme or the simulation. */
 export interface ToggleSpec {
   readonly id: string;
@@ -277,10 +285,17 @@ export const CAPITAL_ROWS = 7;
  * has no underline row. The page sizes the link's HTML box to it.
  */
 export function cellLabelButton(label: string): { width: number; height: number } {
-  return {
-    width: textMask(label).width + 2 * BUTTON_PAD,
-    height: CAPITAL_ROWS + 2 * BUTTON_PAD,
-  };
+  return buttonAround(textMask(label));
+}
+
+/** The size in Cells of a Button drawn round an icon (a Deep Dive's back arrow), as `cellLabelButton`. */
+export function cellIconButton(icon: CellIcon): { width: number; height: number } {
+  return buttonAround(iconMask(icon));
+}
+
+/** A Button with no underline row round `mask`, which is as tall as the font's capitals. */
+function buttonAround(mask: CellMask): { width: number; height: number } {
+  return { width: mask.width + 2 * BUTTON_PAD, height: CAPITAL_ROWS + 2 * BUTTON_PAD };
 }
 /** Clear rows between one line of buttons and the next. */
 const NAV_LINE_GAP = 2;
@@ -389,11 +404,30 @@ const TOGGLE_GAP = 4;
 /** Clear cells kept at least between the toggles and a nav Button beside them. */
 const TOGGLE_NAV_GAP = 2;
 
-/** The toggle icons, 7 cells tall like the 5×7 font's capitals, so they underline like nav labels. */
-const TOGGLE_ICONS: Readonly<Record<ToggleIcon, CellMask>> = {
-  sun: maskFromRows(["...#...", ".#...#.", "..###..", "#.###.#", "..###..", ".#...#.", "...#..."]),
-  moon: maskFromRows(["..####.", ".##....", "##.....", "##.....", "##.....", ".##....", "..####."]),
-  glider: maskFromRows([
+/**
+ * The cell icons, 7 cells tall like the 5×7 font's capitals, so a toggle's underlines like
+ * a nav label and the back arrow centres like a Cell label.
+ */
+const ICON_MASKS: Readonly<Record<CellIcon, CellMask>> = {
+  "sun": maskFromRows([
+    "...#...",
+    ".#...#.",
+    "..###..",
+    "#.###.#",
+    "..###..",
+    ".#...#.",
+    "...#...",
+  ]),
+  "moon": maskFromRows([
+    "..####.",
+    ".##....",
+    "##.....",
+    "##.....",
+    "##.....",
+    ".##....",
+    "..####.",
+  ]),
+  "glider": maskFromRows([
     ".......",
     "..##...",
     "..##...",
@@ -402,7 +436,21 @@ const TOGGLE_ICONS: Readonly<Record<ToggleIcon, CellMask>> = {
     "######.",
     "######.",
   ]),
+  "arrow-left": maskFromRows([
+    "...#...",
+    "..##...",
+    ".######",
+    "#######",
+    ".######",
+    "..##...",
+    "...#...",
+  ]),
 };
+
+/** A cell icon as a Pinned Cell mask. */
+export function iconMask(icon: CellIcon): CellMask {
+  return ICON_MASKS[icon];
+}
 
 /**
  * The toggles, side by side in the top-right corner beside the nav's first line (on a
@@ -417,7 +465,7 @@ function typesetToggles(
   nav: readonly NavItem[],
   place: (mask: CellMask, x: number, y: number) => void,
 ): ToggleItem[] {
-  const masks = specs.map((s) => TOGGLE_ICONS[s.icon]);
+  const masks = specs.map((s) => iconMask(s.icon));
   const width =
     masks.reduce((sum, m) => sum + m.width + 2 * BUTTON_PAD, 0) + TOGGLE_GAP * (masks.length - 1);
   const left = viewport.width - SIDE - width;

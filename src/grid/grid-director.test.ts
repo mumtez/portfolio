@@ -1119,6 +1119,46 @@ describe("Grid Director", () => {
         });
       });
 
+      describe("with a cell icon (a Deep Dive's arrow back to Projects)", () => {
+        // The arrow is 7×7: one clear cell and the border round it.
+        const ARROWED = { x: 20, y: 30, width: 11, height: 11 };
+        const ARROW = ["...#...", "..##...", ".######", "#######", ".######", "..##...", "...#..."];
+        const back = (box = ARROWED): PanelShape => ({
+          ...button("/projects/", box),
+          icon: "arrow-left",
+        });
+        const iconIn = (d: GridDirector, box: Box) =>
+          rowsIn(pinnedIn(d, interiorOf(box)).map(pointOf), interiorOf(box));
+
+        it("draw the icon in Pinned Cells, centred in its pinned border", () => {
+          const d = settledAt("/projects/baja/");
+          d.setShapes([back()]);
+          expect(iconIn(d, ARROWED)).toEqual(ARROW);
+          for (const k of edge(ARROWED)) expect(d.engine.isPinned(...xy(k)), k).toBe(true);
+        });
+
+        it("decay the border on hover and re-pin it, keeping the icon pinned", () => {
+          const d = settledAt("/projects/baja/");
+          d.setShapes([back()]);
+          d.hover({ x: ARROWED.x + 5, y: ARROWED.y + 5 });
+          expect(pinnedIn(d, ARROWED).some((k) => edge(ARROWED).includes(k))).toBe(false);
+          expect(iconIn(d, ARROWED)).toEqual(ARROW);
+          for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+          for (const k of edge(ARROWED)) expect(d.engine.isPinned(...xy(k)), k).toBe(true);
+          expect(iconIn(d, ARROWED)).toEqual(ARROW);
+        });
+
+        it("decay the border on keyboard focus and re-pin it", () => {
+          const d = settledAt("/projects/baja/");
+          d.setShapes([back()]);
+          d.focusPanel("/projects/");
+          expect(pinnedIn(d, ARROWED).some((k) => edge(ARROWED).includes(k))).toBe(false);
+          expect(iconIn(d, ARROWED)).toEqual(ARROW);
+          for (let t = 0; t < BORDER_UNPIN_TICKS; t++) d.tick();
+          for (const k of edge(ARROWED)) expect(d.engine.isPinned(...xy(k)), k).toBe(true);
+        });
+      });
+
       it("leave solid Panels alone, whatever the pointer does", () => {
         const d = settledAt("/experience/");
         d.setShapes([panel("solid")]);

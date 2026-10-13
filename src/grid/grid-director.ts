@@ -19,7 +19,8 @@
  * to cells. A Button Panel (a Project Entry, a Contact link) is a Button too: hovering
  * its measured box or focusing its link (`focusPanel`) decays its border like a nav
  * Button's, told apart by its link so the decay carries on as it scrolls. A Panel's
- * label (a Contact link's EMAIL) is pinned with its border, but stays while it decays.
+ * label (a Contact link's EMAIL) or icon (a Deep Dive's arrow back to Projects) is
+ * pinned with its border, but stays while it decays.
  */
 import { boxContains, intersection, type Box } from "./box";
 import {

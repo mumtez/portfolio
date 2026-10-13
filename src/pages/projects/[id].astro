@@ -2,10 +2,15 @@
 /**
  * A Deep Dive: one project's story, with its Markdown file body as Body Text, set in a solid
  * Panel per subheading, and its Frames between them.
+ *
+ * Above the title, a way back to Projects: in the Grid a Button Panel sized to a left
+ * arrow, which the Grid draws in Cells inside its border (the link's text is hidden there
+ * but still names it "All projects"); in Plain View an ordinary "← All projects" link.
  */
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GetStaticPaths } from "astro";
+import { cellIconButton } from "../../grid/cell-typesetter";
 import Frame from "../../components/Frame.astro";
 import Placeholder from "../../components/Placeholder.astro";
 import Section from "../../layouts/Section.astro";
@@ -38,6 +43,7 @@ const parts = placeFrames(
   frames.map((f) => f.slot),
 );
 const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
+const backButton = cellIconButton("arrow-left");
 ---
 
 <Section
@@ -47,6 +53,18 @@ const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
   title={`${title} · Andrew Aburustum`}
   description={summary}
 >
+  <p class="back" slot="above-heading">
+    <a
+      href="/projects/"
+      data-panel="button"
+      data-cell-icon="arrow-left"
+      style={`--button-cells: ${backButton.width}; --button-rows: ${backButton.height}`}
+    >
+      <span class="visually-hidden-on-grid">
+        <span aria-hidden="true">← </span>All projects
+      </span>
+    </a>
+  </p>
   <p class="meta">
     {tools}
     {link && (
@@ -66,7 +84,46 @@ const frameFor = (slot: string) => frames.find((f) => f.slot === slot)!;
       ) : null,
     )}
   </div>
-  <p>
-    <a href="/projects/">All projects</a>
-  </p>
 </Section>
+
+<style>
+  /* The title sets tight under it, as it would at the top of the Section. */
+  .back + :global(h1) {
+    margin-top: 0;
+  }
+
+  /* Plain View: an ordinary link, not a Panel. */
+  :global(html:not(.grid-on)) .back {
+    margin: 0 0 0.75em;
+    font-size: 0.875rem;
+  }
+  :global(html:not(.grid-on)) .back a {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  /*
+   * Grid on: a Button Panel the size of its arrow in Cells, one clear cell and then the
+   * border round it (the Typesetter's `cellIconButton`), at the top left of the column.
+   * The arrow is drawn in Cells, so the link's text is hidden.
+   */
+  :global(html.grid-on) .back {
+    margin: 0 0 1em;
+    /* Room for its focus ring inside the scroll box. */
+    padding-top: 6px;
+  }
+  :global(html.grid-on) .back a {
+    display: block;
+    width: calc(var(--button-cells) * var(--cell-px, 6px));
+    height: calc(var(--button-rows) * var(--cell-px, 6px));
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+  }
+  :global(html.grid-on) .back a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>

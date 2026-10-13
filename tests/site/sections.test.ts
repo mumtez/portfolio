@@ -44,10 +44,24 @@ describe.each(SECTIONS)("Section %s (built HTML, as seen with JS off)", (url) =>
   });
 
   if (url !== "/") {
-    it(`keeps its h1 for screen readers, ${deepDive ? "visible at the top of its Body Text" : "visually hidden (the underlined nav Button says where you are)"}`, () => {
+    it(`keeps its h1 for screen readers, ${deepDive ? "visible at the top of its Body Text, under the link back to Projects" : "visually hidden (the underlined nav Button says where you are)"}`, () => {
       const h1 = doc.querySelector("main h1");
       expect(h1?.classList.contains("visually-hidden")).toBe(!deepDive);
-      expect(h1?.parentElement?.firstElementChild).toBe(h1);
+      const before = deepDive ? h1?.previousElementSibling : null;
+      expect(h1?.parentElement?.firstElementChild).toBe(before ?? h1);
+      if (deepDive) {
+        expect(before?.previousElementSibling).toBeNull();
+        expect(before?.querySelector('a[href="/projects/"]')).not.toBeNull();
+      }
+    });
+  }
+
+  if (deepDive) {
+    it("links back to Projects once, above its title, not at the bottom", () => {
+      const links = [...doc.querySelectorAll('main a[href="/projects/"]')];
+      expect(links).toHaveLength(1);
+      expect(links[0].getAttribute("data-cell-icon")).toBe("arrow-left");
+      expect(links[0].textContent?.replace(/\s+/g, " ").trim()).toBe("← All projects");
     });
   }
 
