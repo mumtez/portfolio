@@ -14,18 +14,18 @@
 
   experience:
     - org: Memorial Sloan Kettering Cancer Center
-      role: Biomedical Engineering Intern, formal rotation under Paul Booth
+      role: Biomedical Engineering Intern
       location: New York, NY
       dates: Summer 2025
       points:
         - Developed post-processing techniques for biomedical implants and machined parts for medical devices
-        - Operated Stratasys and resin 3D printers and helped repair a plasma cutter
+        - Operated Stratasys and resin 3D printers and helped repair a plasma cutter's gantry
     - org: Olin College IT Department
       role: Student IT Technician
       location: Needham, MA
       dates: Fall 2026 – present
       points:
-        - Troubleshoot and repair student and staff devices at the campus IT help desk
+        - Work 10–20 help desk tickets a week, swapping components to repair student and staff laptops
 
   languages:
     - English (native)
@@ -45,7 +45,7 @@
       role: Division 2 athlete
       dates: Fall 2026 – present
     - name: EMS Summer String Festival
-      role: Volunteer camp counselor
+      role: Volunteer violin camp counselor
       dates: Summers 2023 – present
     - name: Community Chest of Eastern Bergen County
       role: Volunteer

@@ -2,9 +2,9 @@
 title: FTC Event Viewer
 order: 3
 tools: TypeScript, React, Docker, FTCScout API
-summary: A scouting web app that sorts the teams at any FTC event by offensive power rating (OPR).
+summary: A scouting web app, used by 30+ FTC teams, that ranks the teams at any FTC event by offensive power rating (OPR).
 points:
-  - Built a scouting web app that sorts the teams at any FTC event by offensive power rating (OPR)
+  - Built a scouting web app, used by 30+ FTC teams, that ranks event teams by offensive power rating (OPR)
 link:
   label: ftc.aburustum.com
   href: https://ftc.aburustum.com
