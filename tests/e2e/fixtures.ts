@@ -3,8 +3,9 @@
  * `@playwright/test`.
  *
  * Every test fails if the page throws or logs a console error. GoatCounter is blocked
- * (no page views counted from tests, no network flakiness), and its failed requests and
- * a missing favicon are the only errors ignored.
+ * (no page views counted from tests, no network flakiness), and its failed requests, a
+ * missing favicon and WebKit's own native video-control icons failing to load (a quirk of
+ * Playwright's WebKit build, not the site) are the only errors ignored.
  */
 import { test as base, expect, type Locator, type Page } from "@playwright/test";
 import type {} from "../../src/grid/test-hooks";
@@ -15,8 +16,9 @@ export { expect };
 
 /** Requests the tests block: GoatCounter's script and its counting endpoint. */
 const BLOCKED = /goatcounter\.com|gc\.zgo\.at/;
-/** Console errors about these URLs aren't the site's fault. */
-const IGNORED = /goatcounter\.com|gc\.zgo\.at|favicon/;
+/** Console errors about these URLs, or WebKit's native video-control icons, aren't the site's fault. */
+const IGNORED =
+  /goatcounter\.com|gc\.zgo\.at|favicon|^Button failed to load, iconName = [\w-]+-placard\b/;
 
 /** Every Section's URL path. */
 export const SECTIONS = [
