@@ -8,7 +8,7 @@ points:
   - Led the team to win the international 2025 Mexico Premier Event as the 1st seed (6-0)
   - Designed, built and programmed 3 robots with linear slide, arm and flywheel auto-targeting systems
   - Two-time NJ State Championship finalist; won 2 Innovate and 2 Control Awards
-  - Mentored 30 FTC teams across the world, including teams in Australia, Morocco and Venezuela
+  - Mentored 30+ FTC teams across the world, including teams in Australia, Morocco and Venezuela
 deepDive: true
 placeholder: The RoboRebels story in Andrew's own words (how the robots worked, the Mexico Premier Event run, what he learned as captain), plus photos and video.
 frames:
@@ -34,4 +34,4 @@ I captained FIRST Tech Challenge Team 14450 RoboRebels from 2022 to 2026. Over t
 
 ## Mentoring
 
-We mentored 30 FTC teams around the world, including teams in Australia, Morocco and Venezuela.
+We mentored 30+ FTC teams around the world, including teams in Australia, Morocco and Venezuela.
