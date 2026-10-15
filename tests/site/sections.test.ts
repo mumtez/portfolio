@@ -168,6 +168,7 @@ describe("Section content", () => {
       "Humanoid robot",
       "AI & Machine Learning",
       "Homelab",
+      "Home climbing wall",
       "Console & GPU Repair",
     ]);
     const links = [...(main?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
@@ -386,6 +387,7 @@ describe("Panels", () => {
         "Humanoid robot",
         "AI & Machine Learning",
         "Homelab",
+        "Home climbing wall",
         "Console & GPU Repair",
       ]);
       for (const entry of others) expect(entry.getAttribute("data-panel")).toBe("solid");

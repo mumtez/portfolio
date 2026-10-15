@@ -29,7 +29,7 @@ test.describe("Project Entries in the Grid", () => {
   test("each Entry with a Deep Dive is one link, its border pinned round it", async ({ page }) => {
     await openProjects(page);
     const entries = main(page).locator("article");
-    await expect(entries).toHaveCount(7);
+    await expect(entries).toHaveCount(8);
     for (const name of ["FTC RoboRebels", "Baja fuel-level estimator", "FTC Event Viewer"])
       await expect(
         main(page).getByRole("link", { name: `${name} Read the story`, exact: true }),
