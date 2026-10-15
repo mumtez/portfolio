@@ -1,6 +1,6 @@
 ---
 title: Home climbing wall
-order: 7
+order: 4
 tools: Wood, heavy-duty gate hinges, hand-cut and bought holds
 summary: A freestanding wooden climbing wall with an adjustable angle, built to train for rock climbing at home.
 points:

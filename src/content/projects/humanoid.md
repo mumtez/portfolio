@@ -1,6 +1,6 @@
 ---
 title: Humanoid robot
-order: 4
+order: 5
 tools: 70% scale humanoid · early development
 summary: Building a 70% scale humanoid robot with Simon Eberhart.
 points:

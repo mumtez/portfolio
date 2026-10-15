@@ -1,6 +1,6 @@
 ---
 title: AI & Machine Learning
-order: 5
+order: 6
 tools: Python, PyTorch, TensorFlow, Keras
 summary: Generative models, sentiment classifiers and image classifiers.
 points:

@@ -165,10 +165,10 @@ describe("Section content", () => {
       "FTC RoboRebels",
       "Baja fuel-level estimator",
       "FTC Event Viewer",
+      "Home climbing wall",
       "Humanoid robot",
       "AI & Machine Learning",
       "Homelab",
-      "Home climbing wall",
       "Console & GPU Repair",
     ]);
     const links = [...(main?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
