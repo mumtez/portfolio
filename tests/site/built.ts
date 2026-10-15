@@ -15,6 +15,7 @@ export const SECTIONS = [
   "/projects/roborebels/",
   "/projects/baja/",
   "/projects/ftc-event-viewer/",
+  "/projects/climbing-wall/",
   "/contact/",
 ];
 

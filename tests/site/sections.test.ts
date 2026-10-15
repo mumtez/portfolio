@@ -158,7 +158,7 @@ describe("Section content", () => {
     expect(main?.querySelectorAll("ul li").length).toBeGreaterThanOrEqual(3);
   });
 
-  it("Projects lists every project and links the three Deep Dives", () => {
+  it("Projects lists every project and links each Deep Dive", () => {
     const main = builtPage("/projects/").querySelector("main");
     const headings = [...(main?.querySelectorAll("h2") ?? [])].map(text);
     expect(headings).toEqual([
@@ -177,6 +177,7 @@ describe("Section content", () => {
         "/projects/roborebels/",
         "/projects/baja/",
         "/projects/ftc-event-viewer/",
+        "/projects/climbing-wall/",
       ]),
     );
   });
@@ -366,6 +367,7 @@ describe("Panels", () => {
       ["FTC RoboRebels", "/projects/roborebels/"],
       ["Baja fuel-level estimator", "/projects/baja/"],
       ["FTC Event Viewer", "/projects/ftc-event-viewer/"],
+      ["Home climbing wall", "/projects/climbing-wall/"],
     ])("%s is one Button Panel link to its Deep Dive, named for it", (title, href) => {
       const entry = entries.find((e) => text(e.querySelector("h2")) === title)!;
       const links = entry.querySelectorAll("a");
@@ -387,7 +389,6 @@ describe("Panels", () => {
         "Humanoid robot",
         "AI & Machine Learning",
         "Homelab",
-        "Home climbing wall",
         "Console & GPU Repair",
       ]);
       for (const entry of others) expect(entry.getAttribute("data-panel")).toBe("solid");

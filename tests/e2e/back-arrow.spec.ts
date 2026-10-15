@@ -21,6 +21,7 @@ const DEEP_DIVES = [
   { path: "/projects/roborebels/", heading: "FTC RoboRebels" },
   { path: "/projects/baja/", heading: "Baja fuel-level estimator" },
   { path: "/projects/ftc-event-viewer/", heading: "FTC Event Viewer" },
+  { path: "/projects/climbing-wall/", heading: "Home climbing wall" },
 ];
 const BAJA = DEEP_DIVES[1];
 
