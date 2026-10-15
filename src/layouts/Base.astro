@@ -74,6 +74,16 @@ const themeCss = `
 </script>
 
 <style is:global>
+  /*
+   * Focus rings are for the keyboard: the site's own (in the theme's accent) are on
+   * :focus-visible. Focus a script moves (to a Section's heading after a Transition, for
+   * screen readers) or a tap leaves shows no ring, where browsers would otherwise draw
+   * their own (blue on an iPhone).
+   */
+  :focus:not(:focus-visible),
+  [tabindex="-1"]:focus {
+    outline: none;
+  }
   html {
     background: var(--bg);
     color: var(--text);
