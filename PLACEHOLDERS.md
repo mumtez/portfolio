@@ -6,7 +6,6 @@ To fill one in, edit the file named, remove the `placeholder` field (or replace 
 
 | Section | File | What's missing |
 | --- | --- | --- |
-| `/projects/baja/` | `src/content/projects/baja.md` | The Baja story in Andrew's own words (the problem, how the estimator works, the PCB and the model, results so far), plus photos and video. |
 
 The Deep Dive Body Text currently in those files is a short draft from the resume, so it's accurate but not the full story.
 
@@ -22,5 +21,4 @@ Each Deep Dive has **Frames**: slots for photos and videos, shown in the page as
 | Section | Slot | What it's for | Placeholder |
 | --- | --- | --- | --- |
 | `/projects/roborebels/` | `match` | A match (16:9 Frame, good for video) | Photo or video: add public/media/roborebels/match.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
-| `/projects/baja/` | `pcb` | The estimator's custom PCB | Photo or video: add public/media/baja/pcb.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
 | `/projects/baja/` | `car` | The Baja car | Photo or video: add public/media/baja/car.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
