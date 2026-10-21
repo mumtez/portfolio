@@ -20,5 +20,4 @@ Each Deep Dive has **Frames**: slots for photos and videos, shown in the page as
 
 | Section | Slot | What it's for | Placeholder |
 | --- | --- | --- | --- |
-| `/projects/roborebels/` | `match` | A match (16:9 Frame, good for video) | Photo or video: add public/media/roborebels/match.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
 | `/projects/baja/` | `car` | The Baja car | Photo or video: add public/media/baja/car.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |

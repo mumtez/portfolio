@@ -40,7 +40,8 @@ frames:
     caption: The physics derivation behind it.
     aspect: 1290 / 1391
   - slot: match
-    alt: A RoboRebels match
+    alt: A full RoboRebels match on the competition field, filmed from the stands, with referees and drive teams around the field
+    caption: A full match at the 2026 New Jersey State Championship.
     aspect: 16 / 9
 ---
 
@@ -72,6 +73,8 @@ In my final year as captain I set out to build the best robot in the state, and 
 
 <!-- frame: states -->
 
+<!-- frame: match -->
+
 ## Control systems
 
 Over my time in robotics I worked with a lot of control and programming concepts, including PID, feedforward, inverse kinematics, trajectory mapping, localization, odometry and path planning.
@@ -81,8 +84,6 @@ My favorite came in my senior year, when the game had us shooting balls into a g
 <!-- frame: autotarget -->
 
 <!-- frame: math -->
-
-<!-- frame: match -->
 
 ## Mentoring
 
