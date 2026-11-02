@@ -1,6 +1,6 @@
 ---
 title: Console & GPU Repair
-order: 8
+order: 9
 tools: BGA rework, SMD soldering
 summary: Repaired game consoles and GPUs, replacing HDMI ports and GPU memory chips.
 points:

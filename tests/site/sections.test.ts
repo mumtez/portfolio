@@ -166,6 +166,7 @@ describe("Section content", () => {
       "Baja fuel-level estimator",
       "FTC Event Viewer",
       "Home climbing wall",
+      "U2 robot tool changer",
       "Humanoid robot",
       "AI & Machine Learning",
       "Homelab",
@@ -386,13 +387,14 @@ describe("Panels", () => {
     it("an Entry with no Deep Dive is a solid Panel, its own link (if any) inside it", () => {
       const others = entries.filter((e) => !e.querySelector("[data-panel='button']"));
       expect(others.map((e) => text(e.querySelector("h2")))).toEqual([
+        "U2 robot tool changer",
         "Humanoid robot",
         "AI & Machine Learning",
         "Homelab",
         "Console & GPU Repair",
       ]);
       for (const entry of others) expect(entry.getAttribute("data-panel")).toBe("solid");
-      expect(others[1].querySelector("a")?.getAttribute("href")).toBe(
+      expect(others[2].querySelector("a")?.getAttribute("href")).toBe(
         "https://github.com/mumtez/AIfeb14",
       );
     });
