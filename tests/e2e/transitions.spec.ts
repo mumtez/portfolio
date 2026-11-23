@@ -30,12 +30,17 @@ async function timedNavClick(page: Page, label: string) {
       "click",
       () => {
         const t0 = performance.now();
+        // The moment the old one leaves the page, exactly: polling once a frame could
+        // miss most of the fade when a busy machine draws frames far apart.
+        const gone = new MutationObserver(() => {
+          if (old.isConnected) return;
+          w.oldGone = performance.now() - t0;
+          gone.disconnect();
+        });
+        gone.observe(document.body, { childList: true, subtree: true });
         const poll = () => {
-          const now = performance.now() - t0;
-          if (old.isConnected) w.oldGone = now;
-          if (!document.querySelector("main.released")) w.released = now;
-          if (old.isConnected || !document.querySelector("main.released"))
-            requestAnimationFrame(poll);
+          if (!document.querySelector("main.released")) w.released = performance.now() - t0;
+          if (!document.querySelector("main.released")) requestAnimationFrame(poll);
         };
         poll();
       },
