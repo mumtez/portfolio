@@ -47,9 +47,10 @@ test.describe("Project Entries in the Grid", () => {
     await link.hover();
     await expect.poll(() => borderPinned(link)).toBe(false);
     await expect.poll(() => borderPinned(link)).toBe(true);
-    // Only that Entry's border.
+    // Only that Entry's border (its neighbour scrolled into view, so its top edge is on screen).
     const roborebels = main(page).getByRole("link", { name: "FTC RoboRebels Read the story" });
-    expect(await borderPinned(roborebels)).toBe(true);
+    await roborebels.scrollIntoViewIfNeeded();
+    await expect.poll(() => borderPinned(roborebels)).toBe(true);
   });
 
   test("focusing an Entry decays its border, with a focus ring round it", async ({ page }) => {
