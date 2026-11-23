@@ -18,10 +18,12 @@ import {
 // projects". In Plain View and with JS off it's an ordinary "← All projects" link.
 
 const DEEP_DIVES = [
+  { path: "/projects/shadowcast/", heading: "Shadowcast" },
   { path: "/projects/roborebels/", heading: "FTC RoboRebels" },
   { path: "/projects/baja/", heading: "Baja fuel-level estimator" },
   { path: "/projects/ftc-event-viewer/", heading: "FTC Event Viewer" },
   { path: "/projects/climbing-wall/", heading: "Home climbing wall" },
+  { path: "/projects/u2-tool-changer/", heading: "U2 robot tool changer" },
 ];
 const BAJA = DEEP_DIVES[1];
 

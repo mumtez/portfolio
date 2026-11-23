@@ -21,3 +21,6 @@ Each Deep Dive has **Frames**: slots for photos and videos, shown in the page as
 | Section | Slot | What it's for | Placeholder |
 | --- | --- | --- | --- |
 | `/projects/baja/` | `car` | The Baja car | Photo or video: add public/media/baja/car.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
+| `/projects/u2-tool-changer/` | `effector` | The end effector with the claw fitted (motor, solenoids, jaws) | Photo or video: add public/media/u2-tool-changer/effector.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
+| `/projects/u2-tool-changer/` | `dashboard` | A screenshot of the web dashboard planning a move (no IP addresses showing) | Photo or video: add public/media/u2-tool-changer/dashboard.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |
+| `/projects/u2-tool-changer/` | `change-clip` | A short clip of a clutch switch: one jaw moving, then both | Photo or video: add public/media/u2-tool-changer/change-clip.jpg (or .jpeg, .png, .webp, .avif, .gif, .mp4, .webm, .mov) |

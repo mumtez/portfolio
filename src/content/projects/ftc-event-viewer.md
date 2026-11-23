@@ -1,6 +1,6 @@
 ---
 title: FTC Event Viewer
-order: 3
+order: 4
 tools: TypeScript, React, Docker, FTCScout API
 summary: A scouting web app, used by 30+ FTC teams, that ranks the teams at any FTC event by offensive power rating (OPR).
 points:

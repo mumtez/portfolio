@@ -162,6 +162,7 @@ describe("Section content", () => {
     const main = builtPage("/projects/").querySelector("main");
     const headings = [...(main?.querySelectorAll("h2") ?? [])].map(text);
     expect(headings).toEqual([
+      "Shadowcast",
       "FTC RoboRebels",
       "Baja fuel-level estimator",
       "FTC Event Viewer",
@@ -175,10 +176,12 @@ describe("Section content", () => {
     const links = [...(main?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
     expect(links).toEqual(
       expect.arrayContaining([
+        "/projects/shadowcast/",
         "/projects/roborebels/",
         "/projects/baja/",
         "/projects/ftc-event-viewer/",
         "/projects/climbing-wall/",
+        "/projects/u2-tool-changer/",
       ]),
     );
   });
@@ -365,10 +368,12 @@ describe("Panels", () => {
         .join(" ");
 
     it.each([
+      ["Shadowcast", "/projects/shadowcast/"],
       ["FTC RoboRebels", "/projects/roborebels/"],
       ["Baja fuel-level estimator", "/projects/baja/"],
       ["FTC Event Viewer", "/projects/ftc-event-viewer/"],
       ["Home climbing wall", "/projects/climbing-wall/"],
+      ["U2 robot tool changer", "/projects/u2-tool-changer/"],
     ])("%s is one Button Panel link to its Deep Dive, named for it", (title, href) => {
       const entry = entries.find((e) => text(e.querySelector("h2")) === title)!;
       const links = entry.querySelectorAll("a");
@@ -387,14 +392,13 @@ describe("Panels", () => {
     it("an Entry with no Deep Dive is a solid Panel, its own link (if any) inside it", () => {
       const others = entries.filter((e) => !e.querySelector("[data-panel='button']"));
       expect(others.map((e) => text(e.querySelector("h2")))).toEqual([
-        "U2 robot tool changer",
         "Humanoid robot",
         "AI & Machine Learning",
         "Homelab",
         "Console & GPU Repair",
       ]);
       for (const entry of others) expect(entry.getAttribute("data-panel")).toBe("solid");
-      expect(others[2].querySelector("a")?.getAttribute("href")).toBe(
+      expect(others[1].querySelector("a")?.getAttribute("href")).toBe(
         "https://github.com/mumtez/AIfeb14",
       );
     });

@@ -1,6 +1,6 @@
 ---
 title: FTC RoboRebels
-order: 1
+order: 2
 tools: Linear slides, arms, flywheel auto-targeting
 summary: Team captain of FIRST Tech Challenge Team 14450 RoboRebels, 2022–2026.
 points:
@@ -8,7 +8,7 @@ points:
   - Led the team to win the international 2025 Mexico Premier Event as the 1st seed (6-0)
   - Designed, built and programmed 3 robots with linear slide, arm and flywheel auto-targeting systems
   - Two-time NJ State Championship finalist; won 2 Innovate and 2 Control Awards
-  - Mentored 30+ FTC teams across the world, including teams in Australia, Morocco and Venezuela
+  - Mentored 30 FTC teams across the world, including teams in Australia, Morocco and Venezuela
 deepDive: true
 frames:
   - slot: robot
@@ -87,4 +87,4 @@ My favorite came in my senior year, when the game had us shooting balls into a g
 
 ## Mentoring
 
-We mentored 30+ FTC teams around the world, including teams in Australia, Morocco and Venezuela.
+We mentored 30 FTC teams around the world, including teams in Australia, Morocco and Venezuela.

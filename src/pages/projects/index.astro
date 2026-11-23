@@ -14,11 +14,18 @@ const projects = await getProjects();
 
 <Section {...section}>
   {projects.map((project) => {
-    const { title, tools, points, link, deepDive } = project.data;
+    const { title, highlight, tools, points, link, deepDive } = project.data;
     const id = (part: string) => `project-${project.id}-${part}`;
     const body = (
       <>
-        <h2 id={id("title")}>{title}</h2>
+        <div class="title-row">
+          <h2 id={id("title")}>{title}</h2>
+          {highlight && (
+            <span class="highlight" id={id("highlight")}>
+              {highlight}
+            </span>
+          )}
+        </div>
         <p class="meta" id={id("tools")}>
           {tools}
         </p>
@@ -36,7 +43,7 @@ const projects = await getProjects();
           data-panel="button"
           href={deepDivePath(project)}
           aria-labelledby={`${id("title")} ${id("more")}`}
-          aria-describedby={`${id("tools")} ${id("points")}`}
+          aria-describedby={`${highlight ? `${id("highlight")} ` : ""}${id("tools")} ${id("points")}`}
         >
           {body}
           <p class="more" id={id("more")}>
@@ -66,6 +73,26 @@ const projects = await getProjects();
   }
   .entry h2 {
     color: var(--accent);
+  }
+  /* The title, with its highlight (an award, say) in small capitals in the top right corner, wrapping under the title on a phone. */
+  .title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 14px;
+    /* No top margin: it opens its Panel, whose padding is the space above. */
+    margin: 0 0 20px;
+  }
+  .title-row h2 {
+    margin: 0;
+  }
+  .highlight {
+    color: var(--accent);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
   .more {
     color: var(--accent);

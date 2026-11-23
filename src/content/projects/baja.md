@@ -1,6 +1,6 @@
 ---
 title: Baja fuel-level estimator
-order: 2
+order: 3
 tools: Accelerometers, ESP32, STM32, KiCad, Python
 summary: Electrical team member on Olin Baja, fall 2026 to present, co-developing a fuel gauge that reads the tank's fill from vibration.
 link:

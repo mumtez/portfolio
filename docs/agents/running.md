@@ -10,7 +10,7 @@ A preview reported "already running" may be serving another worktree's `dist/` (
 
 ## Content config
 
-Restart the dev server after changing `src/content.config.ts`. A stale server shows errors such as "No Section home".
+Restart the dev server after changing `src/content.config.ts`. A stale server shows errors such as "No Section home". A new schema field can still be missing after a restart, because Astro keeps the old data. Clear its cache first: `npx astro dev stop; rm -rf .astro/data-store.json node_modules/.astro; npm run dev`.
 
 ## Placeholders
 

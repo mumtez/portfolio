@@ -16,14 +16,14 @@
     - org: Memorial Sloan Kettering Cancer Center
       role: Biomedical Engineering Intern
       location: New York, NY
-      dates: Summer 2025
+      dates: Jul – Aug 2025
       points:
-        - Developed post-processing techniques for biomedical implants and machined parts for medical devices
-        - Operated Stratasys and resin 3D printers and helped repair a plasma cutter's gantry
+        - Operated Stratasys and resin 3D printers and worked on post-processing
+        - Machined parts for medical devices on a CNC lathe and helped repair a plasma cutter's gantry
     - org: Olin College IT Department
       role: Student IT Technician
       location: Needham, MA
-      dates: Fall 2026 – present
+      dates: Sep 2026 – present
       points:
         - Work 10–20 help desk tickets a week, swapping components to repair student and staff laptops
 
@@ -34,16 +34,18 @@
 
   skills:
     - area: Software
-      items: Python, Java, TypeScript, MATLAB, PyTorch, TensorFlow, Keras, Git, Docker, Linux, GRUB/UEFI
+      items: Python, Java, TypeScript, MATLAB, PyTorch, TensorFlow, Keras
+    - area: Tools
+      items: Git, Bash, Claude Code, Docker, Linux, GRUB/UEFI
     - area: CAD & PCB design
       items: Fusion 360, Onshape, SolidWorks, KiCad, Altium Designer
     - area: Fabrication
-      items: 3D printing (FDM, resin, Stratasys), machining, SMD soldering, BGA rework, reflow
+      items: 3D printing (FDM, resin, Stratasys), CNC machining, SMD soldering, BGA rework, reflow
 
   activities:
     - name: Olin Handball
       role: Division 2 athlete
-      dates: Fall 2026 – present
+      dates: 2026 – present
     - name: EMS Summer String Festival
       role: Volunteer violin camp counselor
       dates: Summers 2023 – present

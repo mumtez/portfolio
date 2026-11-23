@@ -12,10 +12,12 @@ export const SECTIONS = [
   "/about/",
   "/experience/",
   "/projects/",
+  "/projects/shadowcast/",
   "/projects/roborebels/",
   "/projects/baja/",
   "/projects/ftc-event-viewer/",
   "/projects/climbing-wall/",
+  "/projects/u2-tool-changer/",
   "/contact/",
 ];
 

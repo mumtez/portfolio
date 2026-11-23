@@ -74,8 +74,8 @@ for (const path of ["/experience/", "/projects/", "/projects/roborebels/"]) {
     );
     const scrollable = await main(page).evaluate((el) => el.scrollHeight - el.clientHeight);
     // On a phone every one of these is long, so there's a middle to scroll through (on
-    // Experience about 170px, with the four-row nav).
-    if (page.viewportSize()!.width < 600) expect(scrollable).toBeGreaterThan(120);
+    // Experience about 120px, with the four-row nav).
+    if (page.viewportSize()!.width < 600) expect(scrollable).toBeGreaterThan(80);
 
     for (const share of [0, 0.25, 0.5, 0.75, 1]) {
       await main(page).evaluate((el, share) => (el.scrollTop = share * el.scrollHeight), share);

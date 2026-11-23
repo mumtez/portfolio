@@ -71,6 +71,8 @@ const projects = defineCollection({
   loader: glob({ pattern: "*.md", base: "src/content/projects" }),
   schema: z.object({
     title: z.string(),
+    /** A short badge beside the title on Projects, such as an award. */
+    highlight: z.string().optional(),
     /** Position on the Projects Section. */
     order: z.number(),
     tools: z.string(),
