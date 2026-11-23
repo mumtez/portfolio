@@ -172,6 +172,7 @@ describe("Section content", () => {
       "AI & Machine Learning",
       "Homelab",
       "Console & GPU Repair",
+      "Orbit simulator",
     ]);
     const links = [...(main?.querySelectorAll("a") ?? [])].map((a) => a.getAttribute("href"));
     expect(links).toEqual(
@@ -396,6 +397,7 @@ describe("Panels", () => {
         "AI & Machine Learning",
         "Homelab",
         "Console & GPU Repair",
+        "Orbit simulator",
       ]);
       for (const entry of others) expect(entry.getAttribute("data-panel")).toBe("solid");
       expect(others[1].querySelector("a")?.getAttribute("href")).toBe(
