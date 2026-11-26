@@ -75,16 +75,17 @@ test.describe("on a phone held upright", () => {
     test.skip(!isMobile, "an iPhone");
   });
 
-  test("the nav is four rows, toggles beside CONTACT, on every Section", async ({ page }) => {
-    for (const path of SECTIONS) {
+  // One test per Section, so each gets its own time limit as Sections are added.
+  for (const path of SECTIONS) {
+    test(`the nav is four rows, toggles beside CONTACT, on ${path}`, async ({ page }) => {
       await page.goto(path);
       await expectGrid(page, true);
       await expect(main(page)).toHaveCSS("opacity", "1");
       expect(await rows(page), path).toEqual(FOUR_ROWS);
       await expectAllInside(page);
       await expectNoSidewaysScroll(page);
-    }
-  });
+    });
+  }
 
   test("the Body Text starts just below the nav's last row", async ({ page }) => {
     await page.goto("/about/");
