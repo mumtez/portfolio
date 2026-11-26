@@ -9,7 +9,7 @@
 
   education:
     school: Franklin W. Olin College of Engineering
-    degree: B.S. in Electrical and Computer Engineering (intended)
+    degree: B.S. in Electrical and Computer Engineering
     dates: Expected May 2030
 
   experience:
@@ -65,7 +65,7 @@
     - label: LINKEDIN
       name: linkedin.com/in/andrew-aburustum
       href: https://www.linkedin.com/in/andrew-aburustum
-    # A file in public/, downloaded. Currently a placeholder PDF; see PLACEHOLDERS.md.
+    # A file in public/, downloaded: Andrew's resume.
     - label: RESUME
       name: Download my resume (PDF)
       href: /andrew-aburustum-resume.pdf
